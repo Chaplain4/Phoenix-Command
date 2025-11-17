@@ -57,3 +57,10 @@ class HitLocation(Enum):
     LEG_THIGH_FLESH = 'LEG_THIGH_FLESH'
     LEG_THIGH_BONE = 'LEG_THIGH_BONE'
     LEG_SHIN_FOOT = 'LEG_SHIN_FOOT'
+
+class MedicalAid(Enum):
+    NO_AID = "No Aid"
+    FIRST_AID = "First Aid"
+    AID_STATION = "Aid Station"
+    FIELD_HOSPITAL = "Field Hospital"
+    TRAUMA_CENTER = "Trauma Center"

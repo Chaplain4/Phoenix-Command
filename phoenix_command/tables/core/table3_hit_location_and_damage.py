@@ -1,7 +1,7 @@
 import math
 import random
 
-from phoenix_command.enums import WoundType, DamageType, TargetExposure, HitLocation
+from phoenix_command.models.enums import WoundType, DamageType, TargetExposure, HitLocation
 from phoenix_command.models.hit_result_simple import HitResult
 
 

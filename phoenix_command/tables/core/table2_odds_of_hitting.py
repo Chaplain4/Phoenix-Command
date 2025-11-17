@@ -1,4 +1,4 @@
-from phoenix_command.enums import ShooterStance, TargetExposure, ExplosiveTarget
+from phoenix_command.models.enums import ShooterStance, TargetExposure, ExplosiveTarget
 
 
 class Table2OddsOfHitting:

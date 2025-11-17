@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from phoenix_command.enums import WoundType, HitLocation
+from phoenix_command.models.enums import WoundType, HitLocation
 
 
 @dataclass
