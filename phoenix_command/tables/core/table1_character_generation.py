@@ -1,7 +1,8 @@
 import bisect
 
 
-class Table1:
+class Table1CharacterGeneration:
+    """Implements the character generation tables from Phoenix Command Table 1."""
 
     @staticmethod
     def get_base_speed_1a(strength: float, encumbrance: float) -> float:
@@ -96,7 +97,7 @@ class Table1:
             return 0.0
 
     @staticmethod
-    def get_skill_accuracy_level_1с(skill_level: int) -> int:
+    def get_skill_accuracy_level_1c(skill_level: int) -> int:
         """
         Returns the skill accuracy level based on the provided skill level from the mapping table.
         Raises ValueError if skill_level is not between 0 and 20 inclusive.
@@ -115,14 +116,15 @@ class Table1:
         return mapping[key]
 
     @staticmethod
-    def get_combat_actions_1d(ms: int, isf: int) -> int:
+    def get_combat_actions_1d(max_speed: int, intelligence_skill_factor: int) -> int:
         """
-        Returns the
+        Returns the number of combat actions based on MS and ISF from the provided table.
+        Raises ValueError if MS is not between 1 and 13 inclusive.
         """
 
-        ISF_VALUES = [7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31, 33, 35, 37, 39]
+        isf_values = [7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31, 33, 35, 37, 39]
 
-        TABLE = {
+        table = {
             1: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2],
             2: [1, 1, 1, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 4, 4],
             3: [1, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 6],
@@ -139,16 +141,54 @@ class Table1:
         }
 
 
-        if ms not in TABLE:
-            raise ValueError(f"No data for MS={ms}")
+        if max_speed not in table:
+            raise ValueError(f"No data for MS={max_speed}")
 
-        if isf <= ISF_VALUES[0]:
-            quantized_isf = ISF_VALUES[0]
-        elif isf >= ISF_VALUES[-1]:
-            quantized_isf = ISF_VALUES[-1]
+        if intelligence_skill_factor <= isf_values[0]:
+            quantized_isf = isf_values[0]
+        elif intelligence_skill_factor >= isf_values[-1]:
+            quantized_isf = isf_values[-1]
         else:
-            pos = bisect.bisect_left(ISF_VALUES, isf)
-            quantized_isf = ISF_VALUES[pos]
+            pos = bisect.bisect_left(isf_values, intelligence_skill_factor)
+            quantized_isf = isf_values[pos]
 
-        col_index = ISF_VALUES.index(quantized_isf)
-        return TABLE[ms][col_index]
+        col_index = isf_values.index(quantized_isf)
+        return table[max_speed][col_index]
+
+    @staticmethod
+    def get_impulses_1e(combat_actions: int) -> list[int]:
+        """
+        Returns the list of 4 impulse values based on the provided combat actions from the mapping table.
+        Raises ValueError if combat_actions is not between 1 and 24 inclusive.
+        """
+        mapping = {
+            1: [1, 0, 0, 0],
+            2: [1, 0, 1, 0],
+            3: [1, 0, 1, 1],
+            4: [1, 1, 1, 1],
+            5: [2, 1, 1, 1],
+            6: [2, 1, 2, 1],
+            7: [2, 1, 2, 2],
+            8: [2, 2, 2, 2],
+            9: [3, 2, 2, 2],
+            10: [3, 2, 3, 2],
+            11: [3, 2, 3, 3],
+            12: [3, 3, 3, 3],
+            13: [4, 3, 3, 3],
+            14: [4, 3, 4, 3],
+            15: [4, 3, 4, 4],
+            16: [4, 4, 4, 4],
+            17: [5, 4, 4, 4],
+            18: [5, 4, 5, 4],
+            19: [5, 4, 5, 5],
+            20: [5, 5, 5, 5],
+            21: [6, 5, 5, 5],
+            22: [6, 5, 6, 5],
+            23: [6, 5, 6, 6],
+            24: [6, 6, 6, 6]
+        }
+
+        if combat_actions < 1 or combat_actions > 24:
+            raise ValueError("Combat actions must be between 1 and 24.")
+
+        return mapping[combat_actions]
