@@ -6,7 +6,7 @@ from phoenix_command.models.enums import ShotType, TargetExposure, AccuracyModif
 
 class Table4AdvancedOddsOfHitting:
     @classmethod
-    def get_accuracy_level_modifier_by_range(cls, distance: float) -> int:
+    def get_accuracy_level_modifier_by_range_4a(cls, distance: float) -> int:
         TABLE = [
             (1, 33),
             (2, 28),
@@ -225,13 +225,13 @@ class Table4AdvancedOddsOfHitting:
         return modifiers[modifier_type]
 
     @classmethod
-    def get_movement_alm_and_max_aim_time(cls, speed: float, target_hpi: float) -> Tuple[int, float]:
+    def get_movement_alm_and_max_aim_time_4d(cls, speed: float, target_hpi: float) -> Tuple[int, float]:
         """
         Returns the movement ALM modifier and maximum aim impulses based on speed and target HPI from Table 4D.
         For non-exact speed or HPI, floors to the nearest lower value in the table.
         Maximum aim impulses: 2 for -10, 3 for -9, 4 for -8, 5 for -7, 6 for -6, infinity for -5 and above.
         """
-        # Table: speed -> hpi -> modifier #FIXME: set up real values
+        # Table: speed -> hpi -> modifier
         table: Dict[float, Dict[float, int]] = {
             0.5: {10: -6, 20: -5, 40: -5, 70: -5, 100: -5, 200: -5, 300: -5, 400: -5, 600: -5, 800: -5, 1000: -5,
                   1200: -5, 1500: -5},
@@ -253,20 +253,20 @@ class Table4AdvancedOddsOfHitting:
                    1200: -5, 1500: -5},
             50.0: {10: -10, 20: -10, 40: -10, 70: -10, 100: -10, 200: -10, 300: -10, 400: -10, 600: -9, 800: -8,
                    1000: -7, 1200: -6, 1500: -5},
-            60.0: {10: -10, 20: -10, 40: -10, 70: -10, 100: -10, 200: -10, 300: -10, 400: -10, 600: -10, 800: -10,
-                   1000: -8, 1200: -7, 1500: -6},
+            60.0: {10: -10, 20: -10, 40: -10, 70: -10, 100: -10, 200: -10, 300: -10, 400: -10, 600: -8, 800: -7,
+                   1000: -6, 1200: -6, 1500: -6},
             70.0: {10: -10, 20: -10, 40: -10, 70: -10, 100: -10, 200: -10, 300: -10, 400: -10, 600: -9, 800: -8,
                    1000: -7, 1200: -6, 1500: -6},
-            80.0: {10: -10, 20: -10, 40: -10, 70: -10, 100: -10, 200: -10, 300: -10, 400: -10, 600: -10, 800: -10,
-                   1000: -9, 1200: -8, 1500: -7},
-            90.0: {10: -10, 20: -10, 40: -10, 70: -10, 100: -10, 200: -10, 300: -10, 400: -10, 600: -10, 800: -10,
-                   1000: -10, 1200: -9, 1500: -8},
-            100.0: {10: -10, 20: -10, 40: -10, 70: -10, 100: -10, 200: -10, 300: -10, 400: -10, 600: -10, 800: -10,
-                    1000: -10, 1200: -9, 1500: -8},
+            80.0: {10: -10, 20: -10, 40: -10, 70: -10, 100: -10, 200: -10, 300: -10, 400: -10, 600: -9, 800: -8,
+                   1000: -7, 1200: -7, 1500: -6},
+            90.0: {10: -10, 20: -10, 40: -10, 70: -10, 100: -10, 200: -10, 300: -10, 400: -10, 600: -10, 800: -9,
+                   1000: -8, 1200: -7, 1500: -6},
+            100.0: {10: -10, 20: -10, 40: -10, 70: -10, 100: -10, 200: -10, 300: -10, 400: -10, 600: -10, 800: -9,
+                    1000: -8, 1200: -7, 1500: -7},
             110.0: {10: -10, 20: -10, 40: -10, 70: -10, 100: -10, 200: -10, 300: -10, 400: -10, 600: -10, 800: -10,
-                    1000: -10, 1200: -10, 1500: -9},
+                    1000: -9, 1200: -8, 1500: -7},
             120.0: {10: -10, 20: -10, 40: -10, 70: -10, 100: -10, 200: -10, 300: -10, 400: -10, 600: -10, 800: -10,
-                    1000: -10, 1200: -10, 1500: -10},
+                    1000: -9, 1200: -8, 1500: -7},
         }
 
         # Max aim impulses mapping

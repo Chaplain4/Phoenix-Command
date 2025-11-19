@@ -80,7 +80,7 @@ class ShotType(Enum):
     SINGLE = "SINGLE"
     BURST = "BURST"
 
-class SituationStanceModifier(Enum):
+class SituationStanceModifier4B(Enum):
     """
     Enum for Situation & Stance Modifiers (Table 4B).
     Values represent ALM (Aim Level Modifier) adjustments.
@@ -103,7 +103,7 @@ class SituationStanceModifier(Enum):
     TURRET_MOUNTED_WEAPON = 11
     PISTOL_WITH_SHOULDER_STOCK = 3
 
-class VisibilityModifier(Enum):
+class VisibilityModifier4C(Enum):
     """
     Enum for Visibility Modifiers (Table 4C).
     Values represent ALM (Aim Level Modifier) adjustments.
@@ -130,3 +130,10 @@ class AccuracyModifiers(Enum):
     TARGET_SIZE = "TARGET_SIZE"
     AUTO_ELEV = "AUTO_ELEV"
     AUTO_WIDTH = "AUTO_WIDTH"
+
+class AmmoFeedDevice(Enum):
+    """Type of ammunition feed device."""
+    MAGAZINE = "Magazine"
+    BELT = "Belt"
+    DRUM = "Drum"
+    ROUND = "Round"
