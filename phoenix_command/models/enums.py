@@ -24,6 +24,7 @@ class TargetExposure(Enum):
     HEAD = -3                # Head
     BODY = 5                 # Body
     LEGS = 4                 # Legs
+    ARMS = 3                 # Arms
 
 class ExplosiveTarget(Enum):
     HEX = 12
@@ -68,6 +69,101 @@ class HitLocation(Enum):
     LEG_THIGH_FLESH = 'LEG_THIGH_FLESH'
     LEG_THIGH_BONE = 'LEG_THIGH_BONE'
     LEG_SHIN_FOOT = 'LEG_SHIN_FOOT'
+
+class AdvancedHitLocation(Enum):
+    """
+    Hit Locations including Left/Right separation for applicable limbs.
+    """
+    HEAD_GLANCE = "Head Glance"
+    FOREHEAD = "Forehead"
+    EYE_NOSE = "Eye - Nose"
+    MOUTH = "Mouth"
+    NECK_FLESH = "Neck - Flesh"
+    NECK_THROAT = "Neck - Throat"
+
+    # Shoulders
+    SHOULDER_GLANCE_LEFT = "Shoulder Glance (Left)"
+    SHOULDER_GLANCE_RIGHT = "Shoulder Glance (Right)"
+
+    SHOULDER_SOCKET_LEFT = "Shoulder Socket (Left)"
+    SHOULDER_SOCKET_RIGHT = "Shoulder Socket (Right)"
+
+    SHOULDER_LEFT = "Shoulder (Left)"
+    SHOULDER_RIGHT = "Shoulder (Right)"
+
+    # Arms
+    ARM_GLANCE_LEFT = "Arm Glance (Left)"
+    ARM_GLANCE_RIGHT = "Arm Glance (Right)"
+
+    ARM_GLANCE_SHOULDER_LEFT = "Arm Glance - Shoulder (Left)"
+    ARM_GLANCE_SHOULDER_RIGHT = "Arm Glance - Shoulder (Right)"
+
+    ARM_FLESH_LEFT = "Arm Flesh (Left)"
+    ARM_FLESH_RIGHT = "Arm Flesh (Right)"
+
+    ARM_FLESH_SHOULDER_LEFT = "Arm Flesh - Shoulder (Left)"
+    ARM_FLESH_SHOULDER_RIGHT = "Arm Flesh - Shoulder (Right)"
+
+    ARM_BONE_SHOULDER_LEFT = "Arm Bone - Shoulder (Left)"
+    ARM_BONE_SHOULDER_RIGHT = "Arm Bone - Shoulder (Right)"
+
+    ELBOW_SHOULDER_LEFT = "Elbow - Shoulder (Left)"
+    ELBOW_SHOULDER_RIGHT = "Elbow - Shoulder (Right)"
+
+    FOREARM_FLESH_LUNG_LEFT = "Forearm Flesh - Lung (Left)"
+    FOREARM_FLESH_LUNG_RIGHT = "Forearm Flesh - Lung (Right)"
+
+    FOREARM_BONE_LUNG_LEFT = "Forearm Bone - Lung (Left)"
+    FOREARM_BONE_LUNG_RIGHT = "Forearm Bone - Lung (Right)"
+
+    HAND_BASE_OF_NECK_LEFT = "Hand - Base of Neck (Left)"
+    HAND_BASE_OF_NECK_RIGHT = "Hand - Base of Neck (Right)"
+
+    WEAPON_CRITICAL = "Weapon Critical"
+    TORSO_GLANCE = "Torso Glance"
+    BASE_OF_NECK = "Base of Neck"
+
+    LUNG_RIB = "Lung - Rib"
+    LUNG = "Lung"
+    HEART = "Heart"
+    LIVER_RIB = "Liver - Rib"
+    LIVER = "Liver"
+    STOMACH_RIB = "Stomach - Rib"
+    STOMACH = "Stomach"
+    STOMACH_SPLEEN = "Stomach - Spleen"
+    STOMACH_KIDNEY = "Stomach - Kidney"
+    LIVER_KIDNEY = "Liver - Kidney"
+    LIVER_SPINE = "Liver - Spine"
+    INTESTINES = "Intestines"
+    SPINE = "Spine"
+    PELVIS = "Pelvis"
+
+    # Legs
+    HIP_SOCKET_LEFT = "Hip Socket (Left)"
+    HIP_SOCKET_RIGHT = "Hip Socket (Right)"
+
+    LEG_GLANCE_LEFT = "Leg Glance (Left)"
+    LEG_GLANCE_RIGHT = "Leg Glance (Right)"
+
+    THIGH_FLESH_LEFT = "Thigh Flesh (Left)"
+    THIGH_FLESH_RIGHT = "Thigh Flesh (Right)"
+
+    THIGH_BONE_LEFT = "Thigh Bone (Left)"
+    THIGH_BONE_RIGHT = "Thigh Bone (Right)"
+
+    KNEE_LEFT = "Knee (Left)"
+    KNEE_RIGHT = "Knee (Right)"
+
+    SHIN_FLESH_LEFT = "Shin Flesh (Left)"
+    SHIN_FLESH_RIGHT = "Shin Flesh (Right)"
+
+    SHIN_BONE_LEFT = "Shin Bone (Left)"
+    SHIN_BONE_RIGHT = "Shin Bone (Right)"
+
+    FOOT_LEFT = "Foot (Left)"
+    FOOT_RIGHT = "Foot (Right)"
+
+    MISS = "Miss"
 
 class MedicalAid(Enum):
     NO_AID = "No Aid"
