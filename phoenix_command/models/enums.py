@@ -72,96 +72,168 @@ class HitLocation(Enum):
 
 class AdvancedHitLocation(Enum):
     """
-    Hit Locations including Left/Right separation for applicable limbs.
+    Hit Locations including Left/Right separation and correct Damage Table references.
+    Format: "Location Name (Table X)" or "Location Name (Table X & Y)"
+    Source: Table 4E (Damage Table Number column)
     """
-    HEAD_GLANCE = "Head Glance"
-    FOREHEAD = "Forehead"
-    EYE_NOSE = "Eye - Nose"
-    MOUTH = "Mouth"
-    NECK_FLESH = "Neck - Flesh"
-    NECK_THROAT = "Neck - Throat"
+    # --- HEAD ---
+    HEAD_GLANCE = "Head Glance (Table 1)"
+    SKULL_SIDE = "Skull (Table S1)"
+    FOREHEAD = "Forehead (Table 2)"
+    FOREHEAD_SIDE = "Forehead (Table S1)"  # New for Oblique
+    EYE_NOSE = "Eye - Nose (Table 3)"
+    EYE_SIDE = "Eye (Table S2)"
+    MOUTH = "Mouth (Table 4)"
+    JAW_SIDE = "Jaw (Table S3)"
+    NECK_FLESH = "Neck - Flesh (Table 5)"
+    NECK_THROAT = "Neck - Throat (Table 6)"
+    BASE_OF_SKULL_SIDE = "Base of Skull (Table S4)"
+    NECK_THROAT_SIDE = "Neck - Throat (Table S5)"  # New for Oblique
+    NECK_SPINE_SIDE = "Neck - Spine (Table S6)"  # New for Oblique
 
-    # Shoulders
-    SHOULDER_GLANCE_LEFT = "Shoulder Glance (Left)"
-    SHOULDER_GLANCE_RIGHT = "Shoulder Glance (Right)"
+    # --- SHOULDERS ---
+    # Table 7
+    SHOULDER_GLANCE_LEFT = "Shoulder Glance (Left) (Table 7)"
+    SHOULDER_GLANCE_RIGHT = "Shoulder Glance (Right) (Table 7)"
 
-    SHOULDER_SOCKET_LEFT = "Shoulder Socket (Left)"
-    SHOULDER_SOCKET_RIGHT = "Shoulder Socket (Right)"
+    # Table 8
+    SHOULDER_SOCKET_LEFT = "Shoulder Socket (Left) (Table 8)"
+    SHOULDER_SOCKET_RIGHT = "Shoulder Socket (Right) (Table 8)"
+    SHOULDER_SOCKET_LUNG_SIDE = "Shoulder Socket - Lung (Table S7)"
+    SHOULDER_SOCKET_SPINE_SIDE = "Shoulder Socket - Spine (Table S8)"
 
-    SHOULDER_LEFT = "Shoulder (Left)"
-    SHOULDER_RIGHT = "Shoulder (Right)"
+    # Table 9
+    SHOULDER_LEFT = "Shoulder (Left) (Table 9)"
+    SHOULDER_RIGHT = "Shoulder (Right) (Table 9)"
 
-    # Arms
-    ARM_GLANCE_LEFT = "Arm Glance (Left)"
-    ARM_GLANCE_RIGHT = "Arm Glance (Right)"
+    # --- ARMS ---
+    # Table 10
+    ARM_GLANCE_LEFT = "Arm Glance (Left) (Table 10)"
+    ARM_GLANCE_RIGHT = "Arm Glance (Right) (Table 10)"
 
-    ARM_GLANCE_SHOULDER_LEFT = "Arm Glance - Shoulder (Left)"
-    ARM_GLANCE_SHOULDER_RIGHT = "Arm Glance - Shoulder (Right)"
+    # Tables 10 & 9
+    ARM_GLANCE_SHOULDER_LEFT = "Arm Glance - Shoulder (Left) (Table 10 & 9)"
+    ARM_GLANCE_SHOULDER_RIGHT = "Arm Glance - Shoulder (Right) (Table 10 & 9)"
 
-    ARM_FLESH_LEFT = "Arm Flesh (Left)"
-    ARM_FLESH_RIGHT = "Arm Flesh (Right)"
+    # Table 11
+    ARM_FLESH_LEFT = "Arm Flesh (Left) (Table 11)"
+    ARM_FLESH_RIGHT = "Arm Flesh (Right) (Table 11)"
+    # Specific Oblique Logic (Table 11) - No Left/Right split in table rows, distinct ranges
+    ARM_FLESH_OFF_SIDE = "Arm Flesh Off Side (Table 11)"
+    ARM_FLESH_SHOT_SIDE = "Arm Flesh Shot Side (Table 11 & 19)"
 
-    ARM_FLESH_SHOULDER_LEFT = "Arm Flesh - Shoulder (Left)"
-    ARM_FLESH_SHOULDER_RIGHT = "Arm Flesh - Shoulder (Right)"
+    # Tables 11 & 9
+    ARM_FLESH_SHOULDER_LEFT = "Arm Flesh - Shoulder (Left) (Table 11 & 9)"
+    ARM_FLESH_SHOULDER_RIGHT = "Arm Flesh - Shoulder (Right) (Table 11 & 9)"
 
-    ARM_BONE_SHOULDER_LEFT = "Arm Bone - Shoulder (Left)"
-    ARM_BONE_SHOULDER_RIGHT = "Arm Bone - Shoulder (Right)"
+    # Tables 12 & 9
+    ARM_BONE_LEFT = "Arm Bone (Left) (Table 12)"
+    ARM_BONE_RIGHT = "Arm Bone (Right) (Table 12)"
+    ARM_BONE_SHOULDER_LEFT = "Arm Bone - Shoulder (Left) (Table 12 & 9)"
+    ARM_BONE_SHOULDER_RIGHT = "Arm Bone - Shoulder (Right) (Table 12 & 9)"
+    # Specific Oblique Logic (Table 12)
+    ARM_BONE_OFF_SIDE = "Arm Bone Off Side (Table 12)"
+    ARM_BONE_SHOT_SIDE = "Arm Bone Shot Side (Table 12 & 19)"
 
-    ELBOW_SHOULDER_LEFT = "Elbow - Shoulder (Left)"
-    ELBOW_SHOULDER_RIGHT = "Elbow - Shoulder (Right)"
+    # Tables 13 & 9
+    ELBOW_SHOULDER_LEFT = "Elbow - Shoulder (Left) (Table 13 & 9)"
+    ELBOW_SHOULDER_RIGHT = "Elbow - Shoulder (Right) (Table 13 & 9)"
+    ELBOW_LEFT = "Elbow (Table 13)"  # Generic for Oblique where Shoulder isn't mentioned
+    ELBOW_RIGHT = "Elbow (Table 13)"
 
-    FOREARM_FLESH_LUNG_LEFT = "Forearm Flesh - Lung (Left)"
-    FOREARM_FLESH_LUNG_RIGHT = "Forearm Flesh - Lung (Right)"
+    # Tables 14 & 19
+    FOREARM_FLESH_LUNG_LEFT = "Forearm Flesh - Lung (Left) (Table 14 & 19)"
+    FOREARM_FLESH_LUNG_RIGHT = "Forearm Flesh - Lung (Right) (Table 14 & 19)"
+    FOREARM_FLESH_LEFT = "Forearm Flesh (Table 14)"  # Oblique generic
+    FOREARM_FLESH_RIGHT = "Forearm Flesh (Table 14)"
 
-    FOREARM_BONE_LUNG_LEFT = "Forearm Bone - Lung (Left)"
-    FOREARM_BONE_LUNG_RIGHT = "Forearm Bone - Lung (Right)"
+    # Tables 15 & 19
+    FOREARM_BONE_LUNG_LEFT = "Forearm Bone - Lung (Left) (Table 15 & 19)"
+    FOREARM_BONE_LUNG_RIGHT = "Forearm Bone - Lung (Right) (Table 15 & 19)"
+    FOREARM_BONE_LEFT = "Forearm Bone (Table 15)"  # Oblique generic
+    FOREARM_BONE_RIGHT = "Forearm Bone (Table 15)"
 
-    HAND_BASE_OF_NECK_LEFT = "Hand - Base of Neck (Left)"
-    HAND_BASE_OF_NECK_RIGHT = "Hand - Base of Neck (Right)"
+    # Tables 16 & 18
+    HAND_BASE_OF_NECK_LEFT = "Hand - Base of Neck (Left) (Table 16 & 18)"
+    HAND_BASE_OF_NECK_RIGHT = "Hand - Base of Neck (Right) (Table 16 & 18)"
+    HAND_LEFT = "Hand (Table 16)"  # Oblique generic
+    HAND_RIGHT = "Hand (Table 16)"
+    HAND_WEAPON_CRITICAL = "Hand - Weapon Critical (Table 16 & Weapon)"
 
-    WEAPON_CRITICAL = "Weapon Critical"
-    TORSO_GLANCE = "Torso Glance"
-    BASE_OF_NECK = "Base of Neck"
+    # --- TORSO / ORGANS ---
+    WEAPON_CRITICAL = "Weapon Critical (Weapon)"
+    TORSO_GLANCE = "Torso Glance (Table 17)"
+    BASE_OF_NECK = "Base of Neck (Table 18)"
 
-    LUNG_RIB = "Lung - Rib"
-    LUNG = "Lung"
-    HEART = "Heart"
-    LIVER_RIB = "Liver - Rib"
-    LIVER = "Liver"
-    STOMACH_RIB = "Stomach - Rib"
-    STOMACH = "Stomach"
-    STOMACH_SPLEEN = "Stomach - Spleen"
-    STOMACH_KIDNEY = "Stomach - Kidney"
-    LIVER_KIDNEY = "Liver - Kidney"
-    LIVER_SPINE = "Liver - Spine"
-    INTESTINES = "Intestines"
-    SPINE = "Spine"
-    PELVIS = "Pelvis"
+    LUNG_RIB = "Lung - Rib (Table 19)"
+    LUNG = "Lung (Table 20)"
+    HEART = "Heart (Table 21)"
+    LIVER_RIB = "Liver - Rib (Table 22)"
+    LIVER = "Liver (Table 23)"
+    STOMACH_RIB = "Stomach - Rib (Table 24)"
+    STOMACH = "Stomach (Table 25)"
+    STOMACH_SPLEEN = "Stomach - Spleen (Table 26)"
+    STOMACH_KIDNEY = "Stomach - Kidney (Table 27)"
+    LIVER_KIDNEY = "Liver - Kidney (Table 28)"
+    LIVER_SPINE = "Liver - Spine (Table 29)"
+    INTESTINES = "Intestines (Table 30)"
+    SPINE = "Spine (Table 31)"
+    PELVIS = "Pelvis (Table 32)"
+    LUNG_SIDE = "Lung (Table S10)"
+    LUNG_RIB_SIDE = "Lung - Rib (Table S9)"
+    HEART_RIB_SIDE = "Heart - Rib (Table S11)"
+    HEART_SIDE = "Heart (Table S12)"
+    SPINE_SIDE = "Spine (Table S13)"
+    STOMACH_LIVER_RIB_SIDE = "Stomach - Liver - Rib (Table S14)"
+    STOMACH_LIVER_SIDE = "Stomach - Liver (Table S15)"
+    SPLEEN_LIVER_SIDE = "Spleen - Liver (Table S16)"
+    KIDNEY_SPINE_SIDE = "Kidney - Spine (Table S17)"
+    INTESTINES_SIDE = "Intestines (Table S18)"
+    INTESTINES_SPINE_SIDE = "Intestines - Spine (Table S19)"
+    PELVIS_SIDE = "Pelvis (Table S20)"
 
-    # Legs
-    HIP_SOCKET_LEFT = "Hip Socket (Left)"
-    HIP_SOCKET_RIGHT = "Hip Socket (Right)"
+    # --- LEGS ---
+    # Table 33
+    HIP_SOCKET_LEFT = "Hip Socket (Left) (Table 33)"
+    HIP_SOCKET_RIGHT = "Hip Socket (Right) (Table 33)"
+    HIP_SPINE_SIDE = "Hip - Spine (Table S21)"
+    HIP_SOCKET_SIDE = "Hip Socket (Table S22)"
 
-    LEG_GLANCE_LEFT = "Leg Glance (Left)"
-    LEG_GLANCE_RIGHT = "Leg Glance (Right)"
+    # Table 34
+    LEG_GLANCE_LEFT = "Leg Glance (Left) (Table 34)"
+    LEG_GLANCE_RIGHT = "Leg Glance (Right) (Table 34)"
 
-    THIGH_FLESH_LEFT = "Thigh Flesh (Left)"
-    THIGH_FLESH_RIGHT = "Thigh Flesh (Right)"
+    # Table 35
+    THIGH_FLESH_LEFT = "Thigh Flesh (Left) (Table 35)"
+    THIGH_FLESH_RIGHT = "Thigh Flesh (Right) (Table 35)"
+    THIGH_FLESH_THIGH_FLESH = "Thigh Flesh - Thigh Flesh (Table 35 & 35)"
+    THIGH_FLESH_THIGH_BONE = "Thigh Flesh - Thigh Bone (Table 35 & 36)"
 
-    THIGH_BONE_LEFT = "Thigh Bone (Left)"
-    THIGH_BONE_RIGHT = "Thigh Bone (Right)"
+    # Table 36
+    THIGH_BONE_LEFT = "Thigh Bone (Left) (Table 36)"
+    THIGH_BONE_RIGHT = "Thigh Bone (Right) (Table 36)"
 
-    KNEE_LEFT = "Knee (Left)"
-    KNEE_RIGHT = "Knee (Right)"
+    # Table 37
+    KNEE_LEFT = "Knee (Left) (Table 37)"
+    KNEE_RIGHT = "Knee (Right) (Table 37)"
 
-    SHIN_FLESH_LEFT = "Shin Flesh (Left)"
-    SHIN_FLESH_RIGHT = "Shin Flesh (Right)"
+    # Table 38
+    SHIN_FLESH_LEFT = "Shin Flesh (Left) (Table 38)"
+    SHIN_FLESH_RIGHT = "Shin Flesh (Right) (Table 38)"
+    # Table S23 (Side)
+    SHIN_FLESH_SIDE_LEFT = "Shin Flesh (Left) (Table S23)"  # Oblique
+    SHIN_FLESH_SIDE_RIGHT = "Shin Flesh (Right) (Table S23)"  # Oblique
 
-    SHIN_BONE_LEFT = "Shin Bone (Left)"
-    SHIN_BONE_RIGHT = "Shin Bone (Right)"
+    # Table 39
+    SHIN_BONE_LEFT = "Shin Bone (Left) (Table 39)"
+    SHIN_BONE_RIGHT = "Shin Bone (Right) (Table 39)"
+    # Table S24 (Side)
+    SHIN_BONE_SIDE_LEFT = "Shin Bone (Left) (Table S24)"  # Oblique
+    SHIN_BONE_SIDE_RIGHT = "Shin Bone (Right) (Table S24)"  # Oblique
 
-    FOOT_LEFT = "Foot (Left)"
-    FOOT_RIGHT = "Foot (Right)"
+    # Table 40
+    FOOT_LEFT = "Foot (Left) (Table 40)"
+    FOOT_RIGHT = "Foot (Right) (Table 40)"
 
     MISS = "Miss"
 
