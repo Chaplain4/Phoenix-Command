@@ -78,18 +78,18 @@ class AdvancedHitLocation(Enum):
     """
     # --- HEAD ---
     HEAD_GLANCE = "Head Glance (Table 1)"
-    SKULL_SIDE = "Skull (Table S1)"
+    SKULL_SIDE = "Skull (Table 41)"
     FOREHEAD = "Forehead (Table 2)"
-    FOREHEAD_SIDE = "Forehead (Table S1)"  # New for Oblique
+    FOREHEAD_SIDE = "Forehead (Table 41)"  # New for Oblique
     EYE_NOSE = "Eye - Nose (Table 3)"
-    EYE_SIDE = "Eye (Table S2)"
+    EYE_SIDE = "Eye (Table 42)"
     MOUTH = "Mouth (Table 4)"
-    JAW_SIDE = "Jaw (Table S3)"
+    JAW_SIDE = "Jaw (Table 43)"
     NECK_FLESH = "Neck - Flesh (Table 5)"
     NECK_THROAT = "Neck - Throat (Table 6)"
-    BASE_OF_SKULL_SIDE = "Base of Skull (Table S4)"
-    NECK_THROAT_SIDE = "Neck - Throat (Table S5)"  # New for Oblique
-    NECK_SPINE_SIDE = "Neck - Spine (Table S6)"  # New for Oblique
+    BASE_OF_SKULL_SIDE = "Base of Skull (Table 44)"
+    NECK_THROAT_SIDE = "Neck - Throat (Table 45)"  # New for Oblique
+    NECK_SPINE_SIDE = "Neck - Spine (Table 46)"  # New for Oblique
 
     # --- SHOULDERS ---
     # Table 7
@@ -99,8 +99,8 @@ class AdvancedHitLocation(Enum):
     # Table 8
     SHOULDER_SOCKET_LEFT = "Shoulder Socket (Left) (Table 8)"
     SHOULDER_SOCKET_RIGHT = "Shoulder Socket (Right) (Table 8)"
-    SHOULDER_SOCKET_LUNG_SIDE = "Shoulder Socket - Lung (Table S7)"
-    SHOULDER_SOCKET_SPINE_SIDE = "Shoulder Socket - Spine (Table S8)"
+    SHOULDER_SOCKET_LUNG_SIDE = "Shoulder Socket - Lung (Table 47)"
+    SHOULDER_SOCKET_SPINE_SIDE = "Shoulder Socket - Spine (Table 48)"
 
     # Table 9
     SHOULDER_LEFT = "Shoulder (Left) (Table 9)"
@@ -179,17 +179,17 @@ class AdvancedHitLocation(Enum):
     INTESTINES = "Intestines (Table 30)"
     SPINE = "Spine (Table 31)"
     PELVIS = "Pelvis (Table 32)"
-    LUNG_SIDE = "Lung (Table S10)"
-    LUNG_RIB_SIDE = "Lung - Rib (Table S9)"
-    HEART_RIB_SIDE = "Heart - Rib (Table S11)"
-    HEART_SIDE = "Heart (Table S12)"
-    SPINE_SIDE = "Spine (Table S13)"
-    STOMACH_LIVER_RIB_SIDE = "Stomach - Liver - Rib (Table S14)"
-    STOMACH_LIVER_SIDE = "Stomach - Liver (Table S15)"
-    SPLEEN_LIVER_SIDE = "Spleen - Liver (Table S16)"
-    KIDNEY_SPINE_SIDE = "Kidney - Spine (Table S17)"
-    INTESTINES_SIDE = "Intestines (Table S18)"
-    INTESTINES_SPINE_SIDE = "Intestines - Spine (Table S19)"
+    LUNG_SIDE = "Lung (Table 50)"
+    LUNG_RIB_SIDE = "Lung - Rib (Table 49)"
+    HEART_RIB_SIDE = "Heart - Rib (Table 51)"
+    HEART_SIDE = "Heart (Table 52)"
+    SPINE_SIDE = "Spine (Table 53)"
+    STOMACH_LIVER_RIB_SIDE = "Stomach - Liver - Rib (Table 54)"
+    STOMACH_LIVER_SIDE = "Stomach - Liver (Table 55)"
+    SPLEEN_LIVER_SIDE = "Spleen - Liver (Table 56)"
+    KIDNEY_SPINE_SIDE = "Kidney - Spine (Table 57)"
+    INTESTINES_SIDE = "Intestines (Table 58)"
+    INTESTINES_SPINE_SIDE = "Intestines - Spine (Table 59)"
     PELVIS_SIDE = "Pelvis (Table S20)"
 
     # --- LEGS ---
