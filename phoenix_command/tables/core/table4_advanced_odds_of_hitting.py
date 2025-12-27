@@ -188,7 +188,7 @@ class Table4AdvancedOddsOfHitting:
                 AccuracyModifiers.AUTO_ELEV: 11,
                 AccuracyModifiers.AUTO_WIDTH: 2,
             },
-            TargetExposure.HANDS_AND_KNEES: {
+            TargetExposure.HANDS_AND_KNEES_CROUCH: {
                 AccuracyModifiers.TARGET_SIZE: 6,
                 AccuracyModifiers.AUTO_ELEV: 8,
                 AccuracyModifiers.AUTO_WIDTH: 1,

@@ -12,19 +12,19 @@ class TargetExposure(Enum):
     Enum for Target Exposure types (Table 4E rows).
     Values represent base ALM (Aim Level Modifier) adjustments for Target Size.
     """
-    LOOKING_OVER_COVER = -4  # Look Over/Around
-    FIRING_OVER_COVER = 0    # Fire Over/Around
-    STANDING_EXPOSED = 7     # Standing Exposed (updated to match table)
-    KNEELING_EXPOSED = 6     # Kneeling Exposed
-    PRONE_EXPOSED = 2        # Prone / Crawl
-    RUNNING = 8              # Running
-    LOW_CROUCH = 7           # Low Crouch
-    HANDS_AND_KNEES = 6      # Hands and Knees
-    LOW_PRONE = 1            # Low Prone
-    HEAD = -3                # Head
-    BODY = 5                 # Body
-    LEGS = 4                 # Legs
-    ARMS = 3                 # Arms
+    LOOKING_OVER_COVER = -4         # Look Over/Around
+    FIRING_OVER_COVER = 0           # Fire Over/Around
+    STANDING_EXPOSED = 7            # Standing Exposed (updated to match table)
+    KNEELING_EXPOSED = 6            # Kneeling Exposed
+    PRONE_EXPOSED = 2               # Prone / Crawl
+    RUNNING = 8                     # Running
+    LOW_CROUCH = 7                  # Low Crouch
+    HANDS_AND_KNEES_CROUCH = 6      # Hands and Knees
+    LOW_PRONE = 1                   # Low Prone
+    HEAD = -3                       # Head
+    BODY = 5                        # Body
+    LEGS = 4                        # Legs
+    ARMS = 3                        # Arms
 
 class ExplosiveTarget(Enum):
     HEX = 12
@@ -190,14 +190,14 @@ class AdvancedHitLocation(Enum):
     KIDNEY_SPINE_SIDE = "Kidney - Spine (Table 57)"
     INTESTINES_SIDE = "Intestines (Table 58)"
     INTESTINES_SPINE_SIDE = "Intestines - Spine (Table 59)"
-    PELVIS_SIDE = "Pelvis (Table S20)"
+    PELVIS_SIDE = "Pelvis (Table 60)"
 
     # --- LEGS ---
     # Table 33
     HIP_SOCKET_LEFT = "Hip Socket (Left) (Table 33)"
     HIP_SOCKET_RIGHT = "Hip Socket (Right) (Table 33)"
-    HIP_SPINE_SIDE = "Hip - Spine (Table S21)"
-    HIP_SOCKET_SIDE = "Hip Socket (Table S22)"
+    HIP_SPINE_SIDE = "Hip - Spine (Table 61)"
+    HIP_SOCKET_SIDE = "Hip Socket (Table 62)"
 
     # Table 34
     LEG_GLANCE_LEFT = "Leg Glance (Left) (Table 34)"
@@ -220,16 +220,16 @@ class AdvancedHitLocation(Enum):
     # Table 38
     SHIN_FLESH_LEFT = "Shin Flesh (Left) (Table 38)"
     SHIN_FLESH_RIGHT = "Shin Flesh (Right) (Table 38)"
-    # Table S23 (Side)
-    SHIN_FLESH_SIDE_LEFT = "Shin Flesh (Left) (Table S23)"  # Oblique
-    SHIN_FLESH_SIDE_RIGHT = "Shin Flesh (Right) (Table S23)"  # Oblique
+    # Table 63 (Side)
+    SHIN_FLESH_SIDE_LEFT = "Shin Flesh (Left) (Table 63)"  # Oblique
+    SHIN_FLESH_SIDE_RIGHT = "Shin Flesh (Right) (Table 63)"  # Oblique
 
     # Table 39
     SHIN_BONE_LEFT = "Shin Bone (Left) (Table 39)"
     SHIN_BONE_RIGHT = "Shin Bone (Right) (Table 39)"
-    # Table S24 (Side)
-    SHIN_BONE_SIDE_LEFT = "Shin Bone (Left) (Table S24)"  # Oblique
-    SHIN_BONE_SIDE_RIGHT = "Shin Bone (Right) (Table S24)"  # Oblique
+    # Table 64 (Side)
+    SHIN_BONE_SIDE_LEFT = "Shin Bone (Left) (Table 64)"  # Oblique
+    SHIN_BONE_SIDE_RIGHT = "Shin Bone (Right) (Table 64)"  # Oblique
 
     # Table 40
     FOOT_LEFT = "Foot (Left) (Table 40)"

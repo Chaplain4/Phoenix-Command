@@ -83,6 +83,7 @@ class Table8HealingAndRecovery:
             (9000, 99, 52 * P, 0, 67 * P, 0, 22 * M, 0, 2 * H, 0, 7 * H, 3),
             (12000, 102, 38 * P, 0, 57 * P, 0, 19 * M, 0, 95 * M, 0, 6 * H, 1),
             (16000, 105, 25 * P, 0, 44 * P, 0, 15 * M, 0, 75 * M, 0, 5 * H, 0),
+            (16001, 999, 1 * P, 0, 1 * P, 0, 1 * M, 0, 1 * M, 0, 1 * H, 0),
         ]
 
         lookup = physical_damage * 10.0 / target_health
