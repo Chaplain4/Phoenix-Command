@@ -12,7 +12,7 @@ class TestTable1AdvancedDamageHitLocation:
     def test_get_hit_location_front_rear_returns_valid_location(self):
         """Test that front/rear method returns valid hit location."""
         result = Table1AdvancedDamageHitLocation.get_hit_location_front_rear(
-            TargetExposure.IN_THE_OPEN
+            TargetExposure.STANDING_EXPOSED
         )
 
         assert isinstance(result, AdvancedHitLocation)
@@ -21,7 +21,7 @@ class TestTable1AdvancedDamageHitLocation:
     def test_get_hit_location_oblique_returns_valid_location(self):
         """Test that oblique method returns valid hit location."""
         result = Table1AdvancedDamageHitLocation.get_hit_location_oblique(
-            TargetExposure.IN_THE_OPEN
+            TargetExposure.STANDING_EXPOSED
         )
 
         assert isinstance(result, AdvancedHitLocation)
@@ -29,7 +29,7 @@ class TestTable1AdvancedDamageHitLocation:
     def test_get_hit_location_right_side_returns_valid_location(self):
         """Test that right side method returns valid hit location."""
         result = Table1AdvancedDamageHitLocation.get_hit_location_right_side(
-            TargetExposure.IN_THE_OPEN
+            TargetExposure.STANDING_EXPOSED
         )
 
         assert isinstance(result, AdvancedHitLocation)
@@ -37,7 +37,7 @@ class TestTable1AdvancedDamageHitLocation:
     def test_get_hit_location_left_side_returns_valid_location(self):
         """Test that left side method returns valid hit location."""
         result = Table1AdvancedDamageHitLocation.get_hit_location_left_side(
-            TargetExposure.IN_THE_OPEN
+            TargetExposure.STANDING_EXPOSED
         )
 
         assert isinstance(result, AdvancedHitLocation)
@@ -177,22 +177,22 @@ class TestTable1AdvancedDamageHitLocation:
             f"ARMS exposure returned forbidden locations: {results & forbidden}"
 
     def test_in_the_open_can_hit_anywhere(self):
-        """Test that IN_THE_OPEN can potentially hit any location."""
+        """Test that STANDING_EXPOSED can potentially hit any location."""
         results = set()
         for _ in range(1000):
             result = Table1AdvancedDamageHitLocation.get_hit_location_front_rear(
-                TargetExposure.IN_THE_OPEN
+                TargetExposure.STANDING_EXPOSED
             )
             results.add(result)
 
         # Should have good variety of locations
         assert len(results) > 20, \
-            f"IN_THE_OPEN only returned {len(results)} different locations, expected more variety"
+            f"STANDING_EXPOSED only returned {len(results)} different locations, expected more variety"
 
     def test_oblique_exposure_types_work(self):
         """Test all exposure types work for oblique."""
         exposures = [
-            TargetExposure.IN_THE_OPEN,
+            TargetExposure.STANDING_EXPOSED,
             TargetExposure.LOOKING_OVER_COVER,
             TargetExposure.FIRING_OVER_COVER,
             TargetExposure.HEAD,
@@ -208,7 +208,7 @@ class TestTable1AdvancedDamageHitLocation:
     def test_side_exposure_types_work(self):
         """Test all exposure types work for side shots."""
         exposures = [
-            TargetExposure.IN_THE_OPEN,
+            TargetExposure.STANDING_EXPOSED,
             TargetExposure.LOOKING_OVER_COVER,
             TargetExposure.FIRING_OVER_COVER,
             TargetExposure.HEAD,
@@ -229,7 +229,7 @@ class TestTable1AdvancedDamageHitLocation:
         results = []
         for _ in range(50):
             result = Table1AdvancedDamageHitLocation.get_hit_location_front_rear(
-                TargetExposure.IN_THE_OPEN
+                TargetExposure.STANDING_EXPOSED
             )
             results.append(result)
 
@@ -246,12 +246,12 @@ class TestTable1AdvancedDamageHitLocation:
         for _ in range(200):
             front_results.add(
                 Table1AdvancedDamageHitLocation.get_hit_location_front_rear(
-                    TargetExposure.IN_THE_OPEN
+                    TargetExposure.STANDING_EXPOSED
                 )
             )
             oblique_results.add(
                 Table1AdvancedDamageHitLocation.get_hit_location_oblique(
-                    TargetExposure.IN_THE_OPEN
+                    TargetExposure.STANDING_EXPOSED
                 )
             )
 
@@ -268,12 +268,12 @@ class TestTable1AdvancedDamageHitLocation:
         for _ in range(200):
             results_right.add(
                 Table1AdvancedDamageHitLocation.get_hit_location_right_side(
-                    TargetExposure.IN_THE_OPEN
+                    TargetExposure.STANDING_EXPOSED
                 )
             )
             results_left.add(
                 Table1AdvancedDamageHitLocation.get_hit_location_left_side(
-                    TargetExposure.IN_THE_OPEN
+                    TargetExposure.STANDING_EXPOSED
                 )
             )
 
@@ -284,7 +284,7 @@ class TestTable1AdvancedDamageHitLocation:
     def test_coverage_all_exposure_types_front_rear(self):
         """Test that all exposure types are handled in front/rear."""
         all_exposures = [
-            TargetExposure.IN_THE_OPEN,
+            TargetExposure.STANDING_EXPOSED,
             TargetExposure.LOOKING_OVER_COVER,
             TargetExposure.FIRING_OVER_COVER,
             TargetExposure.HEAD,
@@ -331,12 +331,11 @@ class TestTable1AdvancedDamageHitLocation:
         assert len(unique) >= 3, \
             f"HEAD exposure only returned {len(unique)} unique locations in 1000 rolls"
 
-    def test_miss_is_not_returned_for_in_the_open(self):
-        """Test that MISS is not returned for IN_THE_OPEN (should always hit something)."""
+    def test_miss_is_not_returned_for_standing_exposed(self):
+        """Test that MISS is not returned for STANDING_EXPOSED (should always hit something)."""
         for _ in range(100):
             result = Table1AdvancedDamageHitLocation.get_hit_location_front_rear(
-                TargetExposure.IN_THE_OPEN
+                TargetExposure.STANDING_EXPOSED
             )
             assert result != AdvancedHitLocation.MISS, \
-                "IN_THE_OPEN should not return MISS"
-
+                "STANDING_EXPOSED should not return MISS"

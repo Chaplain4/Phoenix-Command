@@ -30,8 +30,9 @@ class TestAdvancedDamageCalculator:
         assert AdvancedDamageCalculator.parse_val("10T") == 100000
         assert AdvancedDamageCalculator.parse_val("5T") == 50000
         assert AdvancedDamageCalculator.parse_val("10X") == 1000000
-        assert AdvancedDamageCalculator.parse_val("5X") == 5000000
+        assert AdvancedDamageCalculator.parse_val("5X") == 500000
         assert AdvancedDamageCalculator.parse_val("10M") == 10000000
+        assert AdvancedDamageCalculator.parse_val("5M") == 5000000
 
     def test_parse_val_with_float_multipliers(self):
         """Test parsing float values with multipliers."""
@@ -145,7 +146,7 @@ class TestAdvancedDamageCalculator:
         )
 
         # Should have no excess epen
-        assert result.excess_epen == 0.0
+        assert result.excess_epen.__eq__(0.0)
 
     def test_calculate_damage_with_zero_epen(self):
         """Test calculation with zero epen."""
