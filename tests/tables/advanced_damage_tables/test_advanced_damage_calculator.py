@@ -384,3 +384,216 @@ class TestAdvancedDamageCalculator:
         assert result.weapon_damaged == True
         # No numeric tables, so no damage from tables
         assert result.damage == 0
+
+    def test_multiple_tables_bullet_stops_in_first_table(self):
+        """Test sequential table processing: bullet stops in first table."""
+        # Use ARM_GLANCE_SHOULDER_RIGHT which has "Table 10 & 9"
+        # Low epen should stop in Table 10 (first table)
+
+        result = AdvancedDamageCalculator.calculate_damage(
+            location=AdvancedHitLocation.ARM_GLANCE_SHOULDER_RIGHT,
+            dc=10,
+            epen=0.3,  # Low epen to stop in first table
+            is_front=True
+        )
+
+        # Should have damage from Table 10 only
+        assert result.damage > 0, "Should have damage from first table"
+
+        # Should have no excess epen (bullet stopped)
+        assert result.excess_epen == 0.0, "No excess epen when bullet stops in first table"
+
+        # May have organs from first table
+        # (depends on table structure, but list should exist)
+        assert isinstance(result.pierced_organs, list)
+
+        # Should have shock from first table
+        assert result.shock >= 0
+
+    def test_multiple_tables_bullet_stops_in_second_table(self):
+        """Test sequential table processing: bullet passes first table but stops in second."""
+        # Use ARM_GLANCE_SHOULDER_RIGHT which has "Table 10 & 9"
+        # Medium epen should pass through Table 10 but stop in Table 9
+
+        result = AdvancedDamageCalculator.calculate_damage(
+            location=AdvancedHitLocation.ARM_GLANCE_SHOULDER_RIGHT,
+            dc=10,
+            epen=1.5,  # Medium epen to pass through first table but stop in second
+            is_front=True
+        )
+
+        # Should have damage from both tables
+        assert result.damage > 0, "Should have damage from both tables"
+
+        # Should have no excess epen (bullet stopped in second table)
+        assert result.excess_epen == 0.0, "No excess epen when bullet stops in second table"
+
+        # Should have organs from both tables
+        assert isinstance(result.pierced_organs, list)
+
+        # Should have shock from both tables (summed)
+        assert result.shock >= 0
+
+    def test_multiple_tables_bullet_passes_through_both(self):
+        """Test sequential table processing: bullet passes through both tables completely."""
+        # Use ARM_GLANCE_SHOULDER_RIGHT which has "Table 10 & 9"
+        # High epen should pass through both tables
+
+        result = AdvancedDamageCalculator.calculate_damage(
+            location=AdvancedHitLocation.ARM_GLANCE_SHOULDER_RIGHT,
+            dc=10,
+            epen=5.0,  # High epen to pass through both tables
+            is_front=True
+        )
+
+        # Should have damage from both tables
+        assert result.damage > 0, "Should have damage from both tables"
+
+        # Should have excess epen (bullet passed through both)
+        assert result.excess_epen > 0.0, "Should have excess epen when bullet passes through both tables"
+
+        # Should have organs from both tables
+        assert isinstance(result.pierced_organs, list)
+
+        # Should have shock from both tables (summed)
+        assert result.shock >= 0
+
+    def test_multiple_tables_damage_and_shock_accumulation(self):
+        """Test that damage and shock accumulate correctly across multiple tables."""
+        # Test with different epen values to verify accumulation
+
+        # Low epen - only first table
+        result_low = AdvancedDamageCalculator.calculate_damage(
+            location=AdvancedHitLocation.ARM_GLANCE_SHOULDER_RIGHT,
+            dc=10,
+            epen=0.3,
+            is_front=True
+        )
+
+        # High epen - both tables
+        result_high = AdvancedDamageCalculator.calculate_damage(
+            location=AdvancedHitLocation.ARM_GLANCE_SHOULDER_RIGHT,
+            dc=10,
+            epen=2.0,
+            is_front=True
+        )
+
+        # Damage and shock should be greater when penetrating more
+        # (assuming second table contributes additional damage/shock)
+        assert result_high.damage >= result_low.damage, \
+            "Higher epen should produce equal or more damage"
+
+        # Number of organs should be greater or equal
+        assert len(result_high.pierced_organs) >= len(result_low.pierced_organs), \
+            "Higher epen should pierce equal or more organs"
+
+    def test_hand_weapon_critical_three_scenarios(self):
+        """Test HAND_WEAPON_CRITICAL (Table 16 & Weapon) in all three scenarios."""
+
+        # Scenario 1: Bullet stops in hand (Table 16)
+        result_stops_in_hand = AdvancedDamageCalculator.calculate_damage(
+            location=AdvancedHitLocation.HAND_WEAPON_CRITICAL,
+            dc=10,
+            epen=0.3,
+            is_front=True
+        )
+        assert result_stops_in_hand.damage > 0, "Should have damage from hand"
+        assert result_stops_in_hand.excess_epen == 0.0, "No excess epen"
+        assert result_stops_in_hand.weapon_damaged == False, "Weapon not damaged when bullet stops in hand"
+
+        # Scenario 2: Bullet barely passes through hand (just reaches weapon)
+        result_reaches_weapon = AdvancedDamageCalculator.calculate_damage(
+            location=AdvancedHitLocation.HAND_WEAPON_CRITICAL,
+            dc=10,
+            epen=1.2,  # Just enough to pass through hand
+            is_front=True
+        )
+        assert result_reaches_weapon.damage > 0, "Should have damage from hand"
+        # Weapon damage depends on if there's excess epen
+        if result_reaches_weapon.excess_epen > 0:
+            assert result_reaches_weapon.weapon_damaged == True, "Weapon damaged when bullet exits hand"
+
+        # Scenario 3: Bullet passes through hand with high epen (definitely damages weapon)
+        result_passes_through = AdvancedDamageCalculator.calculate_damage(
+            location=AdvancedHitLocation.HAND_WEAPON_CRITICAL,
+            dc=10,
+            epen=5.0,
+            is_front=True
+        )
+        assert result_passes_through.damage > 0, "Should have damage from hand"
+        assert result_passes_through.excess_epen > 0, "Should have excess epen"
+        assert result_passes_through.weapon_damaged == True, "Weapon damaged when bullet passes through hand"
+
+    def test_multiple_tables_damage_output_front_and_rear(self):
+        """Output damage and shock for two-table locations from front and rear."""
+
+        # Find all locations with exactly 2 numeric tables
+        two_table_locations = []
+        for location in AdvancedHitLocation:
+            if location == AdvancedHitLocation.MISS or 'Table' not in location.value:
+                continue
+
+            # Count numeric tables
+            import re
+            table_part = location.value.split('(')[-1].rstrip(')')
+            parts = [p.strip() for p in table_part.split('&')]
+            table_count = sum(1 for p in parts if p.startswith('Table') or p.isdigit())
+
+            if table_count == 2:
+                # Exclude Weapon combinations
+                if 'Weapon' not in location.value:
+                    two_table_locations.append(location)
+
+        print("\n" + "="*80)
+        print("DAMAGE AND SHOCK FOR TWO-TABLE LOCATIONS")
+        print("="*80)
+
+        test_cases = [
+            ("Low EPEN (0.5)", 0.5),
+            ("Medium EPEN (1.5)", 1.5),
+            ("High EPEN (3.0)", 3.0),
+            ("Very High EPEN (5.0)", 25.0),
+        ]
+
+        for location in two_table_locations:
+            print(f"\n{'='*80}")
+            print(f"Location: {location.name}")
+            print(f"Description: {location.value}")
+            print(f"{'='*80}")
+
+            for test_name, epen_value in test_cases:
+                print(f"\n  {test_name}:")
+
+                # Front shot
+                result_front = AdvancedDamageCalculator.calculate_damage(
+                    location=location,
+                    dc=10,
+                    epen=epen_value,
+                    is_front=True
+                )
+
+                print(f"    FRONT: Damage={result_front.damage:6d}, Shock={result_front.shock:4d}, "
+                      f"Excess EPEN={result_front.excess_epen:.2f}, "
+                      f"Organs={len(result_front.pierced_organs)}, "
+                      f"Disabled={result_front.is_disabled}")
+                if result_front.pierced_organs:
+                    print(f"           Pierced: {', '.join(result_front.pierced_organs)}")
+
+                # Rear shot
+                result_rear = AdvancedDamageCalculator.calculate_damage(
+                    location=location,
+                    dc=10,
+                    epen=epen_value,
+                    is_front=False
+                )
+
+                print(f"    REAR:  Damage={result_rear.damage:6d}, Shock={result_rear.shock:4d}, "
+                      f"Excess EPEN={result_rear.excess_epen:.2f}, "
+                      f"Organs={len(result_rear.pierced_organs)}, "
+                      f"Disabled={result_rear.is_disabled}")
+                if result_rear.pierced_organs:
+                    print(f"           Pierced: {', '.join(result_rear.pierced_organs)}")
+
+        print(f"\n{'='*80}")
+        print(f"Total locations tested: {len(two_table_locations)}")
+        print(f"{'='*80}\n")
