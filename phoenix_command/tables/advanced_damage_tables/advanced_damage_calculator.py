@@ -6,8 +6,6 @@ from phoenix_command.tables.advanced_damage_tables.tables_data import TablesData
 
 
 class AdvancedDamageCalculator:
-    # Damage tables database
-
     @classmethod
     def calculate_damage(cls, location: AdvancedHitLocation, dc: int, epen: float, is_front: bool) -> DamageResult:
         """
