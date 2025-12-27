@@ -11,4 +11,5 @@ class DamageResult:
     shock: int = 0
     excess_epen: float = 0.0
     is_disabled: bool = False
+    weapon_damaged: bool = False
     pierced_organs: List[str] = field(default_factory=list)

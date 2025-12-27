@@ -7,50 +7,58 @@ from phoenix_command.tables.advanced_damage_tables.tables_data import TablesData
 
 class AdvancedDamageCalculator:
     @classmethod
-    def calculate_damage(cls, location: AdvancedHitLocation, dc: int, epen: float, is_front: bool) -> DamageResult:
-        """
-        Calculates damage from a hit.
+    def calculate_damage(
+            cls,
+            location: AdvancedHitLocation,
+            dc: int,
+            epen: float,
+            is_front: bool,
+    ) -> DamageResult:
+        table_references: list[int | str] = []
+        if '(' in location.value:
+            for part in location.value.split('(')[-1].rstrip(')').split('&'):
+                part = part.strip()
+                if part == 'Weapon':
+                    table_references.append('Weapon')
+                else:
+                    m = re.search(r'\d+', part)
+                    if m:
+                        table_references.append(int(m.group()))
 
-        Args:
-            location: Hit location
-            dc: Damage Class (ammunition damage class)
-            epen: Effective Penetration (effective penetration value)
-            is_front: True if shot from front, False if from rear
-
-        Returns:
-            DamageResult with information about damage, shock, pierced organs, etc.
-        """
-        table_numbers = re.findall(r'S?\d+', location.value.split('(Table')[-1] if 'Table' in location.value else '')
         final_res = DamageResult(location=location)
+        current_epen = epen
 
-        for t_num_str in table_numbers:
-            # Try to convert to int for numeric tables, skip if alphanumeric (S-tables not yet implemented)
-            try:
-                t_num = int(t_num_str)
-            except ValueError:
-                # Skip S-tables (S1, S24, etc.) as they are not yet in TABLES_DATA
+        for ref in table_references:
+            if ref == 'Weapon':
+                if current_epen > 0:
+                    final_res.weapon_damaged = True
                 continue
 
-            if t_num not in TablesData.TABLES_DATA:
+            data = TablesData.TABLES_DATA.get(ref)
+            if not data:
                 continue
 
-            data = TablesData.TABLES_DATA[t_num]
-            thresholds: list[float] = data["epen"]
-            dc_values: list[str] | None = data["dc"].get(dc)
-
+            thresholds = data["epen"]
+            dc_values = data["dc"].get(dc)
             if not dc_values:
                 continue
 
-            # Find last threshold the bullet overcame
-            penetration_idx = -1
-            for idx, threshold_value in enumerate(thresholds):
-                if epen >= threshold_value:
-                    penetration_idx = idx
+            penetration_idx = max(
+                (i for i, t in enumerate(thresholds) if current_epen >= t),
+                default=-1,
+            )
 
+            final_res.excess_epen = 0.0
             if is_front:
-                cls._process_front_shot(data, thresholds, dc_values, penetration_idx, epen, final_res)
+                cls._process_front_shot(
+                    data, thresholds, dc_values, penetration_idx, current_epen, final_res
+                )
             else:
-                cls._process_rear_shot(data, thresholds, dc_values, penetration_idx, epen, final_res)
+                cls._process_rear_shot(
+                    data, thresholds, dc_values, penetration_idx, current_epen, final_res
+                )
+
+            current_epen = final_res.excess_epen
 
         return final_res
 

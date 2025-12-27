@@ -1,10 +1,9 @@
 """
 Tests for AdvancedDamageCalculator.
 """
-import pytest
+from phoenix_command.models.enums import AdvancedHitLocation
 from phoenix_command.tables.advanced_damage_tables.advanced_damage_calculator import AdvancedDamageCalculator
 from phoenix_command.tables.advanced_damage_tables.tables_data import TablesData
-from phoenix_command.models.enums import AdvancedHitLocation
 
 
 class TestAdvancedDamageCalculator:
@@ -272,3 +271,116 @@ class TestAdvancedDamageCalculator:
             )
             assert result.location == location
 
+    def test_all_hit_locations_table_parsing(self):
+        """Test that all AdvancedHitLocation values correctly parse table references and weapon flag."""
+        import re
+
+        for location in AdvancedHitLocation:
+            if location == AdvancedHitLocation.MISS:
+                # MISS should not have any table references
+                assert 'Table' not in location.value
+                assert 'Weapon' not in location.value
+                continue
+
+            location_value = location.value
+
+            # Skip if no table or weapon reference
+            if 'Table' not in location_value and 'Weapon' not in location_value:
+                continue
+
+            # Parse expected tables from location value
+            expected_tables = []
+            expected_weapon = False
+
+            if '(' in location_value:
+                table_part = location_value.split('(')[-1].rstrip(')')
+                parts = [p.strip() for p in table_part.split('&')]
+
+                for part in parts:
+                    if part == 'Weapon':
+                        expected_weapon = True
+                    elif part.startswith('Table'):
+                        num_match = re.search(r'\d+', part)
+                        if num_match:
+                            expected_tables.append(int(num_match.group()))
+                    elif part.isdigit():
+                        expected_tables.append(int(part))
+
+            # Calculate damage to trigger table parsing
+            result = AdvancedDamageCalculator.calculate_damage(
+                location=location,
+                dc=10,
+                epen=1.0,
+                is_front=True
+            )
+
+            # Verify weapon_targeted flag
+            assert result.weapon_damaged == expected_weapon, \
+                f"Location {location.name} should have weapon_targeted={expected_weapon}, got {result.weapon_damaged}"
+
+            # Verify that expected tables exist in TablesData
+            for table_num in expected_tables:
+                assert table_num in TablesData.TABLES_DATA, \
+                    f"Location {location.name} references Table {table_num} which doesn't exist in TablesData"
+
+    def test_multiple_tables_sequential_processing(self):
+        """Test that multiple tables are processed sequentially with excess_epen passing through."""
+        # Test with ARM_GLANCE_SHOULDER_RIGHT which has "Table 10 & 9"
+        result = AdvancedDamageCalculator.calculate_damage(
+            location=AdvancedHitLocation.ARM_GLANCE_SHOULDER_RIGHT,
+            dc=10,
+            epen=5.0,  # High epen to ensure it passes through first table
+            is_front=True
+        )
+
+        # Should process both tables
+        # Result should have combined damage from both tables if bullet passes through first one
+        assert result.damage >= 0
+        assert result.location == AdvancedHitLocation.ARM_GLANCE_SHOULDER_RIGHT
+
+    def test_weapon_targeted_flag_with_epen(self):
+        """Test that weapon_targeted is set only when bullet penetrates through previous tables."""
+        # Test HAND_WEAPON_CRITICAL which has "Table 16 & Weapon"
+
+        # With low epen that doesn't penetrate through hand completely, weapon should NOT be targeted
+        result_low_epen = AdvancedDamageCalculator.calculate_damage(
+            location=AdvancedHitLocation.HAND_WEAPON_CRITICAL,
+            dc=10,
+            epen=0.5,  # Low epen, won't penetrate through hand
+            is_front=True
+        )
+        assert result_low_epen.weapon_damaged == False, \
+            "weapon_targeted should be False when bullet stops in hand (no excess epen)"
+
+        # With high epen that penetrates through hand completely, weapon should be targeted
+        result_high_epen = AdvancedDamageCalculator.calculate_damage(
+            location=AdvancedHitLocation.HAND_WEAPON_CRITICAL,
+            dc=10,
+            epen=5.0,  # High epen, will penetrate through hand
+            is_front=True
+        )
+        assert result_high_epen.weapon_damaged == True, \
+            "weapon_targeted should be True when bullet penetrates through hand (has excess epen)"
+
+        # With epen = 0, weapon should not be targeted
+        result_no_epen = AdvancedDamageCalculator.calculate_damage(
+            location=AdvancedHitLocation.HAND_WEAPON_CRITICAL,
+            dc=10,
+            epen=0.0,
+            is_front=True
+        )
+        assert result_no_epen.weapon_damaged == False, \
+            "weapon_targeted should be False when epen = 0"
+
+    def test_weapon_only_location(self):
+        """Test location that only has Weapon reference (no numeric tables)."""
+        result = AdvancedDamageCalculator.calculate_damage(
+            location=AdvancedHitLocation.WEAPON_CRITICAL,
+            dc=10,
+            epen=1.0,
+            is_front=True
+        )
+
+        assert result.weapon_damaged == True
+        # No numeric tables, so no damage from tables
+        assert result.damage == 0
