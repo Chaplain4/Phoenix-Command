@@ -5,7 +5,6 @@ class Table5AutoPelletShrapnel:
 
     @classmethod
     def ceil_key(cls, value: float, keys):
-        """Округление вверх до ближайшего ключа."""
         for k in keys:
             if value <= k:
                 return k
@@ -70,14 +69,12 @@ class Table5AutoPelletShrapnel:
         }
 
         FIRE_COLUMNS = [3, 4, 5, 6, 7, 8, 9, 10, 12, 18, 36, 54, 72, 144]
-        # --- 1. Округляем arc_of_fire вверх ---
         arc_keys = list(FIRE_TABLE.keys())
         arc_keys.sort()
         if arc_of_fire > arc_keys[-1]:
             raise ValueError("arc_of_fire too large")
         arc_key = Table5AutoPelletShrapnel.ceil_key(arc_of_fire, arc_keys)
 
-        # --- 2. Применяем size_modifier: смещение по строкам ---
         row_index = arc_keys.index(arc_key)
         shifted_index = row_index + size_modifier
         shifted_index = max(0, min(len(arc_keys) - 1, shifted_index))  # Clamp to bounds
@@ -86,19 +83,13 @@ class Table5AutoPelletShrapnel:
         row_key = arc_keys[shifted_index]
 
         row = FIRE_TABLE[row_key]
-
-        # --- 3. Округляем rate_of_fire вверх ---
         if rate_of_fire > 144:
             raise ValueError("rate_of_fire too large")
         col_key = Table5AutoPelletShrapnel.ceil_key(rate_of_fire, FIRE_COLUMNS)
         col_index = FIRE_COLUMNS.index(col_key)
         cell = row[col_index]
-
-        # --- 4. Если * — возвращаем число ---
         if cell.startswith("*"):
             return int(cell[1:])
-
-        # --- 5. Если без * — бросаем 0–100 и сравниваем ---
         threshold = int(cell)
         roll = random.randint(0, 100)
         return 1 if threshold < roll else 0
@@ -130,23 +121,19 @@ class Table5AutoPelletShrapnel:
             candidates = range(num_guaranteed, len(full_values))
             max_val = 87
 
-        # Handle base > max_val
         if base > max_val:
             base_index = 0 if is_guaranteed else num_guaranteed
-        # Handle base <= min_val (take rightmost)
         elif base <= full_values[-1]:
             base_index = len(full_values) - 1
         else:
-            # Find rightmost (ceil: smallest >= base) in candidates
             base_index = None
             for i in reversed(list(candidates)):
                 if full_values[i] >= base:
                     base_index = i
                     break
             if base_index is None:
-                base_index = list(candidates)[0]  # Fallback to leftmost if all < base (shouldn't occur)
+                base_index = list(candidates)[0]
 
-        # Adjust index: positive size_modifier moves left (higher values)
         adjusted_index = base_index - size_modifier
         adjusted_index = max(0, min(len(full_values) - 1, adjusted_index))
 
@@ -156,6 +143,5 @@ class Table5AutoPelletShrapnel:
         if final_is_guaranteed:
             return min(58, final_value)
         else:
-            # Probabilistic: chance of at least one hit
             rand = random.randint(0, 99)
             return 1 if rand < final_value else 0
