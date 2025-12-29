@@ -2,8 +2,6 @@
 
 from phoenix_command.models.gear import Gear
 
-
-# Equipment list from Equipment Table
 EQUIPMENT_LIST = [
     Gear(name="Bayonet", weight=1.0, description="Standard bayonet attachment"),
     Gear(name="Binoculars", weight=2.0, description="Field binoculars"),
