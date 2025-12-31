@@ -405,6 +405,100 @@ ammo_762x25_ap = AmmoType(
 )
 
 # ============================================================================
+# .45 ACP ammunition types
+# ============================================================================
+
+ammo_45_m15_fmj = AmmoType(
+    name="45 ACP FMJ (M15)",
+    abbreviation="FMJ",
+    ballistic_data=[
+        BallisticData(range_hexes=10,  penetration=1.5, damage_class=3),
+        BallisticData(range_hexes=20,  penetration=1.4, damage_class=3),
+        BallisticData(range_hexes=40,  penetration=1.1, damage_class=2),
+        BallisticData(range_hexes=70,  penetration=0.9, damage_class=1),
+        BallisticData(range_hexes=100, penetration=0.8, damage_class=1),
+        BallisticData(range_hexes=200, penetration=0.3, damage_class=1, beyond_max_range=True),
+        BallisticData(range_hexes=300, penetration=0.2, damage_class=1, beyond_max_range=True),
+        BallisticData(range_hexes=400, penetration=0.1, damage_class=1, beyond_max_range=True),
+    ]
+)
+
+ammo_45_m15_jhp = AmmoType(
+    name="45 ACP JHP (M15)",
+    abbreviation="JHP",
+    ballistic_data=[
+        BallisticData(range_hexes=10,  penetration=1.4, damage_class=4),
+        BallisticData(range_hexes=20,  penetration=1.3, damage_class=3),
+        BallisticData(range_hexes=40,  penetration=1.1, damage_class=3),
+        BallisticData(range_hexes=70,  penetration=0.8, damage_class=2),
+        BallisticData(range_hexes=100, penetration=0.7, damage_class=1),
+        BallisticData(range_hexes=200, penetration=0.3, damage_class=1, beyond_max_range=True),
+        BallisticData(range_hexes=300, penetration=0.1, damage_class=1, beyond_max_range=True),
+        BallisticData(range_hexes=400, penetration=0.1, damage_class=1, beyond_max_range=True),
+    ]
+)
+
+ammo_45_m15_ap = AmmoType(
+    name="45 ACP AP (M15)",
+    abbreviation="AP",
+    ballistic_data=[
+        BallisticData(range_hexes=10,  penetration=2.1, damage_class=3),
+        BallisticData(range_hexes=20,  penetration=2.0, damage_class=3),
+        BallisticData(range_hexes=40,  penetration=1.7, damage_class=2),
+        BallisticData(range_hexes=70,  penetration=1.3, damage_class=1),
+        BallisticData(range_hexes=100, penetration=1.0, damage_class=1),
+        BallisticData(range_hexes=200, penetration=0.5, damage_class=1, beyond_max_range=True),
+        BallisticData(range_hexes=300, penetration=0.2, damage_class=1, beyond_max_range=True),
+        BallisticData(range_hexes=400, penetration=0.1, damage_class=1, beyond_max_range=True),
+    ]
+)
+
+ammo_45_m1911_fmj = AmmoType(
+    name="45 ACP FMJ (M1911A1)",
+    abbreviation="FMJ",
+    ballistic_data=[
+        BallisticData(range_hexes=10,  penetration=1.6, damage_class=3),
+        BallisticData(range_hexes=20,  penetration=1.5, damage_class=3),
+        BallisticData(range_hexes=40,  penetration=1.2, damage_class=2),
+        BallisticData(range_hexes=70,  penetration=1.0, damage_class=1),
+        BallisticData(range_hexes=100, penetration=0.8, damage_class=1),
+        BallisticData(range_hexes=200, penetration=0.3, damage_class=1, beyond_max_range=True),
+        BallisticData(range_hexes=300, penetration=0.2, damage_class=1, beyond_max_range=True),
+        BallisticData(range_hexes=400, penetration=0.1, damage_class=1, beyond_max_range=True),
+    ]
+)
+
+ammo_45_m1911_jhp = AmmoType(
+    name="45 ACP JHP (M1911A1)",
+    abbreviation="JHP",
+    ballistic_data=[
+        BallisticData(range_hexes=10,  penetration=1.5, damage_class=4),
+        BallisticData(range_hexes=20,  penetration=1.4, damage_class=4),
+        BallisticData(range_hexes=40,  penetration=1.2, damage_class=3),
+        BallisticData(range_hexes=70,  penetration=0.9, damage_class=2),
+        BallisticData(range_hexes=100, penetration=0.7, damage_class=1),
+        BallisticData(range_hexes=200, penetration=0.3, damage_class=1, beyond_max_range=True),
+        BallisticData(range_hexes=300, penetration=0.1, damage_class=1, beyond_max_range=True),
+        BallisticData(range_hexes=400, penetration=0.1, damage_class=1, beyond_max_range=True),
+    ]
+)
+
+ammo_45_m1911_ap = AmmoType(
+    name="45 ACP AP (M1911A1)",
+    abbreviation="AP",
+    ballistic_data=[
+        BallisticData(range_hexes=10,  penetration=2.2, damage_class=3),
+        BallisticData(range_hexes=20,  penetration=2.1, damage_class=3),
+        BallisticData(range_hexes=40,  penetration=1.8, damage_class=2),
+        BallisticData(range_hexes=70,  penetration=1.4, damage_class=1),
+        BallisticData(range_hexes=100, penetration=1.1, damage_class=1),
+        BallisticData(range_hexes=200, penetration=0.5, damage_class=1, beyond_max_range=True),
+        BallisticData(range_hexes=300, penetration=0.2, damage_class=1, beyond_max_range=True),
+        BallisticData(range_hexes=400, penetration=0.1, damage_class=1, beyond_max_range=True),
+    ]
+)
+
+# ============================================================================
 # .32 ACP ammunition types
 # ============================================================================
 ammo_32acp_fmj = AmmoType(
@@ -712,6 +806,52 @@ m92f_ballistic = WeaponBallisticData(
         RangeData(range_hexes=200, value=13),
         RangeData(range_hexes=300, value=22),
         RangeData(range_hexes=400, value=32),
+    ]
+)
+
+m1911a1_ballistic = WeaponBallisticData(
+    ballistic_accuracy=[
+        RangeData(range_hexes=10,  value=45),
+        RangeData(range_hexes=20,  value=36),
+        RangeData(range_hexes=40,  value=27),
+        RangeData(range_hexes=70,  value=20),
+        RangeData(range_hexes=100, value=15),
+        RangeData(range_hexes=200, value=5),
+        RangeData(range_hexes=300, value=0),
+        RangeData(range_hexes=400, value=-4),
+    ],
+    time_of_flight=[
+        RangeData(range_hexes=10,  value=1),
+        RangeData(range_hexes=20,  value=2),
+        RangeData(range_hexes=40,  value=3),
+        RangeData(range_hexes=70,  value=5),
+        RangeData(range_hexes=100, value=8),
+        RangeData(range_hexes=200, value=19),
+        RangeData(range_hexes=300, value=31),
+        RangeData(range_hexes=400, value=45),
+    ]
+)
+
+m15_ballistic = WeaponBallisticData(
+    ballistic_accuracy=[
+        RangeData(range_hexes=10,  value=45),
+        RangeData(range_hexes=20,  value=37),
+        RangeData(range_hexes=40,  value=27),
+        RangeData(range_hexes=70,  value=20),
+        RangeData(range_hexes=100, value=15),
+        RangeData(range_hexes=200, value=5),
+        RangeData(range_hexes=300, value=0),
+        RangeData(range_hexes=400, value=-4),
+    ],
+    time_of_flight=[
+        RangeData(range_hexes=10,  value=1),
+        RangeData(range_hexes=20,  value=2),
+        RangeData(range_hexes=40,  value=3),
+        RangeData(range_hexes=70,  value=5),
+        RangeData(range_hexes=100, value=8),
+        RangeData(range_hexes=200, value=20),
+        RangeData(range_hexes=300, value=32),
+        RangeData(range_hexes=400, value=47),
     ]
 )
 
@@ -1135,6 +1275,72 @@ sw_m469 = Weapon(
     aim_time_modifiers={1: -16, 2: -11, 3: -10, 4: -9, 5: -8},
     ammunition_types=[ammo_9mm_vp70_fmj, ammo_9mm_vp70_jhp, ammo_9mm_vp70_ap],
     ballistic_data=sw_m469_ballistic
+)
+
+m1911a1 = Weapon(
+    name="M1911A1",
+    weight=3.0,
+    description="The Colt 45 Automatic Pistol has been the USA's standard military sidearm since WW I.",
+    caliber="45 ACP",
+    weapon_type="Automatic Pistol",
+    country="USA",
+    length_deployed=9.0,
+    reload_time=4,
+    actions_to_cycle=None,
+    self_loading_action=True,
+    full_auto=False,
+    ammo_capacity=7,
+    ammo_weight=0.70,
+    ammo_feed_device=AmmoFeedDevice.MAGAZINE,
+    knock_down=5,
+    sustained_auto_burst=5,
+    aim_time_modifiers={1: -18, 2: -11, 3: -10, 4: -9, 5: -8, 6: -7},
+    ammunition_types=[ammo_45_m1911_fmj, ammo_45_m1911_jhp, ammo_45_m1911_ap],
+    ballistic_data=m1911a1_ballistic
+)
+
+m15 = Weapon(
+    name="M15",
+    weight=2.8,
+    description="The M15 General Officers Pistol is a shortened version of the M1911A1.",
+    caliber="45 ACP",
+    weapon_type="Automatic Pistol",
+    country="USA",
+    length_deployed=8.0,
+    reload_time=4,
+    actions_to_cycle=None,
+    self_loading_action=True,
+    full_auto=False,
+    ammo_capacity=7,
+    ammo_weight=0.70,
+    ammo_feed_device=AmmoFeedDevice.MAGAZINE,
+    knock_down=5,
+    sustained_auto_burst=5,
+    aim_time_modifiers={1: -18, 2: -11, 3: -10, 4: -9, 5: -8, 6: -7},
+    ammunition_types=[ammo_45_m15_fmj, ammo_45_m15_jhp, ammo_45_m15_ap],
+    ballistic_data=m15_ballistic
+)
+
+asp_9mm = Weapon(
+    name="ASP 9mm",
+    weight=1.4,
+    description="Modified Smith & Wesson M39 with Guttersnipe sights intended for high level security.",
+    caliber="9mm Parabellum",
+    weapon_type="Automatic Pistol",
+    country="USA",
+    length_deployed=7.0,
+    reload_time=4,
+    actions_to_cycle=None,
+    self_loading_action=True,
+    full_auto=False,
+    ammo_capacity=7,
+    ammo_weight=0.40,
+    ammo_feed_device=AmmoFeedDevice.MAGAZINE,
+    knock_down=3,
+    sustained_auto_burst=4,
+    aim_time_modifiers={1: -16, 2: -12, 3: -10},
+    ammunition_types=[ammo_9mm_v2_fmj, ammo_9mm_v2_jhp, ammo_9mm_v2_ap],
+    ballistic_data=pistol_9mm_v2_ballistic
 )
 
 WEAPONS_LIST = [
