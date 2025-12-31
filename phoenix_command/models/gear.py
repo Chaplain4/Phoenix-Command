@@ -10,6 +10,7 @@ class BallisticData:
     range_hexes: int
     penetration: float
     damage_class: int
+    beyond_max_range: bool = False
 
 
 @dataclass
@@ -99,7 +100,7 @@ class Weapon(Gear):
     length_deployed: float  # Overall weapon length in inches when deployed
     length_folded: Optional[float] = None  # Length with stock folded (if applicable)
     reload_time: int = 0  # in Action Counts
-    rate_of_fire: Optional[int] = None  # in Action Counts, None if no magazine
+    actions_to_cycle: Optional[int] = None  # in Action Counts, None if no magazine
     self_loading_action: bool = False
     full_auto: bool = False
     full_auto_rof: Optional[int] = None  # rounds per half second burst
