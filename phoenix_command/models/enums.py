@@ -305,3 +305,48 @@ class AmmoFeedDevice(Enum):
     BELT = "Belt"
     DRUM = "Drum"
     ROUND = "Round"
+
+class ArmorMaterial(Enum):
+    """
+    Armor material types with different degradation characteristics.
+    Materials affect armor protection degradation on hit and penetration.
+
+    Each material has:
+    - name: Material name
+    - degradation_on_hit: Protection degradation % on non-penetrating hit
+    - degradation_on_penetration: Protection degradation % when penetrated
+    - global_degradation: If True, damage affects entire armor piece, not just hit location
+    """
+    # (name, degradation_on_hit %, degradation_on_penetration %, global_degradation)
+    KEVLAR = ("Kevlar", 5.0, 10.0, False)
+    UHMWPE = ("UHMWPE", 5.0, 10.0, False)  # Ultra-High-Molecular-Weight Polyethylene
+    STEEL = ("Steel", 0.0, 5.0, False)
+    TITANIUM = ("Titanium", 0.0, 5.0, False)
+    SILICON_CARBIDE = ("Silicon Carbide", 20.0, 25.0, True)  # Ceramic - shatters affect whole plate
+    BORON_CARBIDE = ("Boron Carbide", 35.0, 45.0, True)  # Ceramic - shatters affect whole plate
+
+    def __init__(self, display_name: str, degradation_on_hit: float, degradation_on_penetration: float, global_degradation: bool):
+        self._display_name = display_name
+        self._degradation_on_hit = degradation_on_hit
+        self._degradation_on_penetration = degradation_on_penetration
+        self._global_degradation = global_degradation
+
+    @property
+    def display_name(self) -> str:
+        """Display name of the material."""
+        return self._display_name
+
+    @property
+    def degradation_on_hit(self) -> float:
+        """Protection degradation percentage on non-penetrating hit."""
+        return self._degradation_on_hit
+
+    @property
+    def degradation_on_penetration(self) -> float:
+        """Protection degradation percentage when armor is penetrated."""
+        return self._degradation_on_penetration
+
+    @property
+    def global_degradation(self) -> bool:
+        """Whether damage affects entire armor piece or just the hit location."""
+        return self._global_degradation
