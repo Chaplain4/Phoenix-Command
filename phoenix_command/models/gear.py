@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Optional
 
-from phoenix_command.models.enums import AmmoFeedDevice, AdvancedHitLocation, ArmorMaterial
+from phoenix_command.models.enums import AmmoFeedDevice, AdvancedHitLocation, ArmorMaterial, Caliber, WeaponType, Country
 
 
 @dataclass
@@ -264,9 +264,9 @@ class Armor(Gear):
 @dataclass
 class Weapon(Gear):
     """Weapon with ballistic and operational characteristics."""
-    caliber: str
-    weapon_type: str  # e.g., "Assault Rifle", "Pistol"
-    country: str
+    caliber: Caliber
+    weapon_type: WeaponType
+    country: Country
     length_deployed: float  # Overall weapon length in inches when deployed
     length_folded: Optional[float] = None  # Length with stock folded (if applicable)
     reload_time: int = 0  # in Action Counts
@@ -283,7 +283,7 @@ class Weapon(Gear):
     ammunition_types: list[AmmoType] = field(default_factory=list)  # Available ammo types
     ballistic_data: Optional[WeaponBallisticData] = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.aim_time_modifiers is None:
             self.aim_time_modifiers = {}
         if self.ammunition_types is None:

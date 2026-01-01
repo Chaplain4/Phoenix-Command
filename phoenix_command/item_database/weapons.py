@@ -1,8 +1,7 @@
 """Database of weapons with their ballistic characteristics."""
 
 from phoenix_command.models.gear import Weapon, AmmoType, BallisticData, WeaponBallisticData, RangeData
-from phoenix_command.models.enums import AmmoFeedDevice
-
+from phoenix_command.models.enums import AmmoFeedDevice, Caliber, WeaponType, Country
 
 # ============================================================================
 # 5.56mm NATO ammunition types
@@ -1413,6 +1412,141 @@ ammo_556_bushmaster_ap = AmmoType(
     ]
 )
 
+ammo_556_aug_fmj = AmmoType(
+    name="5.56mm NATO FMJ (AUG)",
+    abbreviation="FMJ",
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=15.0, damage_class=6),
+        BallisticData(range_hexes=20, penetration=14.0, damage_class=6),
+        BallisticData(range_hexes=40, penetration=13.0, damage_class=6),
+        BallisticData(range_hexes=70, penetration=11.0, damage_class=5),
+        BallisticData(range_hexes=100, penetration=9.9, damage_class=5),
+        BallisticData(range_hexes=200, penetration=6.3, damage_class=4),
+        BallisticData(range_hexes=300, penetration=4.0, damage_class=3),
+        BallisticData(range_hexes=400, penetration=2.5, damage_class=2, beyond_max_range=True),
+    ]
+)
+
+ammo_556_aug_jhp = AmmoType(
+    name="5.56mm NATO JHP (AUG)",
+    abbreviation="JHP",
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=14.0, damage_class=8),
+        BallisticData(range_hexes=20, penetration=14.0, damage_class=8),
+        BallisticData(range_hexes=40, penetration=12.0, damage_class=7),
+        BallisticData(range_hexes=70, penetration=11.0, damage_class=7),
+        BallisticData(range_hexes=100, penetration=9.5, damage_class=7),
+        BallisticData(range_hexes=200, penetration=6.0, damage_class=6),
+        BallisticData(range_hexes=300, penetration=3.8, damage_class=4),
+        BallisticData(range_hexes=400, penetration=2.4, damage_class=3, beyond_max_range=True),
+    ]
+)
+
+ammo_556_aug_ap = AmmoType(
+    name="5.56mm NATO AP (AUG)",
+    abbreviation="AP",
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=21.0, damage_class=6),
+        BallisticData(range_hexes=20, penetration=20.0, damage_class=6),
+        BallisticData(range_hexes=40, penetration=18.0, damage_class=6),
+        BallisticData(range_hexes=70, penetration=16.0, damage_class=5),
+        BallisticData(range_hexes=100, penetration=14.0, damage_class=5),
+        BallisticData(range_hexes=200, penetration=8.8, damage_class=3),
+        BallisticData(range_hexes=300, penetration=5.6, damage_class=3),
+        BallisticData(range_hexes=400, penetration=3.5, damage_class=2, beyond_max_range=True),
+    ]
+)
+
+ammo_762_l1a1_fmj = AmmoType(
+    name="7.62mm NATO FMJ (L1A1)",
+    abbreviation="FMJ",
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=18.0, damage_class=8),
+        BallisticData(range_hexes=20, penetration=18.0, damage_class=8),
+        BallisticData(range_hexes=40, penetration=17.0, damage_class=8),
+        BallisticData(range_hexes=70, penetration=15.0, damage_class=7),
+        BallisticData(range_hexes=100, penetration=14.0, damage_class=7),
+        BallisticData(range_hexes=200, penetration=9.8, damage_class=6),
+        BallisticData(range_hexes=300, penetration=7.0, damage_class=6),
+        BallisticData(range_hexes=400, penetration=5.0, damage_class=5, beyond_max_range=True),
+    ]
+)
+
+ammo_762_l1a1_jhp = AmmoType(
+    name="7.62mm NATO JHP (L1A1)",
+    abbreviation="JHP",
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=18.0, damage_class=9),
+        BallisticData(range_hexes=20, penetration=17.0, damage_class=9),
+        BallisticData(range_hexes=40, penetration=16.0, damage_class=9),
+        BallisticData(range_hexes=70, penetration=15.0, damage_class=9),
+        BallisticData(range_hexes=100, penetration=13.0, damage_class=9),
+        BallisticData(range_hexes=200, penetration=9.4, damage_class=8),
+        BallisticData(range_hexes=300, penetration=6.7, damage_class=7),
+        BallisticData(range_hexes=400, penetration=4.8, damage_class=7, beyond_max_range=True),
+    ]
+)
+
+ammo_762_l1a1_ap = AmmoType(
+    name="7.62mm NATO AP (L1A1)",
+    abbreviation="AP",
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=26.0, damage_class=8),
+        BallisticData(range_hexes=20, penetration=25.0, damage_class=7),
+        BallisticData(range_hexes=40, penetration=24.0, damage_class=7),
+        BallisticData(range_hexes=70, penetration=21.0, damage_class=7),
+        BallisticData(range_hexes=100, penetration=19.0, damage_class=7),
+        BallisticData(range_hexes=200, penetration=14.0, damage_class=6),
+        BallisticData(range_hexes=300, penetration=9.9, damage_class=6),
+        BallisticData(range_hexes=400, penetration=7.1, damage_class=5, beyond_max_range=True),
+    ]
+)
+
+ammo_762_fal_fmj = AmmoType(
+    name="7.62mm NATO FMJ (FN FAL)",
+    abbreviation="FMJ",
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=19.0, damage_class=8),
+        BallisticData(range_hexes=20, penetration=19.0, damage_class=8),
+        BallisticData(range_hexes=40, penetration=17.0, damage_class=8),
+        BallisticData(range_hexes=70, penetration=16.0, damage_class=7),
+        BallisticData(range_hexes=100, penetration=14.0, damage_class=7),
+        BallisticData(range_hexes=200, penetration=10.0, damage_class=7),
+        BallisticData(range_hexes=300, penetration=7.4, damage_class=6),
+        BallisticData(range_hexes=400, penetration=5.3, damage_class=5, beyond_max_range=True),
+    ]
+)
+
+ammo_762_fal_jhp = AmmoType(
+    name="7.62mm NATO JHP (FN FAL)",
+    abbreviation="JHP",
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=18.0, damage_class=9),
+        BallisticData(range_hexes=20, penetration=18.0, damage_class=9),
+        BallisticData(range_hexes=40, penetration=17.0, damage_class=9),
+        BallisticData(range_hexes=70, penetration=15.0, damage_class=9),
+        BallisticData(range_hexes=100, penetration=14.0, damage_class=9),
+        BallisticData(range_hexes=200, penetration=9.8, damage_class=8),
+        BallisticData(range_hexes=300, penetration=7.1, damage_class=7),
+        BallisticData(range_hexes=400, penetration=5.1, damage_class=7, beyond_max_range=True),
+    ]
+)
+
+ammo_762_fal_ap = AmmoType(
+    name="7.62mm NATO AP (FN FAL)",
+    abbreviation="AP",
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=27.0, damage_class=8),
+        BallisticData(range_hexes=20, penetration=26.0, damage_class=8),
+        BallisticData(range_hexes=40, penetration=25.0, damage_class=7),
+        BallisticData(range_hexes=70, penetration=22.0, damage_class=7),
+        BallisticData(range_hexes=100, penetration=20.0, damage_class=7),
+        BallisticData(range_hexes=200, penetration=14.0, damage_class=6),
+        BallisticData(range_hexes=300, penetration=10.0, damage_class=6),
+        BallisticData(range_hexes=400, penetration=7.5, damage_class=5, beyond_max_range=True),
+    ]
+)
+
 # 7.62 x 25mm Pistol ballistic data (for Type 51)
 pistol_762x25_ballistic = WeaponBallisticData(
     ballistic_accuracy=[
@@ -2035,6 +2169,95 @@ bushmaster_ballistic = WeaponBallisticData(
     ]
 )
 
+aug_ballistic = WeaponBallisticData(
+    minimum_arc=[
+        RangeData(range_hexes=10, value=0.2),
+        RangeData(range_hexes=20, value=0.5),
+        RangeData(range_hexes=40, value=1.0),
+        RangeData(range_hexes=70, value=2.0),
+        RangeData(range_hexes=100, value=2.0),
+        RangeData(range_hexes=200, value=5.0),
+        RangeData(range_hexes=300, value=7.0),
+        RangeData(range_hexes=400, value=10.0)
+    ],
+    ballistic_accuracy=[
+        RangeData(range_hexes=10, value=60),
+        RangeData(range_hexes=20, value=51),
+        RangeData(range_hexes=40, value=42),
+        RangeData(range_hexes=70, value=35),
+        RangeData(range_hexes=100, value=30),
+        RangeData(range_hexes=200, value=20),
+        RangeData(range_hexes=300, value=15),
+        RangeData(range_hexes=400, value=11)
+    ],
+    time_of_flight=[
+        RangeData(range_hexes=10, value=0),
+        RangeData(range_hexes=20, value=0),
+        RangeData(range_hexes=40, value=1),
+        RangeData(range_hexes=70, value=1),
+        RangeData(range_hexes=100, value=2),
+        RangeData(range_hexes=200, value=5),
+        RangeData(range_hexes=300, value=8),
+        RangeData(range_hexes=400, value=11)
+    ]
+)
+
+l1a1_ballistic = WeaponBallisticData(
+    ballistic_accuracy=[
+        RangeData(range_hexes=10, value=61),
+        RangeData(range_hexes=20, value=53),
+        RangeData(range_hexes=40, value=45),
+        RangeData(range_hexes=70, value=37),
+        RangeData(range_hexes=100, value=32),
+        RangeData(range_hexes=200, value=23),
+        RangeData(range_hexes=300, value=17),
+        RangeData(range_hexes=400, value=13)
+    ],
+    time_of_flight=[
+        RangeData(range_hexes=10, value=0),
+        RangeData(range_hexes=20, value=0),
+        RangeData(range_hexes=40, value=1),
+        RangeData(range_hexes=70, value=2),
+        RangeData(range_hexes=100, value=2),
+        RangeData(range_hexes=200, value=5),
+        RangeData(range_hexes=300, value=8),
+        RangeData(range_hexes=400, value=12)
+    ]
+)
+
+fal_ballistic = WeaponBallisticData(
+    minimum_arc=[
+        RangeData(range_hexes=10, value=0.6),
+        RangeData(range_hexes=20, value=1.0),
+        RangeData(range_hexes=40, value=3.0),
+        RangeData(range_hexes=70, value=4.0),
+        RangeData(range_hexes=100, value=6.0),
+        RangeData(range_hexes=200, value=13.0),
+        RangeData(range_hexes=300, value=19.0),
+        RangeData(range_hexes=400, value=25.0)
+    ],
+    ballistic_accuracy=[
+        RangeData(range_hexes=10, value=61),
+        RangeData(range_hexes=20, value=53),
+        RangeData(range_hexes=40, value=45),
+        RangeData(range_hexes=70, value=37),
+        RangeData(range_hexes=100, value=32),
+        RangeData(range_hexes=200, value=23),
+        RangeData(range_hexes=300, value=17),
+        RangeData(range_hexes=400, value=13)
+    ],
+    time_of_flight=[
+        RangeData(range_hexes=10, value=0),
+        RangeData(range_hexes=20, value=0),
+        RangeData(range_hexes=40, value=1),
+        RangeData(range_hexes=70, value=2),
+        RangeData(range_hexes=100, value=2),
+        RangeData(range_hexes=200, value=5),
+        RangeData(range_hexes=300, value=8),
+        RangeData(range_hexes=400, value=11)
+    ]
+)
+
 # ============================================================================
 # WEAPONS
 # ============================================================================
@@ -2046,9 +2269,9 @@ sig_550 = Weapon(
     description="Swiss-made SG 550 assault rifle, featuring excellent accuracy and reliability. "
                 "Standard issue for Swiss Armed Forces. Gas-operated, selective-fire rifle with "
                 "folding stock. Chambered in 5.56mm NATO with 30-round magazine capacity.",
-    caliber="5.56mm NATO",
-    weapon_type="Assault Rifle",
-    country="Switzerland",
+    caliber=Caliber.CAL_556_NATO,
+    weapon_type=WeaponType.ASSAULT_RIFLE,
+    country=Country.SWITZERLAND,
     length_deployed=39,
     length_folded=30,
     reload_time=7,
@@ -2084,9 +2307,9 @@ fn_mk1 = Weapon(
     weight=2.3,
     description="Automatic Pistol, 9mm Parabellum, Belgium, Browning High-Power pistol. "
                 "Manufactured & sold world-wide.",
-    caliber="9mm Parabellum",
-    weapon_type="Pistol",
-    country="Belgium",
+    caliber=Caliber.CAL_9MM_PARABELLUM,
+    weapon_type=WeaponType.AUTOMATIC_PISTOL,
+    country=Country.BELGIUM,
     length_deployed=8,
     reload_time=4,
     actions_to_cycle=None,
@@ -2115,9 +2338,9 @@ type_51 = Weapon(
     weight=1.9,
     description="Automatic Pistol, 7.62 x 25mm, China, Chinese copy of the Soviet TT33. "
                 "Standard pistol of the Chinese army.",
-    caliber="7.62 x 25mm",
-    weapon_type="Pistol",
-    country="China",
+    caliber=Caliber.CAL_762X25,
+    weapon_type=WeaponType.AUTOMATIC_PISTOL,
+    country=Country.CHINA,
     length_deployed=8,
     reload_time=4,
     actions_to_cycle=None,
@@ -2146,9 +2369,9 @@ mab_pa15 = Weapon(
     weight=2.8,
     description="Automatic Pistol, 9mm Parabellum, France, Modern, high capacity pistol. "
                 "Standard pistol of the French army.",
-    caliber="9mm Parabellum",
-    weapon_type="Pistol",
-    country="France",
+    caliber=Caliber.CAL_9MM_PARABELLUM,
+    weapon_type=WeaponType.AUTOMATIC_PISTOL,
+    country=Country.FRANCE,
     length_deployed=8,
     reload_time=4,
     actions_to_cycle=None,
@@ -2177,9 +2400,9 @@ walther_ppk = Weapon(
     weight=1.4,
     description="Automatic Pistol, .32 ACP, West Germany, Small, easily concealed pistol "
                 "designed for police undercover use.",
-    caliber=".32 ACP",
-    weapon_type="Pistol",
-    country="West Germany",
+    caliber=Caliber.CAL_32_ACP,
+    weapon_type=WeaponType.AUTOMATIC_PISTOL,
+    country=Country.WEST_GERMANY,
     length_deployed=6,
     reload_time=4,
     actions_to_cycle=None,
@@ -2207,9 +2430,9 @@ walther_p1 = Weapon(
     name="Walther P1",
     weight=2.1,
     description="Current version of the WWII P38. Standard pistol of the West German army.",
-    caliber="9mm Parabellum",
-    weapon_type="Pistol",
-    country="W Germany",
+    caliber=Caliber.CAL_9MM_PARABELLUM,
+    weapon_type=WeaponType.AUTOMATIC_PISTOL,
+    country=Country.WEST_GERMANY,
     length_deployed=9.0,
     reload_time=5,
     actions_to_cycle=None,
@@ -2230,9 +2453,9 @@ hk_p7m13 = Weapon(
     name="HK P7M13",
     weight=2.5,
     description="Modern pistol of innovative design used by the West German army and police.",
-    caliber="9mm Parabellum",
-    weapon_type="Pistol",
-    country="W Germany",
+    caliber=Caliber.CAL_9MM_PARABELLUM,
+    weapon_type=WeaponType.AUTOMATIC_PISTOL,
+    country=Country.WEST_GERMANY,
     length_deployed=7.0,
     reload_time=3,
     actions_to_cycle=None,
@@ -2253,9 +2476,9 @@ hk_vp70m = Weapon(
     name="HK VP70M",
     weight=2.5,
     description="Late model pistol with three round burst capability when its shoulder stock is attached.",
-    caliber="9mm Parabellum",
-    weapon_type="Pistol",
-    country="W Germany",
+    caliber=Caliber.CAL_9MM_PARABELLUM,
+    weapon_type=WeaponType.AUTOMATIC_PISTOL,
+    country=Country.WEST_GERMANY,
     length_deployed=21.0,
     length_folded=8.0,
     reload_time=5,
@@ -2277,9 +2500,9 @@ m1951 = Weapon(
     name="M1951",
     weight=1.9,
     description="This Beretta pistol is used by the Italian & Israeli armies. It is also popular in the civilian market.",
-    caliber="9mm Parabellum",
-    weapon_type="Pistol",
-    country="Italy",
+    caliber=Caliber.CAL_9MM_PARABELLUM,
+    weapon_type=WeaponType.AUTOMATIC_PISTOL,
+    country=Country.ITALY,
     length_deployed=8.0,
     reload_time=5,
     actions_to_cycle=None,
@@ -2300,9 +2523,9 @@ m93r = Weapon(
     name="M93R",
     weight=3.1,
     description="Beretta with three round burst capability. Issued to the Italian Special Forces.",
-    caliber="9mm Parabellum",
-    weapon_type="Pistol",
-    country="Italy",
+    caliber=Caliber.CAL_9MM_PARABELLUM,
+    weapon_type=WeaponType.AUTOMATIC_PISTOL,
+    country=Country.ITALY,
     length_deployed=9.0,
     reload_time=4,
     actions_to_cycle=None,
@@ -2323,9 +2546,9 @@ m951r = Weapon(
     name="M951R",
     weight=3.2,
     description="Modified large capacity M1951 with fully automatic fire capability.",
-    caliber="9mm Parabellum",
-    weapon_type="Machine Pistol",
-    country="Italy",
+    caliber=Caliber.CAL_9MM_PARABELLUM,
+    weapon_type=WeaponType.AUTOMATIC_PISTOL,
+    country=Country.ITALY,
     length_deployed=7.0,
     reload_time=4,
     actions_to_cycle=None,
@@ -2347,9 +2570,9 @@ sig_p226 = Weapon(
     name="SIG P226",
     weight=2.2,
     description="Well balanced, large capacity version of the SIG P220 with ambidextrous magazine catch.",
-    caliber="9mm Parabellum",
-    weapon_type="Automatic Pistol",
-    country="Switzerland",
+    caliber=Caliber.CAL_9MM_PARABELLUM,
+    weapon_type=WeaponType.AUTOMATIC_PISTOL,
+    country=Country.SWITZERLAND,
     length_deployed=8.0,
     reload_time=4,
     actions_to_cycle=None,
@@ -2370,9 +2593,9 @@ makarov_pm = Weapon(
     name="Makarov PM",
     weight=1.7,
     description="Dating back to the 1950s, this is still the standard pistol of the Soviet military.",
-    caliber="9 x 18mm",
-    weapon_type="Automatic Pistol",
-    country="USSR",
+    caliber=Caliber.CAL_9X18_MAKAROV,
+    weapon_type=WeaponType.AUTOMATIC_PISTOL,
+    country=Country.USSR,
     length_deployed=6.0,
     reload_time=5,
     actions_to_cycle=None,
@@ -2393,9 +2616,9 @@ psm = Weapon(
     name="5.45 PSM",
     weight=1.1,
     description="Soviet pistol issued to internal security forces. It has an under-powered cartridge.",
-    caliber="5.45 x 18mm",
-    weapon_type="Automatic Pistol",
-    country="USSR",
+    caliber=Caliber.CAL_545X18,
+    weapon_type=WeaponType.AUTOMATIC_PISTOL,
+    country=Country.USSR,
     length_deployed=6.0,
     reload_time=5,
     actions_to_cycle=None,
@@ -2416,9 +2639,9 @@ m92f = Weapon(
     name="M92F",
     weight=2.4,
     description="Beretta 9mm which has become extremely popular since its successes in U.S. military trials.",
-    caliber="9mm Parabellum",
-    weapon_type="Automatic Pistol",
-    country="USA",
+    caliber=Caliber.CAL_9MM_PARABELLUM,
+    weapon_type=WeaponType.AUTOMATIC_PISTOL,
+    country=Country.USA,
     length_deployed=9.0,
     reload_time=4,
     actions_to_cycle=None,
@@ -2439,9 +2662,9 @@ sw_m469 = Weapon(
     name="S&W M469",
     weight=1.9,
     description="Shortened version of the Smith and Wesson M459 designed for the US Air Force.",
-    caliber="9mm Parabellum",
-    weapon_type="Automatic Pistol",
-    country="USA",
+    caliber=Caliber.CAL_9MM_PARABELLUM,
+    weapon_type=WeaponType.AUTOMATIC_PISTOL,
+    country=Country.USA,
     length_deployed=7.0,
     reload_time=4,
     actions_to_cycle=None,
@@ -2461,9 +2684,9 @@ m1911a1 = Weapon(
     name="M1911A1",
     weight=3.0,
     description="The Colt 45 Automatic Pistol has been the USA's standard military sidearm since WW I.",
-    caliber="45 ACP",
-    weapon_type="Automatic Pistol",
-    country="USA",
+    caliber=Caliber.CAL_45_ACP,
+    weapon_type=WeaponType.AUTOMATIC_PISTOL,
+    country=Country.USA,
     length_deployed=9.0,
     reload_time=4,
     actions_to_cycle=None,
@@ -2483,9 +2706,9 @@ m15 = Weapon(
     name="M15",
     weight=2.8,
     description="The M15 General Officers Pistol is a shortened version of the M1911A1.",
-    caliber="45 ACP",
-    weapon_type="Automatic Pistol",
-    country="USA",
+    caliber=Caliber.CAL_45_ACP,
+    weapon_type=WeaponType.AUTOMATIC_PISTOL,
+    country=Country.USA,
     length_deployed=8.0,
     reload_time=4,
     actions_to_cycle=None,
@@ -2505,9 +2728,9 @@ asp_9mm = Weapon(
     name="ASP 9mm",
     weight=1.4,
     description="Modified Smith & Wesson M39 with Guttersnipe sights intended for high level security.",
-    caliber="9mm Parabellum",
-    weapon_type="Automatic Pistol",
-    country="USA",
+    caliber=Caliber.CAL_9MM_PARABELLUM,
+    weapon_type=WeaponType.AUTOMATIC_PISTOL,
+    country=Country.USA,
     length_deployed=7.0,
     reload_time=4,
     actions_to_cycle=None,
@@ -2527,9 +2750,9 @@ pa3_dm = Weapon(
     name="PA3-DM",
     weight=8.7,
     description="Standard Sub-Machinegun of the Argentine military.",
-    caliber="9mm Parabellum",
-    weapon_type="Sub-Machinegun",
-    country="Argentina",
+    caliber=Caliber.CAL_9MM_PARABELLUM,
+    weapon_type=WeaponType.SUB_MACHINEGUN,
+    country=Country.ARGENTINA,
     length_deployed=27.0,
     length_folded=21.0,
     reload_time=8,
@@ -2551,9 +2774,9 @@ f1_smg = Weapon(
     name="F1",
     weight=8.6,
     description="Australian Sub-Machinegun unusual for its top loading magazine.",
-    caliber="9mm Parabellum",
-    weapon_type="Sub-Machinegun",
-    country="Australia",
+    caliber=Caliber.CAL_9MM_PARABELLUM,
+    weapon_type=WeaponType.SUB_MACHINEGUN,
+    country=Country.AUSTRALIA,
     length_deployed=28.0,
     reload_time=9,
     actions_to_cycle=None,
@@ -2574,9 +2797,9 @@ steyr_mpi81 = Weapon(
     name="Steyr MPi 81",
     weight=7.8,
     description="Steyr SMG used by the police & military. Adopted by the Australian army.",
-    caliber="9mm Parabellum",
-    weapon_type="Sub-Machinegun",
-    country="Austria",
+    caliber=Caliber.CAL_9MM_PARABELLUM,
+    weapon_type=WeaponType.SUB_MACHINEGUN,
+    country=Country.AUSTRIA,
     length_deployed=24.0,
     length_folded=17.0,
     reload_time=8,
@@ -2598,9 +2821,9 @@ m61_skorpion = Weapon(
     name="M61 Skorpion",
     weight=4.4,
     description="The Skorpion SMP is intended for vehicular crews and heavily loaded infantry.",
-    caliber=".32 ACP",
-    weapon_type="Sub-Machine Pistol",
-    country="Czechoslovakia",
+    caliber=Caliber.CAL_32_ACP,
+    weapon_type=WeaponType.SUB_MACHINEGUN,
+    country=Country.CZECHOSLOVAKIA,
     length_deployed=20.0,
     length_folded=11.0,
     reload_time=7,
@@ -2621,9 +2844,9 @@ mat_49 = Weapon(
     name="MAT 49",
     weight=9.2,
     description="Well made weapon used by the French army and former colonies.",
-    caliber="9mm Parabellum",
-    weapon_type="Sub-Machinegun",
-    country="France",
+    caliber=Caliber.CAL_9MM_PARABELLUM,
+    weapon_type=WeaponType.SUB_MACHINEGUN,
+    country=Country.FRANCE,
     length_deployed=28.0,
     length_folded=18.0,
     reload_time=8,
@@ -2644,9 +2867,9 @@ hk_mp5 = Weapon(
     name="Heckler & Koch MP5",
     weight=6.8,
     description="Widely exported SMG used by W German police & border guards.",
-    caliber="9mm Parabellum",
-    weapon_type="Sub-Machinegun",
-    country="W Germany",
+    caliber=Caliber.CAL_9MM_PARABELLUM,
+    weapon_type=WeaponType.SUB_MACHINEGUN,
+    country=Country.WEST_GERMANY,
     length_deployed=27.0,
     length_folded=19.0,
     reload_time=8,
@@ -2667,9 +2890,9 @@ hk_mp5k = Weapon(
     name="Heckler & Koch MP5K",
     weight=5.6,
     description="Short MP5 designed for anti-terrorist units.",
-    caliber="9mm Parabellum",
-    weapon_type="Sub-Machine Pistol",
-    country="W Germany",
+    caliber=Caliber.CAL_9MM_PARABELLUM,
+    weapon_type=WeaponType.SUB_MACHINEGUN,
+    country=Country.WEST_GERMANY,
     length_deployed=13.0,
     reload_time=7,
     self_loading_action=True,
@@ -2689,9 +2912,9 @@ hk_53 = Weapon(
     name="Heckler & Koch 53",
     weight=8.1,
     description="Short version of the HK 33 which can be used as an SMG or rifle.",
-    caliber="5.56mm NATO",
-    weapon_type="Sub-Machinegun",
-    country="W Germany",
+    caliber=Caliber.CAL_556_NATO,
+    weapon_type=WeaponType.SUB_MACHINEGUN,
+    country=Country.WEST_GERMANY,
     length_deployed=30.0,
     length_folded=22.0,
     reload_time=8,
@@ -2712,9 +2935,9 @@ uzi = Weapon(
     name="Uzi",
     weight=9.0,
     description="Sturdy, reliable weapon popular with police and secret service.",
-    caliber="9mm Parabellum",
-    weapon_type="Sub-Machinegun",
-    country="Israel",
+    caliber=Caliber.CAL_9MM_PARABELLUM,
+    weapon_type=WeaponType.SUB_MACHINEGUN,
+    country=Country.ISRAEL,
     length_deployed=26.0,
     length_folded=19.0,
     reload_time=8,
@@ -2735,9 +2958,9 @@ mini_uzi = Weapon(
     name="Mini Uzi",
     weight=7.3,
     description="Small version of the Uzi intended for police and security forces.",
-    caliber="9mm Parabellum",
-    weapon_type="Sub-Machine Pistol",
-    country="Israel",
+    caliber=Caliber.CAL_9MM_PARABELLUM,
+    weapon_type=WeaponType.SUB_MACHINEGUN,
+    country=Country.ISRAEL,
     length_deployed=24.0,
     length_folded=14.0,
     reload_time=7,
@@ -2758,9 +2981,9 @@ beretta_m12s = Weapon(
     name="Beretta M12S",
     weight=8.4,
     description="Widely exported SMG used in Italy, Africa, and South America.",
-    caliber="9mm Parabellum",
-    weapon_type="Sub-Machinegun",
-    country="Italy",
+    caliber=Caliber.CAL_9MM_PARABELLUM,
+    weapon_type=WeaponType.SUB_MACHINEGUN,
+    country=Country.ITALY,
     length_deployed=26.0,
     length_folded=17.0,
     reload_time=8,
@@ -2781,9 +3004,9 @@ spectre = Weapon(
     name="Spectre",
     weight=7.6,
     description="New SMG firing from a closed bolt using a four column magazine.",
-    caliber="9mm Parabellum",
-    weapon_type="Sub-Machinegun",
-    country="Italy",
+    caliber=Caliber.CAL_9MM_PARABELLUM,
+    weapon_type=WeaponType.SUB_MACHINEGUN,
+    country=Country.ITALY,
     length_deployed=23.0,
     length_folded=14.0,
     reload_time=8,
@@ -2804,9 +3027,9 @@ armscor_bxp = Weapon(
     name="Armscor BXP",
     weight=6.3,
     description="Compact, light Sub-Machinegun which can be fired one handed.",
-    caliber="9mm Parabellum",
-    weapon_type="Sub-Machinegun",
-    country="South Africa",
+    caliber=Caliber.CAL_9MM_PARABELLUM,
+    weapon_type=WeaponType.SUB_MACHINEGUN,
+    country=Country.SOUTH_AFRICA,
     length_deployed=22.0,
     length_folded=14.0,
     reload_time=7,
@@ -2827,9 +3050,9 @@ aks74u = Weapon(
     name="AKS-74U",
     weight=7.3,
     description="SMG version of the AKS 74 rifle. In service with Soviet forces.",
-    caliber="5.45 x 39.5mm",
-    weapon_type="Sub-Machinegun",
-    country="USSR",
+    caliber=Caliber.CAL_545X39,
+    weapon_type=WeaponType.SUB_MACHINEGUN,
+    country=Country.USSR,
     length_deployed=27.0,
     length_folded=17.0,
     reload_time=8,
@@ -2850,9 +3073,9 @@ sterling_mk7 = Weapon(
     name="Sterling Mk 7",
     weight=5.7,
     description="Special purpose paratroopers machine pistol.",
-    caliber="9mm Parabellum",
-    weapon_type="Sub-Machine Pistol",
-    country="UK",
+    caliber=Caliber.CAL_9MM_PARABELLUM,
+    weapon_type=WeaponType.SUB_MACHINEGUN,
+    country=Country.UK,
     length_deployed=14.0,
     reload_time=8,
     self_loading_action=True,
@@ -2872,9 +3095,9 @@ ingram_mac10_9mm = Weapon(
     name="Ingram MAC 10 (9mm)",
     weight=7.6,
     description="Compact Sub-Machinegun chambered for 9mm Parabellum.",
-    caliber="9mm Parabellum",
-    weapon_type="Sub-Machine Pistol",
-    country="USA",
+    caliber=Caliber.CAL_9MM_PARABELLUM,
+    weapon_type=WeaponType.SUB_MACHINEGUN,
+    country=Country.USA,
     length_deployed=22.0,
     length_folded=11.0,
     reload_time=7,
@@ -2895,9 +3118,9 @@ ingram_mac10_45 = Weapon(
     name="Ingram MAC 10 (.45 ACP)",
     weight=8.4,
     description="MAC 10 chambered for 45 ACP. Its high recoil hinders one hand fire.",
-    caliber=".45 ACP",
-    weapon_type="Sub-Machine Pistol",
-    country="USA",
+    caliber=Caliber.CAL_45_ACP,
+    weapon_type=WeaponType.SUB_MACHINEGUN,
+    country=Country.USA,
     length_deployed=22.0,
     length_folded=11.0,
     reload_time=7,
@@ -2918,9 +3141,9 @@ bushmaster = Weapon(
     name="Bushmaster",
     weight=6.2,
     description="Powerful SMG designed for 1 hand fire braced against the forearm.",
-    caliber="5.56mm NATO",
-    weapon_type="Sub-Machinegun",
-    country="USA",
+    caliber=Caliber.CAL_556_NATO,
+    weapon_type=WeaponType.SUB_MACHINEGUN,
+    country=Country.USA,
     length_deployed=21.0,
     reload_time=8,
     self_loading_action=True,
@@ -2934,6 +3157,80 @@ bushmaster = Weapon(
     aim_time_modifiers={1: -21, 2: -12, 3: -11, 4: -10, 5: -9, 6: -8},
     ammunition_types=[ammo_556_bushmaster_fmj, ammo_556_bushmaster_jhp, ammo_556_bushmaster_ap],
     ballistic_data=bushmaster_ballistic
+)
+
+steyr_aug = Weapon(
+    name="Steyr AUG",
+    weight=9.0,
+    description="New Austrian rifle with an optical scope in its carrying handle.",
+    caliber=Caliber.CAL_556_NATO,
+    weapon_type=WeaponType.ASSAULT_RIFLE,
+    country=Country.AUSTRIA,
+    length_deployed=31.0,
+    reload_time=10,
+    self_loading_action=True,
+    full_auto=True,
+    full_auto_rof=5,
+    ammo_capacity=30,
+    ammo_weight=1.1,
+    ammo_feed_device=AmmoFeedDevice.MAGAZINE,
+    knock_down=4,
+    sustained_auto_burst=3,
+    aim_time_modifiers={
+        1: -23, 2: -12, 3: -8, 4: -6, 5: -5, 
+        6: -4, 7: -3, 8: -2, 9: -1, 10: 0, 11: 1
+    },
+    ammunition_types=[ammo_556_aug_fmj, ammo_556_aug_jhp, ammo_556_aug_ap],
+    ballistic_data=aug_ballistic
+)
+
+l1a1_f1 = Weapon(
+    name="L1A1 - F1",
+    weight=12.0,
+    description="Standard Australian army rifle patterned after the FN FAL. It is being replaced by the Austrian Steyr AUG.",
+    caliber=Caliber.CAL_762_NATO,
+    weapon_type=WeaponType.ASSAULT_RIFLE,
+    country=Country.AUSTRALIA,
+    length_deployed=42.0,
+    reload_time=8,
+    self_loading_action=True,
+    full_auto=False,
+    ammo_capacity=20,
+    ammo_weight=1.6,
+    ammo_feed_device=AmmoFeedDevice.MAGAZINE,
+    knock_down=10,
+    sustained_auto_burst=5,
+    aim_time_modifiers={
+        1: -24, 2: -14, 3: -10, 4: -8, 5: -6,
+        6: -5, 7: -4, 8: -3, 9: -2, 10: -1, 11: 0
+    },
+    ammunition_types=[ammo_762_l1a1_fmj, ammo_762_l1a1_jhp, ammo_762_l1a1_ap],
+    ballistic_data=l1a1_ballistic
+)
+
+fn_fal = Weapon(
+    name="FN FAL",
+    weight=10.8,
+    description="Highly successful weapon exported to over 90 countries including the United Kingdom and Israel.",
+    caliber=Caliber.CAL_762_NATO,
+    weapon_type=WeaponType.ASSAULT_RIFLE,
+    country=Country.BELGIUM,
+    length_deployed=43.0,
+    reload_time=8,
+    self_loading_action=True,
+    full_auto=True,
+    full_auto_rof=6,
+    ammo_capacity=20,
+    ammo_weight=1.4,
+    ammo_feed_device=AmmoFeedDevice.MAGAZINE,
+    knock_down=10,
+    sustained_auto_burst=5,
+    aim_time_modifiers={
+        1: -24, 2: -13, 3: -9, 4: -8, 5: -6,
+        6: -5, 7: -4, 8: -3, 9: -2, 10: -1, 11: 0
+    },
+    ammunition_types=[ammo_762_fal_fmj, ammo_762_fal_jhp, ammo_762_fal_ap],
+    ballistic_data=fal_ballistic
 )
 
 WEAPONS_LIST = [
@@ -2973,5 +3270,8 @@ WEAPONS_LIST = [
     sterling_mk7,
     ingram_mac10_9mm,
     ingram_mac10_45,
-    bushmaster
+    bushmaster,
+    steyr_aug,
+    l1a1_f1,
+    fn_fal
 ]

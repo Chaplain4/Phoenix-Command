@@ -350,3 +350,70 @@ class ArmorMaterial(Enum):
     def global_degradation(self) -> bool:
         """Whether damage affects entire armor piece or just the hit location."""
         return self._global_degradation
+
+
+class Caliber(Enum):
+    """Weapon caliber types."""
+    # Pistol calibers
+    CAL_32_ACP = ".32 ACP"
+    CAL_380_ACP = ".380 ACP"
+    CAL_9MM_PARABELLUM = "9mm Parabellum"
+    CAL_9X18_MAKAROV = "9 x 18mm"
+    CAL_45_ACP = ".45 ACP"
+    CAL_545X18 = "5.45 x 18mm"
+    CAL_762X25 = "7.62 x 25mm"
+
+    # Rifle calibers
+    CAL_556_NATO = "5.56mm NATO"
+    CAL_545X39 = "5.45 x 39.5mm"
+    CAL_762_NATO = "7.62mm NATO"
+    CAL_762X39 = "7.62 x 39mm"
+    CAL_762X51 = "7.62 x 51mm"
+    CAL_762X54R = "7.62 x 54mm R"
+
+    # Shotgun calibers
+    CAL_12_GAUGE = "12 Gauge"
+    CAL_20_GAUGE = "20 Gauge"
+
+
+class WeaponType(Enum):
+    """Weapon type classifications."""
+    AUTOMATIC_PISTOL = "Automatic Pistol"
+    REVOLVER = "Revolver"
+    MACHINE_PISTOL = "Machine Pistol"
+    SUB_MACHINE_PISTOL = "Sub-Machine Pistol"
+    SUB_MACHINEGUN = "Sub-Machinegun"
+    ASSAULT_RIFLE = "Assault Rifle"
+    BATTLE_RIFLE = "Battle Rifle"
+    CARBINE = "Carbine"
+    SNIPER_RIFLE = "Sniper Rifle"
+    MACHINE_GUN = "Machine Gun"
+    LIGHT_MACHINE_GUN = "Light Machine Gun"
+    SHOTGUN = "Shotgun"
+    GRENADE_LAUNCHER = "Grenade Launcher"
+
+
+class Country(Enum):
+    """Countries of weapon origin."""
+    ARGENTINA = "Argentina"
+    AUSTRALIA = "Australia"
+    AUSTRIA = "Austria"
+    BELGIUM = "Belgium"
+    CHINA = "China"
+    CZECHOSLOVAKIA = "Czechoslovakia"
+    FRANCE = "France"
+    GERMANY = "Germany"
+    WEST_GERMANY = "West Germany"
+    EAST_GERMANY = "East Germany"
+    ISRAEL = "Israel"
+    ITALY = "Italy"
+    JAPAN = "Japan"
+    RUSSIA = "Russia"
+    SOUTH_AFRICA = "South Africa"
+    USSR = "USSR"
+    SOVIET_UNION = "Soviet Union"
+    SWITZERLAND = "Switzerland"
+    UK = "UK"
+    USA = "USA"
+    YUGOSLAVIA = "Yugoslavia"
+
