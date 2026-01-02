@@ -370,6 +370,7 @@ class Caliber(Enum):
     CAL_75_FRENCH = "7.5 x 54mm"
     CAL_47_CASELESS = "4.7mm Caseless"
     CAL_300_WIN_MAG = "300 Winchester Magnum"
+    CAL_762X54R = "7.62 x 54mm"
 
     # Shotgun calibers
     CAL_12_GAUGE = "12 Gauge"
