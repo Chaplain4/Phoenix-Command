@@ -282,6 +282,10 @@ class Weapon(Gear):
     aim_time_modifiers: dict[int, int] = field(default_factory=dict)  # Aim Time AC -> Modifier
     ammunition_types: list[AmmoType] = field(default_factory=list)  # Available ammo types
     ballistic_data: Optional[WeaponBallisticData] = None
+    built_in_optics: bool = False
+    built_in_bipod: bool = False
+    built_in_suppressor: bool = False
+    built_in_foregrip: bool = False
 
     def __post_init__(self) -> None:
         if self.aim_time_modifiers is None:

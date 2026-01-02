@@ -356,7 +356,6 @@ class Caliber(Enum):
     """Weapon caliber types."""
     # Pistol calibers
     CAL_32_ACP = ".32 ACP"
-    CAL_380_ACP = ".380 ACP"
     CAL_9MM_PARABELLUM = "9mm Parabellum"
     CAL_9X18_MAKAROV = "9 x 18mm"
     CAL_45_ACP = ".45 ACP"
@@ -368,8 +367,9 @@ class Caliber(Enum):
     CAL_545X39 = "5.45 x 39.5mm"
     CAL_762_NATO = "7.62mm NATO"
     CAL_762X39 = "7.62 x 39mm"
-    CAL_762X51 = "7.62 x 51mm"
-    CAL_762X54R = "7.62 x 54mm R"
+    CAL_75_FRENCH = "7.5 x 54mm"
+    CAL_47_CASELESS = "4.7mm Caseless"
+    CAL_300_WIN_MAG = "300 Winchester Magnum"
 
     # Shotgun calibers
     CAL_12_GAUGE = "12 Gauge"
@@ -379,9 +379,6 @@ class Caliber(Enum):
 class WeaponType(Enum):
     """Weapon type classifications."""
     AUTOMATIC_PISTOL = "Automatic Pistol"
-    REVOLVER = "Revolver"
-    MACHINE_PISTOL = "Machine Pistol"
-    SUB_MACHINE_PISTOL = "Sub-Machine Pistol"
     SUB_MACHINEGUN = "Sub-Machinegun"
     ASSAULT_RIFLE = "Assault Rifle"
     BATTLE_RIFLE = "Battle Rifle"
@@ -395,6 +392,7 @@ class WeaponType(Enum):
 
 class Country(Enum):
     """Countries of weapon origin."""
+    HUNGARY = "Hungary"
     ARGENTINA = "Argentina"
     AUSTRALIA = "Australia"
     AUSTRIA = "Austria"
@@ -402,18 +400,13 @@ class Country(Enum):
     CHINA = "China"
     CZECHOSLOVAKIA = "Czechoslovakia"
     FRANCE = "France"
-    GERMANY = "Germany"
     WEST_GERMANY = "West Germany"
-    EAST_GERMANY = "East Germany"
     ISRAEL = "Israel"
     ITALY = "Italy"
     JAPAN = "Japan"
-    RUSSIA = "Russia"
     SOUTH_AFRICA = "South Africa"
     USSR = "USSR"
-    SOVIET_UNION = "Soviet Union"
     SWITZERLAND = "Switzerland"
     UK = "UK"
     USA = "USA"
-    YUGOSLAVIA = "Yugoslavia"
 

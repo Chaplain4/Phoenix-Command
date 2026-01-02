@@ -1547,6 +1547,645 @@ ammo_762_fal_ap = AmmoType(
     ]
 )
 
+ammo_556_fnc_fmj = AmmoType(
+    name="5.56mm NATO FMJ (FNC)",
+    abbreviation="FMJ",
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=15.0, damage_class=6),
+        BallisticData(range_hexes=20, penetration=15.0, damage_class=6),
+        BallisticData(range_hexes=40, penetration=14.0, damage_class=6),
+        BallisticData(range_hexes=70, penetration=12.0, damage_class=6),
+        BallisticData(range_hexes=100, penetration=11.0, damage_class=5),
+        BallisticData(range_hexes=200, penetration=7.0, damage_class=4),
+        BallisticData(range_hexes=300, penetration=4.6, damage_class=3),
+        BallisticData(range_hexes=400, penetration=3.0, damage_class=2, beyond_max_range=True),
+    ]
+)
+
+ammo_556_fnc_jhp = AmmoType(
+    name="5.56mm NATO JHP (FNC)",
+    abbreviation="JHP",
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=15.0, damage_class=8),
+        BallisticData(range_hexes=20, penetration=14.0, damage_class=8),
+        BallisticData(range_hexes=40, penetration=13.0, damage_class=7),
+        BallisticData(range_hexes=70, penetration=12.0, damage_class=7),
+        BallisticData(range_hexes=100, penetration=10.0, damage_class=7),
+        BallisticData(range_hexes=200, penetration=6.7, damage_class=6),
+        BallisticData(range_hexes=300, penetration=4.4, damage_class=5),
+        BallisticData(range_hexes=400, penetration=2.9, damage_class=3, beyond_max_range=True),
+    ]
+)
+
+ammo_556_fnc_ap = AmmoType(
+    name="5.56mm NATO AP (FNC)",
+    abbreviation="AP",
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=22.0, damage_class=6),
+        BallisticData(range_hexes=20, penetration=21.0, damage_class=6),
+        BallisticData(range_hexes=40, penetration=19.0, damage_class=6),
+        BallisticData(range_hexes=70, penetration=17.0, damage_class=5),
+        BallisticData(range_hexes=100, penetration=15.0, damage_class=5),
+        BallisticData(range_hexes=200, penetration=9.9, damage_class=4),
+        BallisticData(range_hexes=300, penetration=6.5, damage_class=3),
+        BallisticData(range_hexes=400, penetration=4.3, damage_class=2, beyond_max_range=True),
+    ]
+)
+
+ammo_75_m1949_fmj = AmmoType(
+    name="7.5 x 54mm FMJ (M1949)",
+    abbreviation="FMJ",
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=18.0, damage_class=7),
+        BallisticData(range_hexes=20, penetration=18.0, damage_class=7),
+        BallisticData(range_hexes=40, penetration=17.0, damage_class=7),
+        BallisticData(range_hexes=70, penetration=15.0, damage_class=7),
+        BallisticData(range_hexes=100, penetration=14.0, damage_class=7),
+        BallisticData(range_hexes=200, penetration=9.7, damage_class=6),
+        BallisticData(range_hexes=300, penetration=7.0, damage_class=6),
+        BallisticData(range_hexes=400, penetration=5.0, damage_class=5, beyond_max_range=True),
+    ]
+)
+
+ammo_75_m1949_jhp = AmmoType(
+    name="7.5 x 54mm JHP (M1949)",
+    abbreviation="JHP",
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=17.0, damage_class=9),
+        BallisticData(range_hexes=20, penetration=17.0, damage_class=9),
+        BallisticData(range_hexes=40, penetration=16.0, damage_class=9),
+        BallisticData(range_hexes=70, penetration=14.0, damage_class=9),
+        BallisticData(range_hexes=100, penetration=13.0, damage_class=8),
+        BallisticData(range_hexes=200, penetration=9.4, damage_class=8),
+        BallisticData(range_hexes=300, penetration=6.7, damage_class=7),
+        BallisticData(range_hexes=400, penetration=4.8, damage_class=7, beyond_max_range=True),
+    ]
+)
+
+ammo_75_m1949_ap = AmmoType(
+    name="7.5 x 54mm AP (M1949)",
+    abbreviation="AP",
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=26.0, damage_class=7),
+        BallisticData(range_hexes=20, penetration=25.0, damage_class=7),
+        BallisticData(range_hexes=40, penetration=23.0, damage_class=7),
+        BallisticData(range_hexes=70, penetration=21.0, damage_class=7),
+        BallisticData(range_hexes=100, penetration=19.0, damage_class=7),
+        BallisticData(range_hexes=200, penetration=14.0, damage_class=6),
+        BallisticData(range_hexes=300, penetration=9.9, damage_class=5),
+        BallisticData(range_hexes=400, penetration=7.1, damage_class=4, beyond_max_range=True),
+    ]
+)
+
+ammo_556_famas_fmj = AmmoType(
+    name="5.56mm NATO FMJ (FA MAS)",
+    abbreviation="FMJ",
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=15.0, damage_class=6),
+        BallisticData(range_hexes=20, penetration=15.0, damage_class=6),
+        BallisticData(range_hexes=40, penetration=13.0, damage_class=6),
+        BallisticData(range_hexes=70, penetration=12.0, damage_class=6),
+        BallisticData(range_hexes=100, penetration=10.0, damage_class=5),
+        BallisticData(range_hexes=200, penetration=6.4, damage_class=4),
+        BallisticData(range_hexes=300, penetration=4.1, damage_class=3),
+        BallisticData(range_hexes=400, penetration=2.6, damage_class=2, beyond_max_range=True),
+    ]
+)
+
+ammo_556_famas_jhp = AmmoType(
+    name="5.56mm NATO JHP (FA MAS)",
+    abbreviation="JHP",
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=15.0, damage_class=8),
+        BallisticData(range_hexes=20, penetration=14.0, damage_class=8),
+        BallisticData(range_hexes=40, penetration=13.0, damage_class=7),
+        BallisticData(range_hexes=70, penetration=11.0, damage_class=7),
+        BallisticData(range_hexes=100, penetration=9.7, damage_class=7),
+        BallisticData(range_hexes=200, penetration=6.2, damage_class=6),
+        BallisticData(range_hexes=300, penetration=3.9, damage_class=4),
+        BallisticData(range_hexes=200, penetration=2.5, damage_class=3, beyond_max_range=True),
+    ]
+)
+
+ammo_556_famas_ap = AmmoType(
+    name="5.56mm NATO AP (FA MAS)",
+    abbreviation="AP",
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=22.0, damage_class=6),
+        BallisticData(range_hexes=20, penetration=21.0, damage_class=6),
+        BallisticData(range_hexes=40, penetration=19.0, damage_class=6),
+        BallisticData(range_hexes=70, penetration=16.0, damage_class=5),
+        BallisticData(range_hexes=100, penetration=14.0, damage_class=5),
+        BallisticData(range_hexes=200, penetration=9.1, damage_class=4),
+        BallisticData(range_hexes=300, penetration=5.8, damage_class=3),
+        BallisticData(range_hexes=400, penetration=3.7, damage_class=2, beyond_max_range=True),
+    ]
+)
+
+ammo_762_frf2_fmj = AmmoType(
+    name="7.62mm NATO FMJ (FR F2)", abbreviation="FMJ",
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=20.0, damage_class=8),
+        BallisticData(range_hexes=20, penetration=19.0, damage_class=8),
+        BallisticData(range_hexes=40, penetration=18.0, damage_class=8),
+        BallisticData(range_hexes=70, penetration=16.0, damage_class=7),
+        BallisticData(range_hexes=100, penetration=15.0, damage_class=7),
+        BallisticData(range_hexes=200, penetration=11.0, damage_class=7),
+        BallisticData(range_hexes=300, penetration=7.6, damage_class=6),
+        BallisticData(range_hexes=400, penetration=5.5, damage_class=5)
+    ]
+)
+
+ammo_762_frf2_jhp = AmmoType(
+    name="7.62mm NATO JHP (FR F2)", abbreviation="JHP",
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=19.0, damage_class=9),
+        BallisticData(range_hexes=20, penetration=18.0, damage_class=9),
+        BallisticData(range_hexes=40, penetration=17.0, damage_class=9),
+        BallisticData(range_hexes=70, penetration=16.0, damage_class=9),
+        BallisticData(range_hexes=100, penetration=14.0, damage_class=9),
+        BallisticData(range_hexes=200, penetration=10.0, damage_class=8),
+        BallisticData(range_hexes=300, penetration=7.3, damage_class=8),
+        BallisticData(range_hexes=400, penetration=5.3, damage_class=7)
+    ]
+)
+
+ammo_762_frf2_ap = AmmoType(
+    name="7.62mm NATO AP (FR F2)", abbreviation="AP",
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=28.0, damage_class=8),
+        BallisticData(range_hexes=20, penetration=27.0, damage_class=8),
+        BallisticData(range_hexes=40, penetration=25.0, damage_class=7),
+        BallisticData(range_hexes=70, penetration=23.0, damage_class=7),
+        BallisticData(range_hexes=100, penetration=21.0, damage_class=7),
+        BallisticData(range_hexes=200, penetration=15.0, damage_class=6),
+        BallisticData(range_hexes=300, penetration=11.0, damage_class=6),
+        BallisticData(range_hexes=400, penetration=7.7, damage_class=5)
+    ]
+)
+
+ammo_762_g3_fmj = AmmoType(
+    name="7.62mm NATO FMJ (G3)", abbreviation="FMJ",
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=17.0, damage_class=8),
+        BallisticData(range_hexes=20, penetration=16.0, damage_class=7),
+        BallisticData(range_hexes=40, penetration=15.0, damage_class=7),
+        BallisticData(range_hexes=70, penetration=14.0, damage_class=7),
+        BallisticData(range_hexes=100, penetration=13.0, damage_class=7),
+        BallisticData(range_hexes=200, penetration=8.9, damage_class=6),
+        BallisticData(range_hexes=300, penetration=6.3, damage_class=6),
+        BallisticData(range_hexes=400, penetration=4.5, damage_class=4, beyond_max_range=True),
+    ]
+)
+
+ammo_762_g3_jhp = AmmoType(
+    name="7.62mm NATO JHP (G3)", abbreviation="JHP",
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=16.0, damage_class=9),
+        BallisticData(range_hexes=20, penetration=16.0, damage_class=9),
+        BallisticData(range_hexes=40, penetration=15.0, damage_class=9),
+        BallisticData(range_hexes=70, penetration=13.0, damage_class=9),
+        BallisticData(range_hexes=100, penetration=12.0, damage_class=8),
+        BallisticData(range_hexes=200, penetration=8.5, damage_class=8),
+        BallisticData(range_hexes=300, penetration=6.1, damage_class=7),
+        BallisticData(range_hexes=400, penetration=4.3, damage_class=6, beyond_max_range=True),
+    ]
+)
+
+ammo_762_g3_ap = AmmoType(
+    name="7.62mm NATO AP (G3)", abbreviation="AP",
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=24.0, damage_class=7),
+        BallisticData(range_hexes=20, penetration=23.0, damage_class=7),
+        BallisticData(range_hexes=40, penetration=22.0, damage_class=7),
+        BallisticData(range_hexes=70, penetration=20.0, damage_class=7),
+        BallisticData(range_hexes=100, penetration=18.0, damage_class=7),
+        BallisticData(range_hexes=200, penetration=13.0, damage_class=6),
+        BallisticData(range_hexes=300, penetration=8.9, damage_class=5),
+        BallisticData(range_hexes=400, penetration=6.4, damage_class=4, beyond_max_range=True),
+    ]
+)
+
+ammo_556_g41_fmj = AmmoType(
+    name="5.56mm NATO FMJ (G41)", abbreviation="FMJ",
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=16.0, damage_class=6),
+        BallisticData(range_hexes=20, penetration=15.0, damage_class=6),
+        BallisticData(range_hexes=40, penetration=14.0, damage_class=6),
+        BallisticData(range_hexes=70, penetration=13.0, damage_class=6),
+        BallisticData(range_hexes=100, penetration=11.0, damage_class=5),
+        BallisticData(range_hexes=200, penetration=7.4, damage_class=4),
+        BallisticData(range_hexes=300, penetration=4.9, damage_class=3),
+        BallisticData(range_hexes=400, penetration=3.2, damage_class=2, beyond_max_range=True),
+    ]
+)
+
+ammo_556_g41_jhp = AmmoType(
+    name="5.56mm NATO JHP (G41)", abbreviation="JHP",
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=15.0, damage_class=8),
+        BallisticData(range_hexes=20, penetration=15.0, damage_class=8),
+        BallisticData(range_hexes=40, penetration=14.0, damage_class=8),
+        BallisticData(range_hexes=70, penetration=12.0, damage_class=7),
+        BallisticData(range_hexes=100, penetration=11.0, damage_class=7),
+        BallisticData(range_hexes=200, penetration=7.1, damage_class=6),
+        BallisticData(range_hexes=300, penetration=4.7, damage_class=5),
+        BallisticData(range_hexes=400, penetration=3.1, damage_class=4, beyond_max_range=True),
+    ]
+)
+
+ammo_556_g41_ap = AmmoType(
+    name="5.56mm NATO AP (G41)", abbreviation="AP",
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=23.0, damage_class=6),
+        BallisticData(range_hexes=20, penetration=22.0, damage_class=6),
+        BallisticData(range_hexes=40, penetration=20.0, damage_class=6),
+        BallisticData(range_hexes=70, penetration=18.0, damage_class=5),
+        BallisticData(range_hexes=100, penetration=16.0, damage_class=5),
+        BallisticData(range_hexes=200, penetration=10.0, damage_class=4),
+        BallisticData(range_hexes=300, penetration=6.9, damage_class=3),
+        BallisticData(range_hexes=400, penetration=4.5, damage_class=2, beyond_max_range=True),
+    ]
+)
+
+ammo_47_g11_fmj = AmmoType(
+    name="4.7mm Caseless FMJ", abbreviation="FMJ",
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=18.0, damage_class=5),
+        BallisticData(range_hexes=20, penetration=18.0, damage_class=5),
+        BallisticData(range_hexes=40, penetration=17.0, damage_class=5),
+        BallisticData(range_hexes=70, penetration=15.0, damage_class=5),
+        BallisticData(range_hexes=100, penetration=14.0, damage_class=4),
+        BallisticData(range_hexes=200, penetration=9.9, damage_class=4),
+        BallisticData(range_hexes=300, penetration=7.1, damage_class=3),
+        BallisticData(range_hexes=400, penetration=5.1, damage_class=3)
+    ]
+)
+
+ammo_47_g11_jhp = AmmoType(
+    name="4.7mm Caseless JHP", abbreviation="JHP",
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=18.0, damage_class=7),
+        BallisticData(range_hexes=20, penetration=17.0, damage_class=7),
+        BallisticData(range_hexes=40, penetration=16.0, damage_class=7),
+        BallisticData(range_hexes=70, penetration=15.0, damage_class=7),
+        BallisticData(range_hexes=100, penetration=13.0, damage_class=6),
+        BallisticData(range_hexes=200, penetration=9.5, damage_class=6),
+        BallisticData(range_hexes=300, penetration=6.8, damage_class=5),
+        BallisticData(range_hexes=400, penetration=4.9, damage_class=4)
+    ]
+)
+
+ammo_47_g11_ap = AmmoType(
+    name="4.7mm Caseless AP", abbreviation="AP",
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=26.0, damage_class=5),
+        BallisticData(range_hexes=20, penetration=25.0, damage_class=5),
+        BallisticData(range_hexes=40, penetration=24.0, damage_class=5),
+        BallisticData(range_hexes=70, penetration=21.0, damage_class=5),
+        BallisticData(range_hexes=100, penetration=19.0, damage_class=4),
+        BallisticData(range_hexes=200, penetration=14.0, damage_class=3),
+        BallisticData(range_hexes=300, penetration=10.0, damage_class=3),
+        BallisticData(range_hexes=400, penetration=7.2, damage_class=3)
+    ]
+)
+
+ammo_300wm_wa2000_fmj = AmmoType(
+    name=".300 Win Mag FMJ", abbreviation="FMJ",
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=28.0, damage_class=8),
+        BallisticData(range_hexes=20, penetration=27.0, damage_class=8),
+        BallisticData(range_hexes=40, penetration=25.0, damage_class=8),
+        BallisticData(range_hexes=70, penetration=24.0, damage_class=8),
+        BallisticData(range_hexes=100, penetration=22.0, damage_class=8),
+        BallisticData(range_hexes=200, penetration=17.0, damage_class=7),
+        BallisticData(range_hexes=300, penetration=13.0, damage_class=7),
+        BallisticData(range_hexes=400, penetration=9.8, damage_class=7)
+    ]
+)
+
+ammo_300wm_wa2000_jhp = AmmoType(
+    name=".300 Win Mag JHP", abbreviation="JHP",
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=26.0, damage_class=10),
+        BallisticData(range_hexes=20, penetration=26.0, damage_class=10),
+        BallisticData(range_hexes=40, penetration=24.0, damage_class=10),
+        BallisticData(range_hexes=70, penetration=23.0, damage_class=10),
+        BallisticData(range_hexes=100, penetration=21.0, damage_class=9),
+        BallisticData(range_hexes=200, penetration=16.0, damage_class=9),
+        BallisticData(range_hexes=300, penetration=12.0, damage_class=9),
+        BallisticData(range_hexes=400, penetration=9.4, damage_class=8)
+    ]
+)
+
+ammo_300wm_wa2000_ap = AmmoType(
+    name=".300 Win Mag AP", abbreviation="AP",
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=39.0, damage_class=8),
+        BallisticData(range_hexes=20, penetration=38.0, damage_class=8),
+        BallisticData(range_hexes=40, penetration=36.0, damage_class=8),
+        BallisticData(range_hexes=70, penetration=33.0, damage_class=8),
+        BallisticData(range_hexes=100, penetration=31.0, damage_class=8),
+        BallisticData(range_hexes=200, penetration=24.0, damage_class=7),
+        BallisticData(range_hexes=300, penetration=18.0, damage_class=7),
+        BallisticData(range_hexes=400, penetration=14.0, damage_class=6)
+    ]
+)
+
+ammo_762x39_amd65_fmj = AmmoType(
+    name="7.62 x 39mm FMJ", abbreviation="FMJ",
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=11.0, damage_class=7),
+        BallisticData(range_hexes=20, penetration=10.0, damage_class=7),
+        BallisticData(range_hexes=40, penetration=9.4, damage_class=6),
+        BallisticData(range_hexes=70, penetration=8.3, damage_class=6),
+        BallisticData(range_hexes=100, penetration=7.2, damage_class=6),
+        BallisticData(range_hexes=200, penetration=4.6, damage_class=5),
+        BallisticData(range_hexes=300, penetration=3.0, damage_class=3, beyond_max_range=True),
+        BallisticData(range_hexes=400, penetration=1.9, damage_class=2, beyond_max_range=True),
+    ]
+)
+
+ammo_762x39_amd65_jhp = AmmoType(
+    name="7.62 x 39mm JHP", abbreviation="JHP",
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=10.0, damage_class=8),
+        BallisticData(range_hexes=20, penetration=9.9, damage_class=8),
+        BallisticData(range_hexes=40, penetration=9.1, damage_class=8),
+        BallisticData(range_hexes=70, penetration=7.9, damage_class=8),
+        BallisticData(range_hexes=100, penetration=6.9, damage_class=7),
+        BallisticData(range_hexes=200, penetration=4.4, damage_class=7),
+        BallisticData(range_hexes=300, penetration=2.8, damage_class=5, beyond_max_range=True),
+        BallisticData(range_hexes=400, penetration=1.8, damage_class=3, beyond_max_range=True),
+    ]
+)
+
+ammo_762x39_amd65_ap = AmmoType(
+    name="7.62 x 39mm AP", abbreviation="AP",
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=15.0, damage_class=6),
+        BallisticData(range_hexes=20, penetration=15.0, damage_class=6),
+        BallisticData(range_hexes=40, penetration=13.0, damage_class=6),
+        BallisticData(range_hexes=70, penetration=12.0, damage_class=6),
+        BallisticData(range_hexes=100, penetration=10.0, damage_class=6),
+        BallisticData(range_hexes=200, penetration=6.5, damage_class=4),
+        BallisticData(range_hexes=300, penetration=4.2, damage_class=3, beyond_max_range=True),
+        BallisticData(range_hexes=400, penetration=2.7, damage_class=2, beyond_max_range=True),
+    ]
+)
+
+ammo_556_galil_fmj = AmmoType(
+    name="5.56mm NATO FMJ (Galil)", abbreviation="FMJ",
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=16.0, damage_class=6),
+        BallisticData(range_hexes=20, penetration=15.0, damage_class=6),
+        BallisticData(range_hexes=40, penetration=14.0, damage_class=6),
+        BallisticData(range_hexes=70, penetration=12.0, damage_class=6),
+        BallisticData(range_hexes=100, penetration=11.0, damage_class=5),
+        BallisticData(range_hexes=200, penetration=6.8, damage_class=4),
+        BallisticData(range_hexes=300, penetration=4.3, damage_class=3),
+        BallisticData(range_hexes=400, penetration=2.7, damage_class=2, beyond_max_range=True)
+    ]
+)
+
+ammo_556_galil_jhp = AmmoType(
+    name="5.56mm NATO JHP (Galil)", abbreviation="JHP",
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=15.0, damage_class=8),
+        BallisticData(range_hexes=20, penetration=15.0, damage_class=8),
+        BallisticData(range_hexes=40, penetration=13.0, damage_class=8),
+        BallisticData(range_hexes=70, penetration=12.0, damage_class=7),
+        BallisticData(range_hexes=100, penetration=10.0, damage_class=7),
+        BallisticData(range_hexes=200, penetration=6.5, damage_class=6),
+        BallisticData(range_hexes=300, penetration=4.1, damage_class=5),
+        BallisticData(range_hexes=400, penetration=2.6, damage_class=3, beyond_max_range=True)
+    ]
+)
+
+ammo_556_galil_ap = AmmoType(
+    name="5.56mm NATO AP (Galil)", abbreviation="AP",
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=22.0, damage_class=6),
+        BallisticData(range_hexes=20, penetration=21.0, damage_class=6),
+        BallisticData(range_hexes=40, penetration=20.0, damage_class=6),
+        BallisticData(range_hexes=70, penetration=17.0, damage_class=5),
+        BallisticData(range_hexes=100, penetration=15.0, damage_class=5),
+        BallisticData(range_hexes=200, penetration=9.5, damage_class=4),
+        BallisticData(range_hexes=300, penetration=6.1, damage_class=3),
+        BallisticData(range_hexes=400, penetration=3.9, damage_class=2, beyond_max_range=True)
+    ]
+)
+
+ammo_762_galil_fmj = AmmoType(
+    name="7.62mm NATO FMJ (Galil)", abbreviation="FMJ",
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=20.0, damage_class=8),
+        BallisticData(range_hexes=20, penetration=19.0, damage_class=8),
+        BallisticData(range_hexes=40, penetration=18.0, damage_class=8),
+        BallisticData(range_hexes=70, penetration=16.0, damage_class=7),
+        BallisticData(range_hexes=100, penetration=15.0, damage_class=7),
+        BallisticData(range_hexes=200, penetration=11.0, damage_class=7),
+        BallisticData(range_hexes=300, penetration=7.6, damage_class=6),
+        BallisticData(range_hexes=400, penetration=5.5, damage_class=5, beyond_max_range=True)
+    ]
+)
+
+ammo_762_galil_jhp = AmmoType(
+    name="7.62mm NATO JHP (Galil)", abbreviation="JHP",
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=19.0, damage_class=9),
+        BallisticData(range_hexes=20, penetration=18.0, damage_class=9),
+        BallisticData(range_hexes=40, penetration=17.0, damage_class=9),
+        BallisticData(range_hexes=70, penetration=16.0, damage_class=9),
+        BallisticData(range_hexes=100, penetration=14.0, damage_class=9),
+        BallisticData(range_hexes=200, penetration=10.0, damage_class=8),
+        BallisticData(range_hexes=300, penetration=7.3, damage_class=8),
+        BallisticData(range_hexes=400, penetration=5.2, damage_class=7, beyond_max_range=True)
+    ]
+)
+
+ammo_762_galil_ap = AmmoType(
+    name="7.62mm NATO AP (Galil)", abbreviation="AP",
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=28.0, damage_class=8),
+        BallisticData(range_hexes=20, penetration=27.0, damage_class=8),
+        BallisticData(range_hexes=40, penetration=25.0, damage_class=7),
+        BallisticData(range_hexes=70, penetration=23.0, damage_class=7),
+        BallisticData(range_hexes=100, penetration=21.0, damage_class=7),
+        BallisticData(range_hexes=200, penetration=15.0, damage_class=6),
+        BallisticData(range_hexes=300, penetration=11.0, damage_class=6),
+        BallisticData(range_hexes=400, penetration=7.7, damage_class=5, beyond_max_range=True)
+    ]
+)
+
+ammo_762_beretta_bm59_fmj = AmmoType(
+    name="7.62mm NATO FMJ (Beretta)", abbreviation="FMJ",
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=18.0, damage_class=8),
+        BallisticData(range_hexes=20, penetration=18.0, damage_class=8),
+        BallisticData(range_hexes=40, penetration=17.0, damage_class=8),
+        BallisticData(range_hexes=70, penetration=15.0, damage_class=7),
+        BallisticData(range_hexes=100, penetration=14.0, damage_class=7),
+        BallisticData(range_hexes=200, penetration=9.8, damage_class=6),
+        BallisticData(range_hexes=300, penetration=7.0, damage_class=6),
+        BallisticData(range_hexes=400, penetration=5.0, damage_class=5, beyond_max_range=True)
+    ]
+)
+
+ammo_762_beretta_bm59_jhp = AmmoType(
+    name="7.62mm NATO JHP (Beretta)", abbreviation="JHP",
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=18.0, damage_class=9),
+        BallisticData(range_hexes=20, penetration=17.0, damage_class=9),
+        BallisticData(range_hexes=40, penetration=16.0, damage_class=9),
+        BallisticData(range_hexes=70, penetration=15.0, damage_class=9),
+        BallisticData(range_hexes=100, penetration=13.0, damage_class=9),
+        BallisticData(range_hexes=200, penetration=9.4, damage_class=8),
+        BallisticData(range_hexes=300, penetration=6.7, damage_class=7),
+        BallisticData(range_hexes=400, penetration=4.8, damage_class=7, beyond_max_range=True)
+    ]
+)
+
+ammo_762_beretta_bm59_ap = AmmoType(
+    name="7.62mm NATO AP (Beretta)", abbreviation="AP",
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=26.0, damage_class=8),
+        BallisticData(range_hexes=20, penetration=25.0, damage_class=7),
+        BallisticData(range_hexes=40, penetration=24.0, damage_class=7),
+        BallisticData(range_hexes=70, penetration=21.0, damage_class=7),
+        BallisticData(range_hexes=100, penetration=19.0, damage_class=7),
+        BallisticData(range_hexes=200, penetration=14.0, damage_class=6),
+        BallisticData(range_hexes=300, penetration=9.9, damage_class=6),
+        BallisticData(range_hexes=400, penetration=7.1, damage_class=5, beyond_max_range=True)
+    ]
+)
+
+ammo_556_sc70_fmj = AmmoType(
+    name="5.56mm NATO FMJ (SC 70)", abbreviation="FMJ",
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=15.0, damage_class=6),
+        BallisticData(range_hexes=20, penetration=14.0, damage_class=6),
+        BallisticData(range_hexes=40, penetration=13.0, damage_class=6),
+        BallisticData(range_hexes=70, penetration=11.0, damage_class=5),
+        BallisticData(range_hexes=100, penetration=10.0, damage_class=5),
+        BallisticData(range_hexes=200, penetration=6.3, damage_class=4),
+        BallisticData(range_hexes=300, penetration=4.0, damage_class=3),
+        BallisticData(range_hexes=400, penetration=2.5, damage_class=2, beyond_max_range=True)
+    ]
+)
+
+ammo_556_sc70_jhp = AmmoType(
+    name="5.56mm NATO JHP (SC 70)", abbreviation="JHP",
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=14.0, damage_class=8),
+        BallisticData(range_hexes=20, penetration=14.0, damage_class=8),
+        BallisticData(range_hexes=40, penetration=13.0, damage_class=7),
+        BallisticData(range_hexes=70, penetration=11.0, damage_class=7),
+        BallisticData(range_hexes=100, penetration=9.5, damage_class=7),
+        BallisticData(range_hexes=200, penetration=6.0, damage_class=6),
+        BallisticData(range_hexes=300, penetration=3.8, damage_class=4),
+        BallisticData(range_hexes=400, penetration=2.4, damage_class=3, beyond_max_range=True)
+    ]
+)
+
+ammo_556_sc70_ap = AmmoType(
+    name="5.56mm NATO AP (SC 70)", abbreviation="AP",
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=21.0, damage_class=6),
+        BallisticData(range_hexes=20, penetration=20.0, damage_class=6),
+        BallisticData(range_hexes=40, penetration=18.0, damage_class=6),
+        BallisticData(range_hexes=70, penetration=16.0, damage_class=5),
+        BallisticData(range_hexes=100, penetration=14.0, damage_class=5),
+        BallisticData(range_hexes=200, penetration=8.8, damage_class=4),
+        BallisticData(range_hexes=300, penetration=5.6, damage_class=3),
+        BallisticData(range_hexes=400, penetration=3.5, damage_class=2, beyond_max_range=True)
+    ]
+)
+
+ammo_762_type64_fmj = AmmoType(
+    name="7.62mm NATO FMJ (Type 64)", abbreviation="FMJ",
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=13.0, damage_class=7),
+        BallisticData(range_hexes=20, penetration=13.0, damage_class=7),
+        BallisticData(range_hexes=40, penetration=12.0, damage_class=7),
+        BallisticData(range_hexes=70, penetration=11.0, damage_class=7),
+        BallisticData(range_hexes=100, penetration=9.7, damage_class=6),
+        BallisticData(range_hexes=200, penetration=6.7, damage_class=6),
+        BallisticData(range_hexes=300, penetration=4.7, damage_class=4),
+        BallisticData(range_hexes=400, penetration=3.3, damage_class=3, beyond_max_range=True)
+    ]
+)
+
+ammo_762_type64_jhp = AmmoType(
+    name="7.62mm NATO JHP (Type 64)", abbreviation="JHP",
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=13.0, damage_class=9),
+        BallisticData(range_hexes=20, penetration=12.0, damage_class=9),
+        BallisticData(range_hexes=40, penetration=11.0, damage_class=8),
+        BallisticData(range_hexes=70, penetration=10.0, damage_class=8),
+        BallisticData(range_hexes=100, penetration=9.3, damage_class=8),
+        BallisticData(range_hexes=200, penetration=6.5, damage_class=7),
+        BallisticData(range_hexes=300, penetration=4.5, damage_class=6),
+        BallisticData(range_hexes=400, penetration=3.2, damage_class=5, beyond_max_range=True)
+    ]
+)
+
+ammo_762_type64_ap = AmmoType(
+    name="7.62mm NATO AP (Type 64)", abbreviation="AP",
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=19.0, damage_class=7),
+        BallisticData(range_hexes=20, penetration=18.0, damage_class=7),
+        BallisticData(range_hexes=40, penetration=17.0, damage_class=7),
+        BallisticData(range_hexes=70, penetration=15.0, damage_class=6),
+        BallisticData(range_hexes=100, penetration=14.0, damage_class=6),
+        BallisticData(range_hexes=200, penetration=9.5, damage_class=6),
+        BallisticData(range_hexes=300, penetration=6.6, damage_class=4),
+        BallisticData(range_hexes=400, penetration=4.6, damage_class=3, beyond_max_range=True)
+    ]
+)
+
+ammo_556_r4_fmj = AmmoType(
+    name="5.56mm NATO FMJ (R4)", abbreviation="FMJ",
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=16.0, damage_class=6),
+        BallisticData(range_hexes=20, penetration=15.0, damage_class=6),
+        BallisticData(range_hexes=40, penetration=14.0, damage_class=6),
+        BallisticData(range_hexes=70, penetration=12.0, damage_class=6),
+        BallisticData(range_hexes=100, penetration=10.0, damage_class=5),
+        BallisticData(range_hexes=200, penetration=6.5, damage_class=4),
+        BallisticData(range_hexes=300, penetration=4.1, damage_class=3, beyond_max_range=True),
+        BallisticData(range_hexes=400, penetration=2.6, damage_class=2, beyond_max_range=True)
+    ]
+)
+
+ammo_556_r4_jhp = AmmoType(
+    name="5.56mm NATO JHP (R4)", abbreviation="JHP",
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=15.0, damage_class=8),
+        BallisticData(range_hexes=20, penetration=14.0, damage_class=8),
+        BallisticData(range_hexes=40, penetration=13.0, damage_class=8),
+        BallisticData(range_hexes=70, penetration=11.0, damage_class=7),
+        BallisticData(range_hexes=100, penetration=10.0, damage_class=7),
+        BallisticData(range_hexes=200, penetration=6.3, damage_class=6),
+        BallisticData(range_hexes=300, penetration=4.0, damage_class=4, beyond_max_range=True),
+        BallisticData(range_hexes=400, penetration=2.5, damage_class=3, beyond_max_range=True)
+    ]
+)
+
+ammo_556_r4_ap = AmmoType(
+    name="5.56mm NATO AP (R4)", abbreviation="AP",
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=22.0, damage_class=6),
+        BallisticData(range_hexes=20, penetration=21.0, damage_class=6),
+        BallisticData(range_hexes=40, penetration=19.0, damage_class=6),
+        BallisticData(range_hexes=70, penetration=17.0, damage_class=5),
+        BallisticData(range_hexes=100, penetration=15.0, damage_class=5),
+        BallisticData(range_hexes=200, penetration=9.2, damage_class=4),
+        BallisticData(range_hexes=300, penetration=5.8, damage_class=3, beyond_max_range=True),
+        BallisticData(range_hexes=400, penetration=3.7, damage_class=2, beyond_max_range=True)
+    ]
+)
+
 # 7.62 x 25mm Pistol ballistic data (for Type 51)
 pistol_762x25_ballistic = WeaponBallisticData(
     ballistic_accuracy=[
@@ -1915,8 +2554,14 @@ mp5_ballistic = WeaponBallisticData(
 
 mp5k_ballistic = WeaponBallisticData(
     three_round_burst=[
-        RangeData(10, -6), RangeData(20, -1), RangeData(40, 4), RangeData(70, 8),
-        RangeData(100, 11), RangeData(200, 16), RangeData(300, 19), RangeData(400, 21)
+        RangeData(range_hexes=10, value=-6),
+        RangeData(range_hexes=20, value=-1),
+        RangeData(range_hexes=40, value=4),
+        RangeData(range_hexes=70, value=8),
+        RangeData(range_hexes=100, value=11),
+        RangeData(range_hexes=200, value=16),
+        RangeData(range_hexes=300, value=19),
+        RangeData(range_hexes=400, value=21)
     ],
     minimum_arc=[
         RangeData(range_hexes=10,  value=0.4), RangeData(range_hexes=20,  value=0.8),
@@ -2258,6 +2903,327 @@ fal_ballistic = WeaponBallisticData(
     ]
 )
 
+fnc_ballistic = WeaponBallisticData(
+    three_round_burst=[
+        RangeData(range_hexes=10, value=-4), RangeData(range_hexes=20, value=1),
+        RangeData(range_hexes=40, value=6), RangeData(range_hexes=70, value=10),
+        RangeData(range_hexes=100, value=13), RangeData(range_hexes=200, value=17),
+        RangeData(range_hexes=300, value=20), RangeData(range_hexes=400, value=22)
+    ],
+    minimum_arc=[
+        RangeData(range_hexes=10, value=0.3), RangeData(range_hexes=20, value=0.6),
+        RangeData(range_hexes=40, value=1.0), RangeData(range_hexes=70, value=2.0),
+        RangeData(range_hexes=100, value=3.0), RangeData(range_hexes=200, value=6.0),
+        RangeData(range_hexes=300, value=9.0), RangeData(range_hexes=400, value=12.0),
+    ],
+    ballistic_accuracy=[
+        RangeData(range_hexes=10, value=61), RangeData(range_hexes=20, value=53),
+        RangeData(range_hexes=40, value=44), RangeData(range_hexes=70, value=37),
+        RangeData(range_hexes=100, value=32), RangeData(range_hexes=200, value=22),
+        RangeData(range_hexes=300, value=17), RangeData(range_hexes=400, value=13)
+    ],
+    time_of_flight=[
+        RangeData(range_hexes=10, value=0), RangeData(range_hexes=20, value=0),
+        RangeData(range_hexes=40, value=1), RangeData(range_hexes=70, value=2),
+        RangeData(range_hexes=100, value=2), RangeData(range_hexes=200, value=5),
+        RangeData(range_hexes=300, value=8), RangeData(range_hexes=400, value=11)
+    ]
+)
+
+m1949_ballistic = WeaponBallisticData(
+    ballistic_accuracy=[
+        RangeData(range_hexes=10, value=62), RangeData(range_hexes=20, value=54),
+        RangeData(range_hexes=40, value=45), RangeData(range_hexes=70, value=38),
+        RangeData(range_hexes=100, value=33), RangeData(range_hexes=200, value=24),
+        RangeData(range_hexes=300, value=18), RangeData(range_hexes=400, value=14)
+    ],
+    time_of_flight=[
+        RangeData(range_hexes=10, value=0), RangeData(range_hexes=20, value=0),
+        RangeData(range_hexes=40, value=1), RangeData(range_hexes=70, value=2),
+        RangeData(range_hexes=100, value=2), RangeData(range_hexes=200, value=5),
+        RangeData(range_hexes=300, value=8), RangeData(range_hexes=400, value=12)
+    ]
+)
+
+famas_ballistic = WeaponBallisticData(
+    three_round_burst=[
+        RangeData(range_hexes=10, value=-6), RangeData(range_hexes=20, value=-1),
+        RangeData(range_hexes=40, value=4), RangeData(range_hexes=70, value=8),
+        RangeData(range_hexes=100, value=10), RangeData(range_hexes=200, value=15),
+        RangeData(range_hexes=300, value=18), RangeData(range_hexes=400, value=20)
+    ],
+    minimum_arc=[
+        RangeData(range_hexes=10, value=0.4), RangeData(range_hexes=20, value=0.8),
+        RangeData(range_hexes=40, value=2.0), RangeData(range_hexes=70, value=3.0),
+        RangeData(range_hexes=100, value=4.0), RangeData(range_hexes=200, value=8.0),
+        RangeData(range_hexes=300, value=12.0), RangeData(range_hexes=400, value=16.0),
+    ],
+    ballistic_accuracy=[
+        RangeData(range_hexes=10, value=60), RangeData(range_hexes=20, value=51),
+        RangeData(range_hexes=40, value=42), RangeData(range_hexes=70, value=35),
+        RangeData(range_hexes=100, value=30), RangeData(range_hexes=200, value=20),
+        RangeData(range_hexes=300, value=15), RangeData(range_hexes=400, value=11)
+    ],
+    time_of_flight=[
+        RangeData(range_hexes=10, value=0), RangeData(range_hexes=20, value=0),
+        RangeData(range_hexes=40, value=1), RangeData(range_hexes=70, value=1),
+        RangeData(range_hexes=100, value=2), RangeData(range_hexes=200, value=5),
+        RangeData(range_hexes=300, value=8), RangeData(range_hexes=400, value=11)
+    ]
+)
+
+fr_f2_ballistic = WeaponBallisticData(
+    ballistic_accuracy=[
+        RangeData(range_hexes=10, value=68), RangeData(range_hexes=20, value=59),
+        RangeData(range_hexes=40, value=50), RangeData(range_hexes=70, value=43),
+        RangeData(range_hexes=100, value=38), RangeData(range_hexes=200, value=28),
+        RangeData(range_hexes=300, value=22), RangeData(range_hexes=400, value=18)
+    ],
+    time_of_flight=[
+        RangeData(range_hexes=10, value=0), RangeData(range_hexes=20, value=0),
+        RangeData(range_hexes=40, value=1), RangeData(range_hexes=70, value=2),
+        RangeData(range_hexes=100, value=2), RangeData(range_hexes=200, value=5),
+        RangeData(range_hexes=300, value=8), RangeData(range_hexes=400, value=11)
+    ]
+)
+
+g3_ballistic = WeaponBallisticData(
+    minimum_arc=[
+        RangeData(range_hexes=10, value=0.5), RangeData(range_hexes=20, value=1.0),
+        RangeData(range_hexes=40, value=2.0), RangeData(range_hexes=70, value=3.0),
+        RangeData(range_hexes=100, value=5.0), RangeData(range_hexes=200, value=10.0),
+        RangeData(range_hexes=300, value=14.0), RangeData(range_hexes=400, value=19.0)
+    ],
+    ballistic_accuracy=[
+        RangeData(range_hexes=10, value=61), RangeData(range_hexes=20, value=53),
+        RangeData(range_hexes=40, value=44), RangeData(range_hexes=70, value=37),
+        RangeData(range_hexes=100, value=32), RangeData(range_hexes=200, value=23),
+        RangeData(range_hexes=300, value=17), RangeData(range_hexes=400, value=13)
+    ],
+    time_of_flight=[
+        RangeData(range_hexes=10, value=0), RangeData(range_hexes=20, value=0),
+        RangeData(range_hexes=40, value=1), RangeData(range_hexes=70, value=2),
+        RangeData(range_hexes=100, value=3), RangeData(range_hexes=200, value=5),
+        RangeData(range_hexes=300, value=9), RangeData(range_hexes=400, value=12)
+    ]
+)
+
+g41_ballistic = WeaponBallisticData(
+    three_round_burst=[
+        RangeData(range_hexes=10, value=-4), RangeData(range_hexes=20, value=1),
+        RangeData(range_hexes=40, value=5), RangeData(range_hexes=70, value=9),
+        RangeData(range_hexes=100, value=12), RangeData(range_hexes=200, value=17),
+        RangeData(range_hexes=300, value=20), RangeData(range_hexes=400, value=22)
+    ],
+    minimum_arc=[
+        RangeData(range_hexes=10, value=0.4), RangeData(range_hexes=20, value=0.8),
+        RangeData(range_hexes=40, value=2.0), RangeData(range_hexes=70, value=3.0),
+        RangeData(range_hexes=100, value=4.0), RangeData(range_hexes=200, value=8.0),
+        RangeData(range_hexes=300, value=11.0), RangeData(range_hexes=400, value=15.0)
+    ],
+    ballistic_accuracy=[
+        RangeData(range_hexes=10, value=61), RangeData(range_hexes=20, value=53),
+        RangeData(range_hexes=40, value=44), RangeData(range_hexes=70, value=37),
+        RangeData(range_hexes=100, value=32), RangeData(range_hexes=200, value=22),
+        RangeData(range_hexes=300, value=17), RangeData(range_hexes=400, value=13)
+    ],
+    time_of_flight=[
+        RangeData(range_hexes=10, value=0), RangeData(range_hexes=20, value=0),
+        RangeData(range_hexes=40, value=1), RangeData(range_hexes=70, value=1),
+        RangeData(range_hexes=100, value=2), RangeData(range_hexes=200, value=5),
+        RangeData(range_hexes=300, value=8), RangeData(range_hexes=400, value=11)
+    ]
+)
+
+g11_ballistic = WeaponBallisticData(
+    three_round_burst=[
+        RangeData(range_hexes=10, value=-20), RangeData(range_hexes=20, value=-16),
+        RangeData(range_hexes=40, value=-11), RangeData(range_hexes=70, value=-7),
+        RangeData(range_hexes=100, value=-4), RangeData(range_hexes=200, value=1),
+        RangeData(range_hexes=300, value=4), RangeData(range_hexes=400, value=6)
+    ],
+    minimum_arc=[
+        RangeData(range_hexes=10, value=0.2), RangeData(range_hexes=20, value=0.5),
+        RangeData(range_hexes=40, value=0.9), RangeData(range_hexes=70, value=2.0),
+        RangeData(range_hexes=100, value=2.0), RangeData(range_hexes=200, value=5.0),
+        RangeData(range_hexes=300, value=7.0), RangeData(range_hexes=400, value=9.0),
+    ],
+    ballistic_accuracy=[
+        RangeData(range_hexes=10, value=64), RangeData(range_hexes=20, value=57),
+        RangeData(range_hexes=40, value=49), RangeData(range_hexes=70, value=43),
+        RangeData(range_hexes=100, value=38), RangeData(range_hexes=200, value=29),
+        RangeData(range_hexes=300, value=23), RangeData(range_hexes=400, value=19)
+    ],
+    time_of_flight=[
+        RangeData(range_hexes=10, value=0), RangeData(range_hexes=20, value=0),
+        RangeData(range_hexes=40, value=1), RangeData(range_hexes=70, value=1),
+        RangeData(range_hexes=100, value=2), RangeData(range_hexes=200, value=5),
+        RangeData(range_hexes=300, value=7), RangeData(range_hexes=400, value=10)
+    ]
+)
+
+wa2000_ballistic = WeaponBallisticData(
+    ballistic_accuracy=[
+        RangeData(range_hexes=10, value=70), RangeData(range_hexes=20, value=62),
+        RangeData(range_hexes=40, value=53), RangeData(range_hexes=70, value=46),
+        RangeData(range_hexes=100, value=41), RangeData(range_hexes=200, value=32),
+        RangeData(range_hexes=300, value=26), RangeData(range_hexes=400, value=22)
+    ],
+    time_of_flight=[
+        RangeData(range_hexes=10, value=0), RangeData(range_hexes=20, value=0),
+        RangeData(range_hexes=40, value=1), RangeData(range_hexes=70, value=1),
+        RangeData(range_hexes=100, value=2), RangeData(range_hexes=200, value=5),
+        RangeData(range_hexes=300, value=7), RangeData(range_hexes=400, value=10)
+    ]
+)
+
+amd65_ballistic = WeaponBallisticData(
+    minimum_arc=[
+        RangeData(range_hexes=10, value=0.4), RangeData(range_hexes=20, value=0.8),
+        RangeData(range_hexes=40, value=2.0), RangeData(range_hexes=70, value=3.0),
+        RangeData(range_hexes=100, value=4.0), RangeData(range_hexes=200, value=8.0),
+        RangeData(range_hexes=300, value=12.0), RangeData(range_hexes=400, value=16.0),
+    ],
+    ballistic_accuracy=[
+        RangeData(range_hexes=10, value=58), RangeData(range_hexes=20, value=50),
+        RangeData(range_hexes=40, value=40), RangeData(range_hexes=70, value=33),
+        RangeData(range_hexes=100, value=28), RangeData(range_hexes=200, value=18),
+        RangeData(range_hexes=300, value=13), RangeData(range_hexes=400, value=9)
+    ],
+    time_of_flight=[
+        RangeData(range_hexes=10, value=0), RangeData(range_hexes=20, value=1),
+        RangeData(range_hexes=40, value=1), RangeData(range_hexes=70, value=2),
+        RangeData(range_hexes=100, value=3), RangeData(range_hexes=200, value=6),
+        RangeData(range_hexes=300, value=10), RangeData(range_hexes=400, value=15)
+    ]
+)
+
+galil_556_ballistic = WeaponBallisticData(
+    minimum_arc=[
+        RangeData(range_hexes=10, value=0.2), RangeData(range_hexes=20, value=0.5),
+        RangeData(range_hexes=40, value=0.9), RangeData(range_hexes=70, value=2.0),
+        RangeData(range_hexes=100, value=2.0), RangeData(range_hexes=200, value=5.0),
+        RangeData(range_hexes=300, value=7.0), RangeData(range_hexes=400, value=9.0)
+    ],
+    ballistic_accuracy=[
+        RangeData(range_hexes=10, value=60), RangeData(range_hexes=20, value=51),
+        RangeData(range_hexes=40, value=42), RangeData(range_hexes=70, value=35),
+        RangeData(range_hexes=100, value=30), RangeData(range_hexes=200, value=20),
+        RangeData(range_hexes=300, value=15), RangeData(range_hexes=400, value=11)
+    ],
+    time_of_flight=[
+        RangeData(range_hexes=10, value=0), RangeData(range_hexes=20, value=0),
+        RangeData(range_hexes=40, value=1), RangeData(range_hexes=70, value=1),
+        RangeData(range_hexes=100, value=2), RangeData(range_hexes=200, value=5),
+        RangeData(range_hexes=300, value=7), RangeData(range_hexes=400, value=11)
+    ]
+)
+
+galil_762_ballistic = WeaponBallisticData(
+    minimum_arc=[
+        RangeData(range_hexes=10, value=0.5), RangeData(range_hexes=20, value=1.0),
+        RangeData(range_hexes=40, value=2.0), RangeData(range_hexes=70, value=4.0),
+        RangeData(range_hexes=100, value=5.0), RangeData(range_hexes=200, value=11.0),
+        RangeData(range_hexes=300, value=16.0), RangeData(range_hexes=400, value=21.0)
+    ],
+    ballistic_accuracy=[
+        RangeData(range_hexes=10, value=61), RangeData(range_hexes=20, value=53),
+        RangeData(range_hexes=40, value=45), RangeData(range_hexes=70, value=37),
+        RangeData(range_hexes=100, value=32), RangeData(range_hexes=200, value=23),
+        RangeData(range_hexes=300, value=17), RangeData(range_hexes=400, value=13)
+    ],
+    time_of_flight=[
+        RangeData(range_hexes=10, value=0), RangeData(range_hexes=20, value=0),
+        RangeData(range_hexes=40, value=1), RangeData(range_hexes=70, value=2),
+        RangeData(range_hexes=100, value=2), RangeData(range_hexes=200, value=5),
+        RangeData(range_hexes=300, value=8), RangeData(range_hexes=400, value=11)
+    ]
+)
+
+beretta_bm59_ballistic = WeaponBallisticData(
+    minimum_arc=[
+        RangeData(range_hexes=10, value=0.6), RangeData(range_hexes=20, value=1.0),
+        RangeData(range_hexes=40, value=2.0), RangeData(range_hexes=70, value=4.0),
+        RangeData(range_hexes=100, value=6.0), RangeData(range_hexes=200, value=12.0),
+        RangeData(range_hexes=300, value=18.0), RangeData(range_hexes=400, value=24.0)
+    ],
+    ballistic_accuracy=[
+        RangeData(range_hexes=10, value=61), RangeData(range_hexes=20, value=53),
+        RangeData(range_hexes=40, value=45), RangeData(range_hexes=70, value=37),
+        RangeData(range_hexes=100, value=32), RangeData(range_hexes=200, value=23),
+        RangeData(range_hexes=300, value=17), RangeData(range_hexes=400, value=13)
+    ],
+    time_of_flight=[
+        RangeData(range_hexes=10, value=0), RangeData(range_hexes=20, value=0),
+        RangeData(range_hexes=40, value=1), RangeData(range_hexes=70, value=2),
+        RangeData(range_hexes=100, value=2), RangeData(range_hexes=200, value=5),
+        RangeData(range_hexes=300, value=8), RangeData(range_hexes=400, value=12)
+    ]
+)
+
+sc70_ballistic = WeaponBallisticData(
+    minimum_arc=[
+        RangeData(range_hexes=10, value=0.2), RangeData(range_hexes=20, value=0.5),
+        RangeData(range_hexes=40, value=1.0), RangeData(range_hexes=70, value=2.0),
+        RangeData(range_hexes=100, value=2.0), RangeData(range_hexes=200, value=5.0),
+        RangeData(range_hexes=300, value=7.0), RangeData(range_hexes=400, value=10.0)
+    ],
+    ballistic_accuracy=[
+        RangeData(range_hexes=10, value=60), RangeData(range_hexes=20, value=51),
+        RangeData(range_hexes=40, value=42), RangeData(range_hexes=70, value=35),
+        RangeData(range_hexes=100, value=30), RangeData(range_hexes=200, value=20),
+        RangeData(range_hexes=300, value=15), RangeData(range_hexes=400, value=11)
+    ],
+    time_of_flight=[
+        RangeData(range_hexes=10, value=0), RangeData(range_hexes=20, value=0),
+        RangeData(range_hexes=40, value=1), RangeData(range_hexes=70, value=1),
+        RangeData(range_hexes=100, value=2), RangeData(range_hexes=200, value=5),
+        RangeData(range_hexes=300, value=8), RangeData(range_hexes=400, value=11)
+    ]
+)
+
+type64_ballistic = WeaponBallisticData(
+    minimum_arc=[
+        RangeData(range_hexes=10, value=0.3), RangeData(range_hexes=20, value=0.7),
+        RangeData(range_hexes=40, value=1.0), RangeData(range_hexes=70, value=2.0),
+        RangeData(range_hexes=100, value=3.0), RangeData(range_hexes=200, value=7.0),
+        RangeData(range_hexes=300, value=10.0), RangeData(range_hexes=400, value=14.0)
+    ],
+    ballistic_accuracy=[
+        RangeData(range_hexes=10, value=61), RangeData(range_hexes=20, value=53),
+        RangeData(range_hexes=40, value=44), RangeData(range_hexes=70, value=37),
+        RangeData(range_hexes=100, value=32), RangeData(range_hexes=200, value=22),
+        RangeData(range_hexes=300, value=17), RangeData(range_hexes=400, value=13)
+    ],
+    time_of_flight=[
+        RangeData(range_hexes=10, value=0), RangeData(range_hexes=20, value=1),
+        RangeData(range_hexes=40, value=1), RangeData(range_hexes=70, value=2),
+        RangeData(range_hexes=100, value=3), RangeData(range_hexes=200, value=6),
+        RangeData(range_hexes=300, value=10), RangeData(range_hexes=400, value=14)
+    ]
+)
+
+r4_ballistic = WeaponBallisticData(
+    minimum_arc=[
+        RangeData(range_hexes=10, value=0.2), RangeData(range_hexes=20, value=0.4),
+        RangeData(range_hexes=40, value=0.9), RangeData(range_hexes=70, value=1.0),
+        RangeData(range_hexes=100, value=2.0), RangeData(range_hexes=200, value=4.0),
+        RangeData(range_hexes=300, value=6.0), RangeData(range_hexes=400, value=9.0)
+    ],
+    ballistic_accuracy=[
+        RangeData(range_hexes=10, value=59), RangeData(range_hexes=20, value=51),
+        RangeData(range_hexes=40, value=42), RangeData(range_hexes=70, value=35),
+        RangeData(range_hexes=100, value=30), RangeData(range_hexes=200, value=20),
+        RangeData(range_hexes=300, value=14), RangeData(range_hexes=400, value=11)
+    ],
+    time_of_flight=[
+        RangeData(range_hexes=10, value=0), RangeData(range_hexes=20, value=0),
+        RangeData(range_hexes=40, value=1), RangeData(range_hexes=70, value=1),
+        RangeData(range_hexes=100, value=2), RangeData(range_hexes=200, value=5),
+        RangeData(range_hexes=300, value=7), RangeData(range_hexes=400, value=11)
+    ]
+)
+
 # ============================================================================
 # WEAPONS
 # ============================================================================
@@ -2538,7 +3504,8 @@ m93r = Weapon(
     sustained_auto_burst=4,
     aim_time_modifiers={1: -18, 2: -11, 3: -10, 4: -9, 5: -8, 6: -7},
     ammunition_types=[ammo_9mm_m93r_fmj, ammo_9mm_m93r_jhp, ammo_9mm_m93r_ap],
-    ballistic_data=m93r_ballistic
+    ballistic_data=m93r_ballistic,
+    built_in_foregrip=True,
 )
 
 # M951R Machine Pistol
@@ -2905,7 +3872,8 @@ hk_mp5k = Weapon(
     sustained_auto_burst=3,
     aim_time_modifiers={1: -19, 2: -11, 3: -10, 4: -9, 5: -8, 6: -7, 7: -6},
     ammunition_types=[ammo_9mm_mp5k_fmj, ammo_9mm_mp5k_jhp, ammo_9mm_mp5k_ap],
-    ballistic_data=mp5k_ballistic
+    ballistic_data=mp5k_ballistic,
+    built_in_foregrip=True,
 )
 
 hk_53 = Weapon(
@@ -2997,7 +3965,8 @@ beretta_m12s = Weapon(
     sustained_auto_burst=3,
     aim_time_modifiers={1: -22, 2: -12, 3: -9, 4: -7, 5: -6, 6: -5, 7: -4, 8: -3},
     ammunition_types=[ammo_9mm_m12s_fmj, ammo_9mm_m12s_jhp, ammo_9mm_m12s_ap],
-    ballistic_data=m12s_ballistic
+    ballistic_data=m12s_ballistic,
+    built_in_foregrip=True,
 )
 
 spectre = Weapon(
@@ -3020,7 +3989,8 @@ spectre = Weapon(
     sustained_auto_burst=3,
     aim_time_modifiers={1: -20, 2: -10, 3: -7, 4: -5, 5: -4, 6: -3, 7: -2, 8: -1},
     ammunition_types=[ammo_9mm_spectre_fmj, ammo_9mm_spectre_jhp, ammo_9mm_spectre_ap],
-    ballistic_data=spectre_ballistic
+    ballistic_data=spectre_ballistic,
+    built_in_foregrip=True,
 )
 
 armscor_bxp = Weapon(
@@ -3051,7 +4021,7 @@ aks74u = Weapon(
     weight=7.3,
     description="SMG version of the AKS 74 rifle. In service with Soviet forces.",
     caliber=Caliber.CAL_545X39,
-    weapon_type=WeaponType.SUB_MACHINEGUN,
+    weapon_type=WeaponType.CARBINE,
     country=Country.USSR,
     length_deployed=27.0,
     length_folded=17.0,
@@ -3142,7 +4112,7 @@ bushmaster = Weapon(
     weight=6.2,
     description="Powerful SMG designed for 1 hand fire braced against the forearm.",
     caliber=Caliber.CAL_556_NATO,
-    weapon_type=WeaponType.SUB_MACHINEGUN,
+    weapon_type=WeaponType.CARBINE,
     country=Country.USA,
     length_deployed=21.0,
     reload_time=8,
@@ -3181,7 +4151,9 @@ steyr_aug = Weapon(
         6: -4, 7: -3, 8: -2, 9: -1, 10: 0, 11: 1
     },
     ammunition_types=[ammo_556_aug_fmj, ammo_556_aug_jhp, ammo_556_aug_ap],
-    ballistic_data=aug_ballistic
+    ballistic_data=aug_ballistic,
+    built_in_optics=True,
+    built_in_foregrip=True,
 )
 
 l1a1_f1 = Weapon(
@@ -3189,7 +4161,7 @@ l1a1_f1 = Weapon(
     weight=12.0,
     description="Standard Australian army rifle patterned after the FN FAL. It is being replaced by the Austrian Steyr AUG.",
     caliber=Caliber.CAL_762_NATO,
-    weapon_type=WeaponType.ASSAULT_RIFLE,
+    weapon_type=WeaponType.BATTLE_RIFLE,
     country=Country.AUSTRALIA,
     length_deployed=42.0,
     reload_time=8,
@@ -3213,7 +4185,7 @@ fn_fal = Weapon(
     weight=10.8,
     description="Highly successful weapon exported to over 90 countries including the United Kingdom and Israel.",
     caliber=Caliber.CAL_762_NATO,
-    weapon_type=WeaponType.ASSAULT_RIFLE,
+    weapon_type=WeaponType.BATTLE_RIFLE,
     country=Country.BELGIUM,
     length_deployed=43.0,
     reload_time=8,
@@ -3231,6 +4203,354 @@ fn_fal = Weapon(
     },
     ammunition_types=[ammo_762_fal_fmj, ammo_762_fal_jhp, ammo_762_fal_ap],
     ballistic_data=fal_ballistic
+)
+
+fn_fnc = Weapon(
+    name="FN FNC",
+    weight=9.6,
+    description="Modern successor to the FN CAL. This weapon has three round burst capability and like the FN FAL has been marketed for export.",
+    caliber=Caliber.CAL_556_NATO,
+    weapon_type=WeaponType.ASSAULT_RIFLE,
+    country=Country.BELGIUM,
+    length_deployed=39.0,
+    length_folded=30.0,
+    reload_time=8,
+    self_loading_action=True,
+    full_auto=True,
+    full_auto_rof=6,
+    ammo_capacity=30,
+    ammo_weight=1.2,
+    ammo_feed_device=AmmoFeedDevice.MAGAZINE,
+    knock_down=4,
+    sustained_auto_burst=3,
+    aim_time_modifiers={
+        1: -23, 2: -12, 3: -9, 4: -7, 5: -6, 6: -5, 7: -4, 8: -3, 9: -2, 10: -1, 11: 0
+    },
+    ammunition_types=[ammo_556_fnc_fmj, ammo_556_fnc_jhp, ammo_556_fnc_ap],
+    ballistic_data=fnc_ballistic
+)
+
+m1949_56 = Weapon(
+    name="M1949 - 56",
+    weight=9.6,
+    description="This French army rifle is still in service and is being replaced by the FA MAS. The FA MAS is currently only available to elite troops.",
+    caliber=Caliber.CAL_75_FRENCH,
+    weapon_type=WeaponType.BATTLE_RIFLE,
+    country=Country.FRANCE,
+    length_deployed=40.0,
+    reload_time=8,
+    self_loading_action=True,
+    full_auto=False,
+    ammo_capacity=10,
+    ammo_weight=0.95,
+    ammo_feed_device=AmmoFeedDevice.MAGAZINE,
+    knock_down=9,
+    sustained_auto_burst=5,
+    aim_time_modifiers={
+        1: -23, 2: -12, 3: -9, 4: -7, 5: -6, 6: -5, 7: -4, 8: -3, 9: -2, 10: -1, 11: 0
+    },
+    ammunition_types=[ammo_75_m1949_fmj, ammo_75_m1949_jhp, ammo_75_m1949_ap],
+    ballistic_data=m1949_ballistic
+)
+
+fa_mas = Weapon(
+    name="FA MAS",
+    weight=9.0,
+    description="New French army rifle of lightweight, bullpup design.",
+    caliber=Caliber.CAL_556_NATO,
+    weapon_type=WeaponType.ASSAULT_RIFLE,
+    country=Country.FRANCE,
+    length_deployed=30.0,
+    reload_time=10,
+    self_loading_action=True,
+    full_auto=True,
+    full_auto_rof=8, # ROF is **8
+    ammo_capacity=25,
+    ammo_weight=1.0,
+    ammo_feed_device=AmmoFeedDevice.MAGAZINE,
+    knock_down=4,
+    sustained_auto_burst=3,
+    aim_time_modifiers={
+        1: -23, 2: -12, 3: -9, 4: -7, 5: -6, 6: -5, 7: -4, 8: -3, 9: -2, 10: -1, 11: 0
+    },
+    ammunition_types=[ammo_556_famas_fmj, ammo_556_famas_jhp, ammo_556_famas_ap],
+    ballistic_data=famas_ballistic
+)
+
+fr_f2 = Weapon(
+    name="FR F2",
+    weight=12.5,
+    description="French sniper rifle with optical scope and bipod chambered in 7.62mm NATO.",
+    caliber=Caliber.CAL_762_NATO,
+    weapon_type=WeaponType.SNIPER_RIFLE,
+    country=Country.FRANCE,
+    length_deployed=45.0,
+    reload_time=8,
+    self_loading_action=False,
+    full_auto=False,
+    actions_to_cycle=3,
+    ammo_capacity=10,
+    ammo_weight=1.1,
+    ammo_feed_device=AmmoFeedDevice.MAGAZINE,
+    knock_down=10,
+    sustained_auto_burst=5,
+    aim_time_modifiers={1: -24, 2: -14, 3: -7, 4: -5, 5: -4, 6: -2, 7: 0, 8: 1, 9: 2, 10: 3, 12: 5},
+    ammunition_types=[ammo_762_frf2_fmj, ammo_762_frf2_jhp, ammo_762_frf2_ap],
+    ballistic_data=fr_f2_ballistic,
+    built_in_optics=True,
+    built_in_bipod=True,
+)
+
+hk_g3 = Weapon(
+    name="Heckler & Koch G3",
+    weight=11.1,
+    description="Standard rifle of the West German army. It is also widely used in Africa and South America.",
+    caliber=Caliber.CAL_762_NATO,
+    weapon_type=WeaponType.BATTLE_RIFLE,
+    country=Country.WEST_GERMANY,
+    length_deployed=40.0,
+    reload_time=8,
+    self_loading_action=True,
+    full_auto=True,
+    full_auto_rof=5,
+    ammo_capacity=20,
+    ammo_weight=1.4,
+    ammo_feed_device=AmmoFeedDevice.MAGAZINE,
+    knock_down=10,
+    sustained_auto_burst=5,
+    aim_time_modifiers={1: -24, 2: -14, 3: -9, 4: -8, 5: -6, 6: -5, 7: -4, 8: -3, 9: -2, 10: -1, 11: 0},
+    ammunition_types=[ammo_762_g3_fmj, ammo_762_g3_jhp, ammo_762_g3_ap],
+    ballistic_data=g3_ballistic
+)
+
+hk_g41 = Weapon(
+    name="Heckler & Koch G41",
+    weight=8.6,
+    description="5.56mm NATO version of the G3. This weapon is considerably lighter than the G3 and has three round burst capability.",
+    caliber=Caliber.CAL_556_NATO,
+    weapon_type=WeaponType.ASSAULT_RIFLE,
+    country=Country.WEST_GERMANY,
+    length_deployed=39.0,
+    reload_time=8,
+    self_loading_action=True,
+    full_auto=True,
+    full_auto_rof=7,
+    ammo_capacity=30,
+    ammo_weight=1.1,
+    ammo_feed_device=AmmoFeedDevice.MAGAZINE,
+    knock_down=4,
+    sustained_auto_burst=3,
+    aim_time_modifiers={1: -23, 2: -12, 3: -9, 4: -7, 5: -6, 6: -5, 7: -4, 8: -3, 9: -2, 10: -1, 11: 0},
+    ammunition_types=[ammo_556_g41_fmj, ammo_556_g41_jhp, ammo_556_g41_ap],
+    ballistic_data=g41_ballistic
+)
+
+hk_g11 = Weapon(
+    name="Heckler & Koch G11",
+    weight=8.7,
+    description="Advanced caseless rifle under development.",
+    caliber=Caliber.CAL_47_CASELESS,
+    weapon_type=WeaponType.ASSAULT_RIFLE,
+    country=Country.WEST_GERMANY,
+    length_deployed=30.0,
+    reload_time=10,
+    self_loading_action=True,
+    full_auto=True,
+    full_auto_rof=5,
+    ammo_capacity=50,
+    ammo_weight=0.77,
+    ammo_feed_device=AmmoFeedDevice.MAGAZINE,
+    knock_down=4,
+    sustained_auto_burst=3,
+    aim_time_modifiers={1: -23, 2: -12, 3: -8, 4: -6, 5: -5, 6: -4, 7: -3, 8: -2, 9: -1, 10: 0, 11: 1},
+    ammunition_types=[ammo_47_g11_fmj, ammo_47_g11_jhp, ammo_47_g11_ap],
+    ballistic_data=g11_ballistic,
+    built_in_optics=True,
+)
+
+walther_2000 = Weapon(
+    name="Walther 2000",
+    weight=18.3,
+    description="Specially designed sniper rifle with optical scope and bipod.",
+    caliber=Caliber.CAL_300_WIN_MAG,
+    weapon_type=WeaponType.SNIPER_RIFLE,
+    country=Country.WEST_GERMANY,
+    length_deployed=36.0,
+    reload_time=10,
+    self_loading_action=True,
+    full_auto=False,
+    ammo_capacity=6,
+    ammo_weight=0.90,
+    ammo_feed_device=AmmoFeedDevice.MAGAZINE,
+    knock_down=13,
+    sustained_auto_burst=5,
+    aim_time_modifiers={1: -26, 2: -16, 3: -8, 4: -6, 5: -4, 6: -3, 7: -1, 8: 0, 9: 1, 10: 2, 12: 5},
+    ammunition_types=[ammo_300wm_wa2000_fmj, ammo_300wm_wa2000_jhp, ammo_300wm_wa2000_ap],
+    ballistic_data=wa2000_ballistic,
+    built_in_optics=True,
+)
+
+amd_65 = Weapon(
+    name="AMD 65",
+    weight=9.0,
+    description="Hungarian modified AK 63 with folding stock and foregrip.",
+    caliber=Caliber.CAL_762X39,
+    weapon_type=WeaponType.CARBINE,
+    country=Country.HUNGARY,
+    length_deployed=34.0,
+    length_folded=26.0,
+    reload_time=8,
+    self_loading_action=True,
+    full_auto=True,
+    full_auto_rof=5,
+    ammo_capacity=30,
+    ammo_weight=1.8,
+    ammo_feed_device=AmmoFeedDevice.MAGAZINE,
+    knock_down=7,
+    sustained_auto_burst=4,
+    aim_time_modifiers={1: -23, 2: -13, 3: -9, 4: -7, 5: -6, 6: -4, 7: -3, 8: -2},
+    ammunition_types=[ammo_762x39_amd65_fmj, ammo_762x39_amd65_jhp, ammo_762x39_amd65_ap],
+    ballistic_data=amd65_ballistic,
+    built_in_foregrip=True,
+)
+
+galil_ar_556 = Weapon(
+    name="Galil AR 5.56mm",
+    weight=10.2,
+    description="Galil Assault Rifle in 5.56mm NATO.",
+    caliber=Caliber.CAL_556_NATO,
+    weapon_type=WeaponType.ASSAULT_RIFLE,
+    country=Country.ISRAEL,
+    length_deployed=39.0,
+    length_folded=29.0,
+    reload_time=8,
+    self_loading_action=True,
+    full_auto=True,
+    full_auto_rof=5,
+    ammo_capacity=35,
+    ammo_weight=1.6,
+    ammo_feed_device=AmmoFeedDevice.MAGAZINE,
+    knock_down=4,
+    sustained_auto_burst=3,
+    aim_time_modifiers={1: -23, 2: -13, 3: -9, 4: -7, 5: -6, 6: -5, 7: -4, 8: -3, 9: -2, 10: -1, 11: 0},
+    ammunition_types=[ammo_556_galil_fmj, ammo_556_galil_jhp, ammo_556_galil_ap],
+    ballistic_data=galil_556_ballistic
+)
+
+galil_ar_762 = Weapon(
+    name="Galil AR 7.62mm",
+    weight=10.7,
+    description="Galil Assault Rifle in 7.62mm NATO. This weapon & the 5.56mm version are also available in a Short Assault Rifle (SAR) variant.",
+    caliber=Caliber.CAL_762_NATO,
+    weapon_type=WeaponType.BATTLE_RIFLE,
+    country=Country.ISRAEL,
+    length_deployed=41.0,
+    length_folded=32.0,
+    reload_time=8,
+    self_loading_action=True,
+    full_auto=True,
+    full_auto_rof=5,
+    ammo_capacity=25,
+    ammo_weight=2.0,
+    ammo_feed_device=AmmoFeedDevice.MAGAZINE,
+    knock_down=10,
+    sustained_auto_burst=5,
+    aim_time_modifiers={1: -24, 2: -13, 3: -9, 4: -7, 5: -6, 6: -5, 7: -4, 8: -3, 9: -2, 10: -1, 11: 0},
+    ammunition_types=[ammo_762_galil_fmj, ammo_762_galil_jhp, ammo_762_galil_ap],
+    ballistic_data=galil_762_ballistic
+)
+
+beretta_bm59 = Weapon(
+    name="Beretta BM 59",
+    weight=11.3,
+    description="Standard rifle of the Italian army. Similar to the M1 Garand.",
+    caliber=Caliber.CAL_762_NATO,
+    weapon_type=WeaponType.BATTLE_RIFLE,
+    country=Country.ITALY,
+    length_deployed=43.0,
+    reload_time=8,
+    self_loading_action=True,
+    full_auto=True,
+    full_auto_rof=6,
+    ammo_capacity=20,
+    ammo_weight=1.5,
+    ammo_feed_device=AmmoFeedDevice.MAGAZINE,
+    knock_down=10,
+    sustained_auto_burst=5,
+    aim_time_modifiers={1: -24, 2: -14, 3: -9, 4: -8, 5: -6, 6: -5, 7: -4, 8: -3, 9: -2, 10: -1, 11: 0},
+    ammunition_types=[ammo_762_beretta_bm59_fmj, ammo_762_beretta_bm59_jhp, ammo_762_beretta_bm59_ap],
+    ballistic_data=beretta_bm59_ballistic,
+    built_in_bipod=True,
+)
+
+beretta_sc70 = Weapon(
+    name="Beretta SC 70",
+    weight=9.3,
+    description="Folding stock version of the Beretta AR 70 rifle.",
+    caliber=Caliber.CAL_556_NATO,
+    weapon_type=WeaponType.ASSAULT_RIFLE,
+    country=Country.ITALY,
+    length_deployed=38.0,
+    length_folded=29.0,
+    reload_time=8,
+    self_loading_action=True,
+    full_auto=True,
+    full_auto_rof=5,
+    ammo_capacity=30,
+    ammo_weight=1.1,
+    ammo_feed_device=AmmoFeedDevice.MAGAZINE,
+    knock_down=4,
+    sustained_auto_burst=3,
+    aim_time_modifiers={1: -23, 2: -12, 3: -9, 4: -7, 5: -6, 6: -5, 7: -4, 8: -3, 9: -2, 10: -1, 11: 0},
+    ammunition_types=[ammo_556_sc70_fmj, ammo_556_sc70_jhp, ammo_556_sc70_ap],
+    ballistic_data=sc70_ballistic
+)
+
+type_64 = Weapon(
+    name="Type 64",
+    weight=11.3,
+    description="Standard rifle of the Japanese army using a reduced load 7.62mm round.",
+    caliber=Caliber.CAL_762_NATO,
+    weapon_type=WeaponType.BATTLE_RIFLE,
+    country=Country.JAPAN,
+    length_deployed=39.0,
+    reload_time=8,
+    self_loading_action=True,
+    full_auto=True,
+    full_auto_rof=4,
+    ammo_capacity=20,
+    ammo_weight=1.6,
+    ammo_feed_device=AmmoFeedDevice.MAGAZINE,
+    knock_down=8,
+    sustained_auto_burst=5,
+    aim_time_modifiers={1: -24, 2: -14, 3: -9, 4: -8, 5: -6, 6: -5, 7: -4, 8: -3, 9: -2, 10: -1, 11: 0},
+    ammunition_types=[ammo_762_type64_fmj, ammo_762_type64_jhp, ammo_762_type64_ap],
+    ballistic_data=type64_ballistic,
+    built_in_bipod=True,
+)
+
+r4 = Weapon(
+    name="R4",
+    weight=11.2,
+    description="Modified Galil AR. South African Defense Force's standard rifle.",
+    caliber=Caliber.CAL_556_NATO,
+    weapon_type=WeaponType.ASSAULT_RIFLE,
+    country=Country.SOUTH_AFRICA,
+    length_deployed=40.0,
+    length_folded=29.0,
+    reload_time=8,
+    self_loading_action=True,
+    full_auto=True,
+    full_auto_rof=5,
+    ammo_capacity=35,
+    ammo_weight=1.8,
+    ammo_feed_device=AmmoFeedDevice.MAGAZINE,
+    knock_down=4,
+    sustained_auto_burst=3,
+    aim_time_modifiers={1: -24, 2: -14, 3: -9, 4: -7, 5: -6, 6: -5, 7: -4, 8: -3, 9: -2, 10: -1},
+    ammunition_types=[ammo_556_r4_fmj, ammo_556_r4_jhp, ammo_556_r4_ap],
+    ballistic_data=r4_ballistic,
+    built_in_bipod=True,
 )
 
 WEAPONS_LIST = [
@@ -3273,5 +4593,20 @@ WEAPONS_LIST = [
     bushmaster,
     steyr_aug,
     l1a1_f1,
-    fn_fal
+    fn_fal,
+    fn_fnc,
+    m1949_56,
+    fa_mas,
+    fr_f2,
+    hk_g3,
+    hk_g41,
+    hk_g11,
+    walther_2000,
+    amd_65,
+    galil_ar_556,
+    galil_ar_762,
+    beretta_bm59,
+    beretta_sc70,
+    type_64,
+    r4,
 ]
