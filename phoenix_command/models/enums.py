@@ -371,6 +371,8 @@ class Caliber(Enum):
     CAL_47_CASELESS = "4.7mm Caseless"
     CAL_300_WIN_MAG = "300 Winchester Magnum"
     CAL_762X54R = "7.62 x 54mm"
+    CAL_127X107 = "12.7 x 107mm"
+    CAL_50_BMG = ".50 Browning"
 
     # Shotgun calibers
     CAL_12_GAUGE = "12 Gauge"
@@ -386,6 +388,7 @@ class WeaponType(Enum):
     CARBINE = "Carbine"
     SNIPER_RIFLE = "Sniper Rifle"
     MACHINE_GUN = "Machine Gun"
+    HEAVY_MACHINE_GUN = "Heavy Machine Gun"
     LIGHT_MACHINE_GUN = "Light Machine Gun"
     SHOTGUN = "Shotgun"
     GRENADE_LAUNCHER = "Grenade Launcher"
