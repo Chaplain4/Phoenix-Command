@@ -11,6 +11,9 @@ class BallisticData:
     penetration: float
     damage_class: int
     beyond_max_range: bool = False
+    shotgun_accuracy_level_modifier: Optional[int] = None
+    base_pellet_hit_chance: Optional[str] = None
+    pattern_radius: Optional[float] = None
 
 
 @dataclass
@@ -19,6 +22,7 @@ class AmmoType:
     name: str  # Full name like "5.56mm NATO FMJ" or "7.62mm AP"
     abbreviation: str  # "FMJ", "JHP", "AP", etc.
     ballistic_data: list[BallisticData] = field(default_factory=list)
+    pellet_count: Optional[int] = None
 
     def get_pen(self, range_hexes: int) -> float:
         """Get penetration value for a given range."""

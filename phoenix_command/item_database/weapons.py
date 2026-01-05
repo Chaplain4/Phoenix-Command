@@ -3614,6 +3614,210 @@ ammo_50bmg_m2hb_ap = AmmoType(
     ]
 )
 
+ammo_12g_spas_aps = AmmoType(
+    name="12 Gauge APS (Franchi SPAS 12)", abbreviation="APS",
+    ballistic_data=[
+        BallisticData(range_hexes=1, penetration=21.0, damage_class=9),
+        BallisticData(range_hexes=2, penetration=21.0, damage_class=9),
+        BallisticData(range_hexes=4, penetration=21.0, damage_class=9),
+        BallisticData(range_hexes=6, penetration=21.0, damage_class=9),
+        BallisticData(range_hexes=8, penetration=21.0, damage_class=9),
+        BallisticData(range_hexes=10, penetration=21.0, damage_class=9),
+        BallisticData(range_hexes=15, penetration=21.0, damage_class=9),
+        BallisticData(range_hexes=20, penetration=20.0, damage_class=9),
+        BallisticData(range_hexes=30, penetration=20.0, damage_class=9),
+        BallisticData(range_hexes=40, penetration=19.0, damage_class=9),
+        BallisticData(range_hexes=80, penetration=18.0, damage_class=8)
+    ]
+)
+
+ammo_12g_spas_shot = AmmoType(
+    name="12 Gauge Shot (00) (Franchi SPAS 12)", abbreviation="Shot", pellet_count=12,
+    ballistic_data=[
+        BallisticData(range_hexes=1, penetration=5.3, damage_class=8, shotgun_accuracy_level_modifier=-13, base_pellet_hit_chance=None, pattern_radius=0.0),
+        BallisticData(range_hexes=2, penetration=1.6, damage_class=3, shotgun_accuracy_level_modifier=-8, base_pellet_hit_chance="*11", pattern_radius=0.0),
+        BallisticData(range_hexes=4, penetration=1.5, damage_class=3, shotgun_accuracy_level_modifier=-3, base_pellet_hit_chance="*10", pattern_radius=0.0),
+        BallisticData(range_hexes=6, penetration=1.5, damage_class=3, shotgun_accuracy_level_modifier=0, base_pellet_hit_chance="*9", pattern_radius=0.1),
+        BallisticData(range_hexes=8, penetration=1.4, damage_class=3, shotgun_accuracy_level_modifier=2, base_pellet_hit_chance="*5", pattern_radius=0.1),
+        BallisticData(range_hexes=10, penetration=1.4, damage_class=3, shotgun_accuracy_level_modifier=4, base_pellet_hit_chance="*4", pattern_radius=0.1),
+        BallisticData(range_hexes=15, penetration=1.3, damage_class=2, shotgun_accuracy_level_modifier=7, base_pellet_hit_chance="*2", pattern_radius=0.2),
+        BallisticData(range_hexes=20, penetration=1.2, damage_class=2, shotgun_accuracy_level_modifier=9, base_pellet_hit_chance="94", pattern_radius=0.2),
+        BallisticData(range_hexes=30, penetration=1.1, damage_class=2, shotgun_accuracy_level_modifier=12, base_pellet_hit_chance="42", pattern_radius=0.3),
+        BallisticData(range_hexes=40, penetration=0.9, damage_class=2, shotgun_accuracy_level_modifier=14, base_pellet_hit_chance="24", pattern_radius=0.4),
+        BallisticData(range_hexes=80, penetration=0.5, damage_class=1, shotgun_accuracy_level_modifier=19, base_pellet_hit_chance="5", pattern_radius=0.9)
+    ]
+)
+
+ammo_12g_caws_slug = AmmoType(
+    name="12 Gauge Slug (CAWS)", abbreviation="Slug",
+    ballistic_data=[
+        BallisticData(range_hexes=1, penetration=7.0, damage_class=10),
+        BallisticData(range_hexes=2, penetration=7.0, damage_class=10),
+        BallisticData(range_hexes=4, penetration=6.9, damage_class=10),
+        BallisticData(range_hexes=6, penetration=6.9, damage_class=10),
+        BallisticData(range_hexes=8, penetration=6.8, damage_class=10),
+        BallisticData(range_hexes=10, penetration=6.7, damage_class=10),
+        BallisticData(range_hexes=15, penetration=6.6, damage_class=9),
+        BallisticData(range_hexes=20, penetration=6.5, damage_class=9),
+        BallisticData(range_hexes=30, penetration=6.3, damage_class=9),
+        BallisticData(range_hexes=40, penetration=6.0, damage_class=9),
+        BallisticData(range_hexes=80, penetration=5.2, damage_class=8)
+    ]
+)
+
+ammo_12g_caws_shot = AmmoType(
+    name="12 Gauge Shot (000) (CAWS)", abbreviation="Shot", pellet_count=8,
+    ballistic_data=[
+        BallisticData(range_hexes=1, penetration=5.6, damage_class=8, shotgun_accuracy_level_modifier=-13, base_pellet_hit_chance=None, pattern_radius=0.0),
+        BallisticData(range_hexes=2, penetration=2.4, damage_class=4, shotgun_accuracy_level_modifier=-8, base_pellet_hit_chance="*7", pattern_radius=0.0),
+        BallisticData(range_hexes=4, penetration=2.4, damage_class=4, shotgun_accuracy_level_modifier=-3, base_pellet_hit_chance="*7", pattern_radius=0.0),
+        BallisticData(range_hexes=6, penetration=2.3, damage_class=4, shotgun_accuracy_level_modifier=0, base_pellet_hit_chance="*6", pattern_radius=0.1),
+        BallisticData(range_hexes=8, penetration=2.3, damage_class=4, shotgun_accuracy_level_modifier=2, base_pellet_hit_chance="*4", pattern_radius=0.1),
+        BallisticData(range_hexes=10, penetration=2.2, damage_class=4, shotgun_accuracy_level_modifier=4, base_pellet_hit_chance="*2", pattern_radius=0.1),
+        BallisticData(range_hexes=15, penetration=2.1, damage_class=3, shotgun_accuracy_level_modifier=7, base_pellet_hit_chance="*1", pattern_radius=0.2),
+        BallisticData(range_hexes=20, penetration=2.0, damage_class=3, shotgun_accuracy_level_modifier=9, base_pellet_hit_chance="66", pattern_radius=0.2),
+        BallisticData(range_hexes=30, penetration=1.7, damage_class=3, shotgun_accuracy_level_modifier=11, base_pellet_hit_chance="30", pattern_radius=0.3),
+        BallisticData(range_hexes=40, penetration=1.5, damage_class=3, shotgun_accuracy_level_modifier=14, base_pellet_hit_chance="16", pattern_radius=0.4),
+        BallisticData(range_hexes=80, penetration=0.9, damage_class=2, shotgun_accuracy_level_modifier=19, base_pellet_hit_chance="3", pattern_radius=0.9)
+    ]
+)
+
+ammo_12g_mossberg_slug = AmmoType(
+    name="12 Gauge Slug (Mossberg Bullpup)", abbreviation="Slug",
+    ballistic_data=[
+        BallisticData(range_hexes=1, penetration=7.5, damage_class=10),
+        BallisticData(range_hexes=2, penetration=7.4, damage_class=10),
+        BallisticData(range_hexes=4, penetration=7.4, damage_class=10),
+        BallisticData(range_hexes=6, penetration=7.3, damage_class=10),
+        BallisticData(range_hexes=8, penetration=7.3, damage_class=10),
+        BallisticData(range_hexes=10, penetration=7.2, damage_class=10),
+        BallisticData(range_hexes=15, penetration=7.1, damage_class=10),
+        BallisticData(range_hexes=20, penetration=7.0, damage_class=10),
+        BallisticData(range_hexes=30, penetration=6.7, damage_class=9),
+        BallisticData(range_hexes=40, penetration=6.5, damage_class=9),
+        BallisticData(range_hexes=80, penetration=5.6, damage_class=9)
+    ]
+)
+
+ammo_12g_mossberg_shot = AmmoType(
+    name="12 Gauge Shot (00) (Mossberg Bullpup)", abbreviation="Shot", pellet_count=12,
+    ballistic_data=[
+        BallisticData(range_hexes=1, penetration=5.4, damage_class=8, shotgun_accuracy_level_modifier=-14, base_pellet_hit_chance=None, pattern_radius=0.0),
+        BallisticData(range_hexes=2, penetration=1.7, damage_class=3, shotgun_accuracy_level_modifier=-9, base_pellet_hit_chance="*11", pattern_radius=0.0),
+        BallisticData(range_hexes=4, penetration=1.6, damage_class=3, shotgun_accuracy_level_modifier=-4, base_pellet_hit_chance="*10", pattern_radius=0.0),
+        BallisticData(range_hexes=6, penetration=1.6, damage_class=3, shotgun_accuracy_level_modifier=-1, base_pellet_hit_chance="*9", pattern_radius=0.1),
+        BallisticData(range_hexes=8, penetration=1.6, damage_class=3, shotgun_accuracy_level_modifier=1, base_pellet_hit_chance="*7", pattern_radius=0.1),
+        BallisticData(range_hexes=10, penetration=1.5, damage_class=3, shotgun_accuracy_level_modifier=2, base_pellet_hit_chance="*5", pattern_radius=0.1),
+        BallisticData(range_hexes=15, penetration=1.4, damage_class=2, shotgun_accuracy_level_modifier=5, base_pellet_hit_chance="*2", pattern_radius=0.1),
+        BallisticData(range_hexes=20, penetration=1.3, damage_class=2, shotgun_accuracy_level_modifier=7, base_pellet_hit_chance="*1", pattern_radius=0.2),
+        BallisticData(range_hexes=30, penetration=1.1, damage_class=2, shotgun_accuracy_level_modifier=10, base_pellet_hit_chance="62", pattern_radius=0.3),
+        BallisticData(range_hexes=40, penetration=1.0, damage_class=2, shotgun_accuracy_level_modifier=12, base_pellet_hit_chance="35", pattern_radius=0.4),
+        BallisticData(range_hexes=80, penetration=0.6, damage_class=1, shotgun_accuracy_level_modifier=17, base_pellet_hit_chance="8", pattern_radius=0.7)
+    ]
+)
+
+ammo_12g_remington_slug = AmmoType(
+    name="12 Gauge Slug (Remington M870)", abbreviation="Slug",
+    ballistic_data=[
+        BallisticData(range_hexes=1, penetration=7.7, damage_class=10),
+        BallisticData(range_hexes=2, penetration=7.7, damage_class=10),
+        BallisticData(range_hexes=4, penetration=7.6, damage_class=10),
+        BallisticData(range_hexes=6, penetration=7.5, damage_class=10),
+        BallisticData(range_hexes=8, penetration=7.5, damage_class=10),
+        BallisticData(range_hexes=10, penetration=7.4, damage_class=10),
+        BallisticData(range_hexes=15, penetration=7.3, damage_class=10),
+        BallisticData(range_hexes=20, penetration=7.2, damage_class=10),
+        BallisticData(range_hexes=30, penetration=6.9, damage_class=10),
+        BallisticData(range_hexes=40, penetration=6.7, damage_class=9),
+        BallisticData(range_hexes=80, penetration=5.7, damage_class=9)
+    ]
+)
+
+ammo_12g_remington_shot = AmmoType(
+    name="12 Gauge Shot (00) (Remington M870)", abbreviation="Shot", pellet_count=12,
+    ballistic_data=[
+        BallisticData(range_hexes=1, penetration=5.4, damage_class=8, shotgun_accuracy_level_modifier=-14, base_pellet_hit_chance=None, pattern_radius=0.0),
+        BallisticData(range_hexes=2, penetration=1.7, damage_class=3, shotgun_accuracy_level_modifier=-9, base_pellet_hit_chance="*11", pattern_radius=0.0),
+        BallisticData(range_hexes=4, penetration=1.7, damage_class=3, shotgun_accuracy_level_modifier=-4, base_pellet_hit_chance="*10", pattern_radius=0.0),
+        BallisticData(range_hexes=6, penetration=1.6, damage_class=3, shotgun_accuracy_level_modifier=-1, base_pellet_hit_chance="*9", pattern_radius=0.1),
+        BallisticData(range_hexes=8, penetration=1.6, damage_class=3, shotgun_accuracy_level_modifier=1, base_pellet_hit_chance="*7", pattern_radius=0.1),
+        BallisticData(range_hexes=10, penetration=1.6, damage_class=3, shotgun_accuracy_level_modifier=2, base_pellet_hit_chance="*5", pattern_radius=0.1),
+        BallisticData(range_hexes=15, penetration=1.4, damage_class=2, shotgun_accuracy_level_modifier=5, base_pellet_hit_chance="*2", pattern_radius=0.1),
+        BallisticData(range_hexes=20, penetration=1.4, damage_class=2, shotgun_accuracy_level_modifier=7, base_pellet_hit_chance="*1", pattern_radius=0.2),
+        BallisticData(range_hexes=30, penetration=1.2, damage_class=2, shotgun_accuracy_level_modifier=10, base_pellet_hit_chance="62", pattern_radius=0.3),
+        BallisticData(range_hexes=40, penetration=1.0, damage_class=2, shotgun_accuracy_level_modifier=12, base_pellet_hit_chance="35", pattern_radius=0.4),
+        BallisticData(range_hexes=80, penetration=0.6, damage_class=1, shotgun_accuracy_level_modifier=17, base_pellet_hit_chance="8", pattern_radius=0.7)
+    ]
+)
+
+ammo_12g_high_standard_slug = AmmoType(
+    name="12 Gauge Slug (High Standard M10B)", abbreviation="Slug",
+    ballistic_data=[
+        BallisticData(range_hexes=1, penetration=7.0, damage_class=10),
+        BallisticData(range_hexes=2, penetration=7.0, damage_class=10),
+        BallisticData(range_hexes=4, penetration=6.9, damage_class=10),
+        BallisticData(range_hexes=6, penetration=6.9, damage_class=10),
+        BallisticData(range_hexes=8, penetration=6.8, damage_class=10),
+        BallisticData(range_hexes=10, penetration=6.7, damage_class=10),
+        BallisticData(range_hexes=15, penetration=6.6, damage_class=9),
+        BallisticData(range_hexes=20, penetration=6.5, damage_class=9),
+        BallisticData(range_hexes=30, penetration=6.3, damage_class=9),
+        BallisticData(range_hexes=40, penetration=6.0, damage_class=9),
+        BallisticData(range_hexes=80, penetration=5.2, damage_class=8)
+    ]
+)
+
+ammo_12g_high_standard_shot = AmmoType(
+    name="12 Gauge Shot (00) (High Standard M10B)", abbreviation="Shot", pellet_count=12,
+    ballistic_data=[
+        BallisticData(range_hexes=1, penetration=5.3, damage_class=8, shotgun_accuracy_level_modifier=-13, base_pellet_hit_chance=None, pattern_radius=0.0),
+        BallisticData(range_hexes=2, penetration=1.6, damage_class=3, shotgun_accuracy_level_modifier=-8, base_pellet_hit_chance="*11", pattern_radius=0.0),
+        BallisticData(range_hexes=4, penetration=1.5, damage_class=3, shotgun_accuracy_level_modifier=-3, base_pellet_hit_chance="*10", pattern_radius=0.0),
+        BallisticData(range_hexes=6, penetration=1.5, damage_class=2, shotgun_accuracy_level_modifier=0, base_pellet_hit_chance="*9", pattern_radius=0.1),
+        BallisticData(range_hexes=8, penetration=1.4, damage_class=2, shotgun_accuracy_level_modifier=2, base_pellet_hit_chance="*5", pattern_radius=0.1),
+        BallisticData(range_hexes=10, penetration=1.4, damage_class=2, shotgun_accuracy_level_modifier=4, base_pellet_hit_chance="*3", pattern_radius=0.1),
+        BallisticData(range_hexes=15, penetration=1.3, damage_class=2, shotgun_accuracy_level_modifier=7, base_pellet_hit_chance="*2", pattern_radius=0.2),
+        BallisticData(range_hexes=20, penetration=1.2, damage_class=2, shotgun_accuracy_level_modifier=9, base_pellet_hit_chance="93", pattern_radius=0.2),
+        BallisticData(range_hexes=30, penetration=1.1, damage_class=2, shotgun_accuracy_level_modifier=12, base_pellet_hit_chance="42", pattern_radius=0.3),
+        BallisticData(range_hexes=40, penetration=0.9, damage_class=2, shotgun_accuracy_level_modifier=14, base_pellet_hit_chance="23", pattern_radius=0.4),
+        BallisticData(range_hexes=80, penetration=0.5, damage_class=1, shotgun_accuracy_level_modifier=19, base_pellet_hit_chance="5", pattern_radius=0.9)
+    ]
+)
+
+ammo_12g_atchisson_slug = AmmoType(
+    name="12 Gauge Slug (Atchisson Assault 12)", abbreviation="Slug",
+    ballistic_data=[
+        BallisticData(range_hexes=1, penetration=7.0, damage_class=10),
+        BallisticData(range_hexes=2, penetration=7.0, damage_class=10),
+        BallisticData(range_hexes=4, penetration=6.9, damage_class=10),
+        BallisticData(range_hexes=6, penetration=6.9, damage_class=10),
+        BallisticData(range_hexes=8, penetration=6.8, damage_class=10),
+        BallisticData(range_hexes=10, penetration=6.7, damage_class=10),
+        BallisticData(range_hexes=15, penetration=6.6, damage_class=9),
+        BallisticData(range_hexes=20, penetration=6.5, damage_class=9),
+        BallisticData(range_hexes=30, penetration=6.3, damage_class=9),
+        BallisticData(range_hexes=40, penetration=6.0, damage_class=9),
+        BallisticData(range_hexes=80, penetration=5.2, damage_class=8)
+    ]
+)
+
+ammo_12g_atchisson_shot = AmmoType(
+    name="12 Gauge Shot (00) (Atchisson Assault 12)", abbreviation="Shot", pellet_count=12,
+    ballistic_data=[
+        BallisticData(range_hexes=1, penetration=5.4, damage_class=8, shotgun_accuracy_level_modifier=-13, base_pellet_hit_chance=None, pattern_radius=0.0),
+        BallisticData(range_hexes=2, penetration=1.6, damage_class=3, shotgun_accuracy_level_modifier=-8, base_pellet_hit_chance="*11", pattern_radius=0.0),
+        BallisticData(range_hexes=4, penetration=1.5, damage_class=3, shotgun_accuracy_level_modifier=-3, base_pellet_hit_chance="*10", pattern_radius=0.0),
+        BallisticData(range_hexes=6, penetration=1.5, damage_class=2, shotgun_accuracy_level_modifier=0, base_pellet_hit_chance="*9", pattern_radius=0.1),
+        BallisticData(range_hexes=8, penetration=1.4, damage_class=2, shotgun_accuracy_level_modifier=2, base_pellet_hit_chance="*5", pattern_radius=0.1),
+        BallisticData(range_hexes=10, penetration=1.4, damage_class=2, shotgun_accuracy_level_modifier=4, base_pellet_hit_chance="*3", pattern_radius=0.1),
+        BallisticData(range_hexes=15, penetration=1.3, damage_class=2, shotgun_accuracy_level_modifier=7, base_pellet_hit_chance="*2", pattern_radius=0.2),
+        BallisticData(range_hexes=20, penetration=1.2, damage_class=2, shotgun_accuracy_level_modifier=9, base_pellet_hit_chance="93", pattern_radius=0.2),
+        BallisticData(range_hexes=30, penetration=1.1, damage_class=2, shotgun_accuracy_level_modifier=12, base_pellet_hit_chance="42", pattern_radius=0.3),
+        BallisticData(range_hexes=40, penetration=0.9, damage_class=2, shotgun_accuracy_level_modifier=14, base_pellet_hit_chance="23", pattern_radius=0.4),
+        BallisticData(range_hexes=80, penetration=0.5, damage_class=1, shotgun_accuracy_level_modifier=19, base_pellet_hit_chance="5", pattern_radius=0.9)
+    ]
+)
+
 # 7.62 x 25mm Pistol ballistic data (for Type 51)
 pistol_762x25_ballistic = WeaponBallisticData(
     ballistic_accuracy=[
@@ -5540,6 +5744,164 @@ m2hb_ballistic = WeaponBallisticData(
         RangeData(range_hexes=200, value=5),
         RangeData(range_hexes=300, value=8),
         RangeData(range_hexes=400, value=11)
+    ]
+)
+
+spas12_ballistic = WeaponBallisticData(
+    ballistic_accuracy=[
+        RangeData(range_hexes=1, value=71),
+        RangeData(range_hexes=2, value=61),
+        RangeData(range_hexes=4, value=52),
+        RangeData(range_hexes=6, value=46),
+        RangeData(range_hexes=8, value=42),
+        RangeData(range_hexes=10, value=39),
+        RangeData(range_hexes=15, value=33),
+        RangeData(range_hexes=20, value=29),
+        RangeData(range_hexes=30, value=23),
+        RangeData(range_hexes=40, value=19),
+        RangeData(range_hexes=80, value=9)
+    ],
+    time_of_flight=[
+        RangeData(range_hexes=1, value=0),
+        RangeData(range_hexes=2, value=0),
+        RangeData(range_hexes=4, value=0),
+        RangeData(range_hexes=6, value=0),
+        RangeData(range_hexes=8, value=0),
+        RangeData(range_hexes=10, value=0),
+        RangeData(range_hexes=15, value=1),
+        RangeData(range_hexes=20, value=1),
+        RangeData(range_hexes=30, value=1),
+        RangeData(range_hexes=40, value=2),
+        RangeData(range_hexes=80, value=4)
+    ]
+)
+
+caws_ballistic = WeaponBallisticData(
+    ballistic_accuracy=[
+        RangeData(range_hexes=1, value=67),
+        RangeData(range_hexes=2, value=58),
+        RangeData(range_hexes=4, value=48),
+        RangeData(range_hexes=6, value=42),
+        RangeData(range_hexes=8, value=38),
+        RangeData(range_hexes=10, value=35),
+        RangeData(range_hexes=15, value=29),
+        RangeData(range_hexes=20, value=25),
+        RangeData(range_hexes=30, value=19),
+        RangeData(range_hexes=40, value=15),
+        RangeData(range_hexes=80, value=5)
+    ],
+    time_of_flight=[
+        RangeData(range_hexes=1, value=0),
+        RangeData(range_hexes=2, value=0),
+        RangeData(range_hexes=4, value=0),
+        RangeData(range_hexes=6, value=0),
+        RangeData(range_hexes=8, value=0),
+        RangeData(range_hexes=10, value=0),
+        RangeData(range_hexes=15, value=1),
+        RangeData(range_hexes=20, value=1),
+        RangeData(range_hexes=30, value=1),
+        RangeData(range_hexes=40, value=2),
+        RangeData(range_hexes=80, value=4)
+    ]
+)
+
+mossberg_ballistic = WeaponBallisticData(
+    ballistic_accuracy=[
+        RangeData(range_hexes=1, value=67),
+        RangeData(range_hexes=2, value=58),
+        RangeData(range_hexes=4, value=48),
+        RangeData(range_hexes=6, value=42),
+        RangeData(range_hexes=8, value=38),
+        RangeData(range_hexes=10, value=35),
+        RangeData(range_hexes=15, value=29),
+        RangeData(range_hexes=20, value=25),
+        RangeData(range_hexes=30, value=19),
+        RangeData(range_hexes=40, value=15),
+        RangeData(range_hexes=80, value=5)
+    ],
+    time_of_flight=[
+        RangeData(range_hexes=1, value=0),
+        RangeData(range_hexes=2, value=0),
+        RangeData(range_hexes=4, value=0),
+        RangeData(range_hexes=6, value=0),
+        RangeData(range_hexes=8, value=0),
+        RangeData(range_hexes=10, value=0),
+        RangeData(range_hexes=15, value=1),
+        RangeData(range_hexes=20, value=1),
+        RangeData(range_hexes=30, value=1),
+        RangeData(range_hexes=40, value=2),
+        RangeData(range_hexes=80, value=4)
+    ]
+)
+
+remington_ballistic = WeaponBallisticData(
+    ballistic_accuracy=[
+        RangeData(range_hexes=1, value=67),
+        RangeData(range_hexes=2, value=58),
+        RangeData(range_hexes=4, value=48),
+        RangeData(range_hexes=6, value=42),
+        RangeData(range_hexes=8, value=38),
+        RangeData(range_hexes=10, value=35),
+        RangeData(range_hexes=15, value=29),
+        RangeData(range_hexes=20, value=25),
+        RangeData(range_hexes=30, value=19),
+        RangeData(range_hexes=40, value=15),
+        RangeData(range_hexes=80, value=5)
+    ],
+    time_of_flight=[
+        RangeData(range_hexes=1, value=0),
+        RangeData(range_hexes=2, value=0),
+        RangeData(range_hexes=4, value=0),
+        RangeData(range_hexes=6, value=0),
+        RangeData(range_hexes=8, value=0),
+        RangeData(range_hexes=10, value=0),
+        RangeData(range_hexes=15, value=1),
+        RangeData(range_hexes=20, value=1),
+        RangeData(range_hexes=30, value=1),
+        RangeData(range_hexes=40, value=2),
+        RangeData(range_hexes=80, value=4)
+    ]
+)
+
+atchisson_ballistic = WeaponBallisticData(
+    ballistic_accuracy=[
+        RangeData(range_hexes=1, value=67),
+        RangeData(range_hexes=2, value=58),
+        RangeData(range_hexes=4, value=48),
+        RangeData(range_hexes=6, value=42),
+        RangeData(range_hexes=8, value=38),
+        RangeData(range_hexes=10, value=35),
+        RangeData(range_hexes=15, value=29),
+        RangeData(range_hexes=20, value=25),
+        RangeData(range_hexes=30, value=19),
+        RangeData(range_hexes=40, value=15),
+        RangeData(range_hexes=80, value=5)
+    ],
+    time_of_flight=[
+        RangeData(range_hexes=1, value=0),
+        RangeData(range_hexes=2, value=0),
+        RangeData(range_hexes=4, value=0),
+        RangeData(range_hexes=6, value=0),
+        RangeData(range_hexes=8, value=0),
+        RangeData(range_hexes=10, value=0),
+        RangeData(range_hexes=15, value=1),
+        RangeData(range_hexes=20, value=1),
+        RangeData(range_hexes=30, value=1),
+        RangeData(range_hexes=40, value=2),
+        RangeData(range_hexes=80, value=4)
+    ],
+    minimum_arc=[
+        RangeData(range_hexes=1, value=0.1),
+        RangeData(range_hexes=2, value=0.2),
+        RangeData(range_hexes=4, value=0.3),
+        RangeData(range_hexes=6, value=0.5),
+        RangeData(range_hexes=8, value=0.7),
+        RangeData(range_hexes=10, value=0.8),
+        RangeData(range_hexes=15, value=1.0),
+        RangeData(range_hexes=20, value=2.0),
+        RangeData(range_hexes=30, value=2.0),
+        RangeData(range_hexes=40, value=3.0),
+        RangeData(range_hexes=80, value=7.0)
     ]
 )
 
@@ -7666,6 +8028,133 @@ m2hb = Weapon(
     built_in_bipod=True,
 )
 
+spas12 = Weapon(
+    name="Franchi SPAS 12",
+    weight=10.1,
+    description="Special Purpose Automatic Shotgun for police and military.",
+    caliber=Caliber.CAL_12_GAUGE,
+    weapon_type=WeaponType.SHOTGUN,
+    country=Country.ITALY,
+    length_deployed=37.0,
+    length_folded=28.0,
+    reload_time=30,
+    self_loading_action=True,
+    ammo_capacity=7,
+    ammo_weight=0.13,
+    ammo_feed_device=AmmoFeedDevice.ROUND,
+    knock_down=23,
+    sustained_auto_burst=10,
+    aim_time_modifiers={1: -23, 2: -13, 3: -9, 4: -7, 5: -6, 6: -4, 7: -3, 8: -2, 9: -1},
+    ammunition_types=[ammo_12g_spas_aps, ammo_12g_spas_shot],
+    ballistic_data=spas12_ballistic
+)
+
+caws = Weapon(
+    name="Olin - Heckler & Koch CAWS",
+    weight=11.6,
+    description="Close Assault Weapon System uses a belted brass cartridge.",
+    caliber=Caliber.CAL_12_GAUGE,
+    weapon_type=WeaponType.SHOTGUN,
+    country=Country.USA,
+    length_deployed=30.0,
+    reload_time=8,
+    self_loading_action=True,
+    ammo_capacity=10,
+    ammo_weight=2.1,
+    ammo_feed_device=AmmoFeedDevice.MAGAZINE,
+    knock_down=23,
+    sustained_auto_burst=10,
+    aim_time_modifiers={1: -24, 2: -14, 3: -9, 4: -7, 5: -5, 6: -4, 7: -3, 8: -2, 9: -1, 10: 0, 11: 1, 12: 2},
+    ammunition_types=[ammo_12g_caws_slug, ammo_12g_caws_shot],
+    ballistic_data=caws_ballistic
+)
+
+mossberg_bullpup = Weapon(
+    name="Mossberg Bullpup 12",
+    weight=9.4,
+    description="Mossberg 500 action in a military style stock.",
+    caliber=Caliber.CAL_12_GAUGE,
+    weapon_type=WeaponType.SHOTGUN,
+    country=Country.USA,
+    length_deployed=31.0,
+    reload_time=34,
+    self_loading_action=False,
+    actions_to_cycle=2,
+    ammo_capacity=8,
+    ammo_weight=0.13,
+    ammo_feed_device=AmmoFeedDevice.ROUND,
+    knock_down=24,
+    sustained_auto_burst=11,
+    aim_time_modifiers={1: -23, 2: -12, 3: -9, 4: -7, 5: -6, 6: -5, 7: -4, 8: -3, 9: -2, 10: -1},
+    ammunition_types=[ammo_12g_mossberg_slug, ammo_12g_mossberg_shot],
+    ballistic_data=mossberg_ballistic
+)
+
+remington_m870 = Weapon(
+    name="Remington M870",
+    weight=8.8,
+    description="US Marine Corps version of the Remington Model 870. Adopted in 1966 with M7 bayonet mounting lug.",
+    caliber=Caliber.CAL_12_GAUGE,
+    weapon_type=WeaponType.SHOTGUN,
+    country=Country.USA,
+    length_deployed=42.0,
+    reload_time=30,
+    self_loading_action=False,
+    actions_to_cycle=2,
+    ammo_capacity=7,
+    ammo_weight=0.13,
+    ammo_feed_device=AmmoFeedDevice.ROUND,
+    knock_down=25,
+    sustained_auto_burst=12,
+    aim_time_modifiers={1: -23, 2: -12, 3: -9, 4: -7, 5: -6, 6: -4, 7: -3, 8: -2},
+    ammunition_types=[ammo_12g_remington_slug, ammo_12g_remington_shot],
+    ballistic_data=remington_ballistic
+)
+
+high_standard_m10b = Weapon(
+    name="High Standard M10B",
+    weight=9.5,
+    description="Compact shotgun for police tactical teams.",
+    caliber=Caliber.CAL_12_GAUGE,
+    weapon_type=WeaponType.SHOTGUN,
+    country=Country.USA,
+    length_deployed=27.0,
+    reload_time=22,
+    self_loading_action=True,
+    ammo_capacity=5,
+    ammo_weight=0.13,
+    ammo_feed_device=AmmoFeedDevice.ROUND,
+    knock_down=23,
+    sustained_auto_burst=10,
+    aim_time_modifiers={1: -23, 2: -12, 3: -9, 4: -7, 5: -6, 6: -4, 7: -3, 8: -2},
+    ammunition_types=[ammo_12g_high_standard_slug, ammo_12g_high_standard_shot],
+    ballistic_data=remington_ballistic
+)
+
+atchisson_assault_12 = Weapon(
+    name="Atchisson Assault 12",
+    weight=16.1,
+    description="Fully automatic, high capacity, drum fed shotgun. Very few were produced and it has not been adopted by any military.",
+    caliber=Caliber.CAL_12_GAUGE,
+    weapon_type=WeaponType.SHOTGUN,
+    country=Country.USA,
+    length_deployed=39.0,
+    reload_time=14,
+    self_loading_action=True,
+    full_auto=True,
+    full_auto_rof=4,
+    ammo_capacity=20,
+    ammo_weight=4.6,
+    ammo_feed_device=AmmoFeedDevice.DRUM,
+    knock_down=23,
+    sustained_auto_burst=8,
+    aim_time_modifiers={
+        1: -26, 2: -16, 3: -10, 4: -8, 5: -7, 6: -5, 7: -4, 8: -3, 9: -2, 10: -1, 11: -1, 12: 0
+    },
+    ammunition_types=[ammo_12g_atchisson_slug, ammo_12g_atchisson_shot],
+    ballistic_data=atchisson_ballistic
+)
+
 WEAPONS_LIST = [
     fn_mk1,
     type_51,
@@ -7757,4 +8246,10 @@ WEAPONS_LIST = [
     m60,
     m60e3,
     m2hb,
+    spas12,
+    caws,
+    mossberg_bullpup,
+    remington_m870,
+    high_standard_m10b,
+    atchisson_assault_12,
 ]
