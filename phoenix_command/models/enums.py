@@ -378,9 +378,13 @@ class Caliber(Enum):
     CAL_12_GAUGE = "12 Gauge"
     CAL_20_GAUGE = "20 Gauge"
 
+    #Grenade calibers
+    CAL_40x46MM = "40 x 46mm grenade"
+
 
 class WeaponType(Enum):
     """Weapon type classifications."""
+    AUTOMATIC_GRENADE_LAUNCHER = "Automatic grenade launcher"
     AUTOMATIC_PISTOL = "Automatic Pistol"
     SUB_MACHINEGUN = "Sub-Machinegun"
     ASSAULT_RIFLE = "Assault Rifle"

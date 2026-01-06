@@ -1,6 +1,6 @@
 """Database of weapons with their ballistic characteristics."""
 
-from phoenix_command.models.gear import Weapon, AmmoType, BallisticData, WeaponBallisticData, RangeData
+from phoenix_command.models.gear import Weapon, AmmoType, BallisticData, WeaponBallisticData, RangeData, ExplosiveData
 from phoenix_command.models.enums import AmmoFeedDevice, Caliber, WeaponType, Country
 
 # ============================================================================
@@ -3816,6 +3816,43 @@ ammo_12g_atchisson_shot = AmmoType(
         BallisticData(range_hexes=40, penetration=0.9, damage_class=2, shotgun_accuracy_level_modifier=14, base_pellet_hit_chance="23", pattern_radius=0.4),
         BallisticData(range_hexes=80, penetration=0.5, damage_class=1, shotgun_accuracy_level_modifier=19, base_pellet_hit_chance="5", pattern_radius=0.9)
     ]
+)
+
+ammo_40mm_heat = AmmoType(
+    name="40×46mm HEAT",
+    abbreviation="HEAT",
+    ballistic_data=[
+        BallisticData(range_hexes=40, penetration=288, damage_class=10),
+        BallisticData(range_hexes=100, penetration=288, damage_class=10),
+        BallisticData(range_hexes=200, penetration=288, damage_class=10),
+    ],
+    explosive_data=[
+        ExplosiveData(range_hexes=0, shrapnel_penetration=1.6, shrapnel_damage_class=1, base_shrapnel_hit_chance="*2", base_concussion=241),
+        ExplosiveData(range_hexes=1, shrapnel_penetration=1.4, shrapnel_damage_class=1, base_shrapnel_hit_chance="47", base_concussion=71),
+        ExplosiveData(range_hexes=2, shrapnel_penetration=1.0, shrapnel_damage_class=1, base_shrapnel_hit_chance="11", base_concussion=23),
+        ExplosiveData(range_hexes=3, shrapnel_penetration=0.7, shrapnel_damage_class=1, base_shrapnel_hit_chance="4", base_concussion=12),
+        ExplosiveData(range_hexes=5, shrapnel_penetration=0.4, shrapnel_damage_class=1, base_shrapnel_hit_chance="1", base_concussion=5),
+        ExplosiveData(range_hexes=10, shrapnel_penetration=0.0, shrapnel_damage_class=1, base_shrapnel_hit_chance="0", base_concussion=1),
+
+    ],
+)
+
+ammo_40mm_he = AmmoType(
+    name="40×46mm HE",
+    abbreviation="HE",
+    ballistic_data=[
+        BallisticData(range_hexes=40, penetration=2.1, damage_class=10),
+        BallisticData(range_hexes=100, penetration=2.1, damage_class=10),
+        BallisticData(range_hexes=200, penetration=2.1, damage_class=10),
+    ],
+    explosive_data=[
+        ExplosiveData(range_hexes=0, shrapnel_penetration=1.6, shrapnel_damage_class=1, base_shrapnel_hit_chance="*3", base_concussion=273),
+        ExplosiveData(range_hexes=1, shrapnel_penetration=1.4, shrapnel_damage_class=1, base_shrapnel_hit_chance="62", base_concussion=80),
+        ExplosiveData(range_hexes=2, shrapnel_penetration=1.0, shrapnel_damage_class=1, base_shrapnel_hit_chance="15", base_concussion=25),
+        ExplosiveData(range_hexes=3, shrapnel_penetration=0.7, shrapnel_damage_class=1, base_shrapnel_hit_chance="6", base_concussion=13),
+        ExplosiveData(range_hexes=5, shrapnel_penetration=0.4, shrapnel_damage_class=1, base_shrapnel_hit_chance="2", base_concussion=6),
+        ExplosiveData(range_hexes=10, shrapnel_penetration=0.0, shrapnel_damage_class=1, base_shrapnel_hit_chance="0", base_concussion=1),
+    ],
 )
 
 # 7.62 x 25mm Pistol ballistic data (for Type 51)
@@ -8155,6 +8192,114 @@ atchisson_assault_12 = Weapon(
     ballistic_data=atchisson_ballistic
 )
 
+m79 = Weapon(
+    name="M79 Grenade Launcher",
+    weight=6.5,
+    description="Single-shot breech-loading 40mm grenade launcher.",
+    caliber=Caliber.CAL_40x46MM,
+    weapon_type=WeaponType.GRENADE_LAUNCHER,
+    country=Country.USA,
+    length_deployed=29,
+    reload_time=10,
+    self_loading_action=False,
+    ammo_capacity=1,
+    ammo_weight=0.51,
+    ammo_feed_device=AmmoFeedDevice.ROUND,
+    ammunition_types=[ammo_40mm_heat, ammo_40mm_he],
+    sustained_auto_burst=11,
+    aim_time_modifiers={
+        1: -21, 2: -11, 3: -8, 4: -7, 5: -5, 6: -4, 7: -3
+    },
+    ballistic_data=WeaponBallisticData(
+        angle_of_impact=[
+            RangeData(40, 0),
+            RangeData(100, 1),
+            RangeData(200, 4),
+        ],
+        ballistic_accuracy=[
+            RangeData(40, 23),
+            RangeData(100, 10),
+            RangeData(200, 1),
+        ],
+        time_of_flight=[
+            RangeData(40, 11),
+            RangeData(100, 33),
+            RangeData(200, 80),
+        ],
+    ),
+)
+
+m203 = Weapon(
+    name="M203 Grenade Launcher",
+    weight=11.6,
+    description="Single-shot slide-action 40mm launcher mounted under M16.",
+    caliber=Caliber.CAL_40x46MM,
+    weapon_type=WeaponType.GRENADE_LAUNCHER,
+    country=Country.USA,
+    length_deployed=39,
+    reload_time=12,
+    self_loading_action=False,
+    ammo_capacity=1,
+    ammo_weight=0.51,
+    ammo_feed_device=AmmoFeedDevice.ROUND,
+    ammunition_types=[ammo_40mm_heat, ammo_40mm_he],
+    sustained_auto_burst=8,
+    aim_time_modifiers={
+        1: -24, 2: -14, 3: -9, 4: -7, 5: -6, 6: -4
+    },
+    ballistic_data=WeaponBallisticData(
+        angle_of_impact=[
+            RangeData(40, 0),
+            RangeData(100, 1),
+            RangeData(200, 4),
+        ],
+        ballistic_accuracy=[
+            RangeData(40, 23),
+            RangeData(100, 10),
+            RangeData(200, 1),
+        ],
+        time_of_flight=[
+            RangeData(40, 11),
+            RangeData(100, 33),
+            RangeData(200, 80),
+        ],
+    ),
+)
+
+m174 = Weapon(
+    name="M174 Automatic Grenade Launcher",
+    weight=40.8,
+    description="Automatic 40mm grenade launcher on tripod.",
+    caliber=Caliber.CAL_40x46MM,
+    weapon_type=WeaponType.AUTOMATIC_GRENADE_LAUNCHER,
+    country=Country.USA,
+    length_deployed=28,
+    reload_time=5,
+    self_loading_action=True,
+    full_auto=True,
+    full_auto_rof=3,
+    ammunition_types=[ammo_40mm_heat, ammo_40mm_he],
+    built_in_bipod=True,
+    ballistic_data=WeaponBallisticData(
+        minimum_arc=[
+            RangeData(40, 7),
+            RangeData(100, 2),
+            RangeData(200, 4),
+        ],
+        ballistic_accuracy=[
+            RangeData(40, 23),
+            RangeData(100, 10),
+            RangeData(200, 1),
+        ],
+        time_of_flight=[
+            RangeData(40, 11),
+            RangeData(100, 33),
+            RangeData(200, 80),
+        ],
+    ),
+)
+
+
 WEAPONS_LIST = [
     fn_mk1,
     type_51,
@@ -8252,4 +8397,7 @@ WEAPONS_LIST = [
     remington_m870,
     high_standard_m10b,
     atchisson_assault_12,
+    m79,
+    m203,
+    m174,
 ]

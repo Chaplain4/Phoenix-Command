@@ -15,6 +15,14 @@ class BallisticData:
     base_pellet_hit_chance: Optional[str] = None
     pattern_radius: Optional[float] = None
 
+@dataclass
+class ExplosiveData:
+    """Explosive characteristics at specific burst ranges."""
+    range_hexes: Optional[int] #can be None if explosion is in contact with target
+    shrapnel_penetration: float
+    shrapnel_damage_class: int
+    base_shrapnel_hit_chance: str
+    base_concussion: int
 
 @dataclass
 class AmmoType:
@@ -22,6 +30,7 @@ class AmmoType:
     name: str  # Full name like "5.56mm NATO FMJ" or "7.62mm AP"
     abbreviation: str  # "FMJ", "JHP", "AP", etc.
     ballistic_data: list[BallisticData] = field(default_factory=list)
+    explosive_data: list[ExplosiveData] = field(default_factory=list)
     pellet_count: Optional[int] = None
 
     def get_pen(self, range_hexes: int) -> float:
@@ -55,6 +64,7 @@ class RangeData:
 @dataclass
 class WeaponBallisticData:
     """Complete ballistic data for a weapon at various ranges."""
+    angle_of_impact: Optional[list[RangeData]] = None
     three_round_burst: Optional[list[RangeData]] = None  # 3RB - only for burst-capable weapons
     minimum_arc: Optional[list[RangeData]] = None  # MA - only for automatic weapons
     ballistic_accuracy: list[RangeData] = field(default_factory=list)  # BA - required
