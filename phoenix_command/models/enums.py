@@ -379,11 +379,19 @@ class Caliber(Enum):
     CAL_20_GAUGE = "20 Gauge"
 
     #Grenade calibers
-    CAL_40x46MM = "40 x 46mm grenade"
-
+    CAL_40x46MM = "40 x 46mm Grenade"
+    CAL_40x53MM = "40 x 53mm Grenade"
+    CAL_30MM_VOG = "30mm VOG Grenade"
+    CAL_64MM = "64mm Rocket-Propelled Grenade"
+    CAL_66MM = "66mm Rocket-Propelled Grenade"
+    CAL_67MM = "67mm Rocket-Propelled Grenade"
+    CAL_85MM = "85mm Rocket-Propelled Grenade"
+    CAL_94MM = "94mm Rocket-Propelled Grenade"
 
 class WeaponType(Enum):
     """Weapon type classifications."""
+    ROCKET_PROPELLED_GRENADE_LAUNCHER = "Rocket Propelled Grenade Launcher"
+    ROCKET_PROPELLED_GRENADE = "Rocket Propelled Grenade"
     AUTOMATIC_GRENADE_LAUNCHER = "Automatic grenade launcher"
     AUTOMATIC_PISTOL = "Automatic Pistol"
     SUB_MACHINEGUN = "Sub-Machinegun"

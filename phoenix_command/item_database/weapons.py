@@ -3818,6 +3818,135 @@ ammo_12g_atchisson_shot = AmmoType(
     ]
 )
 
+ammo_40mm_heat_standard = AmmoType(
+    name="40×46mm HEAT",
+    abbreviation="HEAT",
+    ballistic_data=[
+        BallisticData(range_hexes=40, penetration=288, damage_class=10),
+        BallisticData(range_hexes=100, penetration=288, damage_class=10),
+        BallisticData(range_hexes=200, penetration=288, damage_class=10),
+    ],
+    explosive_data=[
+        ExplosiveData(range_hexes=0, shrapnel_penetration=1.6, shrapnel_damage_class=1, base_shrapnel_hit_chance="*2", base_concussion=241),
+        ExplosiveData(range_hexes=1, shrapnel_penetration=1.4, shrapnel_damage_class=1, base_shrapnel_hit_chance="47", base_concussion=71),
+        ExplosiveData(range_hexes=2, shrapnel_penetration=1.0, shrapnel_damage_class=1, base_shrapnel_hit_chance="11", base_concussion=23),
+        ExplosiveData(range_hexes=3, shrapnel_penetration=0.7, shrapnel_damage_class=1, base_shrapnel_hit_chance="4", base_concussion=12),
+        ExplosiveData(range_hexes=5, shrapnel_penetration=0.4, shrapnel_damage_class=1, base_shrapnel_hit_chance="1", base_concussion=5),
+        ExplosiveData(range_hexes=10, shrapnel_penetration=0.0, shrapnel_damage_class=1, base_shrapnel_hit_chance="0", base_concussion=1),
+    ],
+)
+
+ammo_40mm_he_hk = AmmoType(
+    name="40×46mm HE (H&K)",
+    abbreviation="HE",
+    ballistic_data=[
+        BallisticData(range_hexes=40, penetration=2.0, damage_class=10),
+        BallisticData(range_hexes=100, penetration=2.0, damage_class=10),
+        BallisticData(range_hexes=200, penetration=2.0, damage_class=10),
+    ],
+    explosive_data=[
+        ExplosiveData(range_hexes=0, shrapnel_penetration=1.4, shrapnel_damage_class=1, base_shrapnel_hit_chance="*3", base_concussion=250),
+        ExplosiveData(range_hexes=1, shrapnel_penetration=1.2, shrapnel_damage_class=1, base_shrapnel_hit_chance="73", base_concussion=74),
+        ExplosiveData(range_hexes=2, shrapnel_penetration=0.8, shrapnel_damage_class=1, base_shrapnel_hit_chance="17", base_concussion=23),
+        ExplosiveData(range_hexes=3, shrapnel_penetration=0.6, shrapnel_damage_class=1, base_shrapnel_hit_chance="7", base_concussion=12),
+        ExplosiveData(range_hexes=5, shrapnel_penetration=0.3, shrapnel_damage_class=1, base_shrapnel_hit_chance="2", base_concussion=5),
+        ExplosiveData(range_hexes=10, shrapnel_penetration=0.0, shrapnel_damage_class=1, base_shrapnel_hit_chance="0", base_concussion=1),
+    ],
+)
+
+ammo_40mm_he_armscor = AmmoType(
+    name="40×46mm HE (Armscor)",
+    abbreviation="HE",
+    ballistic_data=[
+        BallisticData(range_hexes=40, penetration=2.0, damage_class=10),
+        BallisticData(range_hexes=100, penetration=2.0, damage_class=10),
+        BallisticData(range_hexes=200, penetration=2.0, damage_class=10),
+    ],
+    explosive_data=[
+        ExplosiveData(range_hexes=0, shrapnel_penetration=1.6, shrapnel_damage_class=1, base_shrapnel_hit_chance="*3", base_concussion=273),
+        ExplosiveData(range_hexes=1, shrapnel_penetration=1.4, shrapnel_damage_class=1, base_shrapnel_hit_chance="62", base_concussion=80),
+        ExplosiveData(range_hexes=2, shrapnel_penetration=1.0, shrapnel_damage_class=1, base_shrapnel_hit_chance="15", base_concussion=25),
+        ExplosiveData(range_hexes=3, shrapnel_penetration=0.7, shrapnel_damage_class=1, base_shrapnel_hit_chance="6", base_concussion=13),
+        ExplosiveData(range_hexes=5, shrapnel_penetration=0.4, shrapnel_damage_class=1, base_shrapnel_hit_chance="2", base_concussion=6),
+        ExplosiveData(range_hexes=10, shrapnel_penetration=0.0, shrapnel_damage_class=1, base_shrapnel_hit_chance="0", base_concussion=1),
+    ],
+)
+
+ammo_30mm_he_ak = AmmoType(
+    name="30mm HE (VOG-17/VOG-25)",
+    abbreviation="HE",
+    ballistic_data=[
+        BallisticData(range_hexes=40, penetration=2.5, damage_class=10),
+        BallisticData(range_hexes=100, penetration=2.5, damage_class=10),
+        BallisticData(range_hexes=200, penetration=2.5, damage_class=10),
+    ],
+    explosive_data=[
+        ExplosiveData(range_hexes=0, shrapnel_penetration=2.4, shrapnel_damage_class=2, base_shrapnel_hit_chance="*2", base_concussion=250),
+        ExplosiveData(range_hexes=1, shrapnel_penetration=2.2, shrapnel_damage_class=2, base_shrapnel_hit_chance="58", base_concussion=74),
+        ExplosiveData(range_hexes=2, shrapnel_penetration=1.8, shrapnel_damage_class=2, base_shrapnel_hit_chance="14", base_concussion=23),
+        ExplosiveData(range_hexes=3, shrapnel_penetration=1.5, shrapnel_damage_class=2, base_shrapnel_hit_chance="6", base_concussion=12),
+        ExplosiveData(range_hexes=5, shrapnel_penetration=1.0, shrapnel_damage_class=1, base_shrapnel_hit_chance="1", base_concussion=5),
+        ExplosiveData(range_hexes=10, shrapnel_penetration=0.4, shrapnel_damage_class=1, base_shrapnel_hit_chance="-2", base_concussion=1),
+    ],
+)
+
+ammo_30mm_he_ags = AmmoType(
+    name="30mm HE (VOG-17/VOG-25)",
+    abbreviation="HE",
+    ballistic_data=[
+        BallisticData(range_hexes=40, penetration=2.5, damage_class=10),
+        BallisticData(range_hexes=100, penetration=2.5, damage_class=10),
+        BallisticData(range_hexes=200, penetration=2.5, damage_class=10),
+        BallisticData(range_hexes=400, penetration=2.5, damage_class=10),
+    ],
+    explosive_data=[
+        ExplosiveData(range_hexes=0, shrapnel_penetration=2.4, shrapnel_damage_class=2, base_shrapnel_hit_chance="*2", base_concussion=250),
+        ExplosiveData(range_hexes=1, shrapnel_penetration=2.2, shrapnel_damage_class=2, base_shrapnel_hit_chance="58", base_concussion=74),
+        ExplosiveData(range_hexes=2, shrapnel_penetration=1.8, shrapnel_damage_class=2, base_shrapnel_hit_chance="14", base_concussion=23),
+        ExplosiveData(range_hexes=3, shrapnel_penetration=1.5, shrapnel_damage_class=2, base_shrapnel_hit_chance="6", base_concussion=12),
+        ExplosiveData(range_hexes=5, shrapnel_penetration=1.0, shrapnel_damage_class=1, base_shrapnel_hit_chance="1", base_concussion=5),
+        ExplosiveData(range_hexes=10, shrapnel_penetration=0.4, shrapnel_damage_class=1, base_shrapnel_hit_chance="-2", base_concussion=1),
+    ],
+)
+
+ammo_40mm_heat_hv = AmmoType(
+    name="40×53mm HEAT",
+    abbreviation="HEAT",
+    ballistic_data=[
+        BallisticData(range_hexes=40, penetration=288, damage_class=10),
+        BallisticData(range_hexes=100, penetration=288, damage_class=10),
+        BallisticData(range_hexes=200, penetration=288, damage_class=10),
+        BallisticData(range_hexes=400, penetration=288, damage_class=10),
+    ],
+    explosive_data=[
+        ExplosiveData(range_hexes=0, shrapnel_penetration=1.6, shrapnel_damage_class=1, base_shrapnel_hit_chance="*2", base_concussion=241),
+        ExplosiveData(range_hexes=1, shrapnel_penetration=1.4, shrapnel_damage_class=1, base_shrapnel_hit_chance="47", base_concussion=71),
+        ExplosiveData(range_hexes=2, shrapnel_penetration=1.0, shrapnel_damage_class=1, base_shrapnel_hit_chance="11", base_concussion=23),
+        ExplosiveData(range_hexes=3, shrapnel_penetration=0.7, shrapnel_damage_class=1, base_shrapnel_hit_chance="4", base_concussion=12),
+        ExplosiveData(range_hexes=5, shrapnel_penetration=0.4, shrapnel_damage_class=1, base_shrapnel_hit_chance="1", base_concussion=5),
+        ExplosiveData(range_hexes=10, shrapnel_penetration=0.0, shrapnel_damage_class=1, base_shrapnel_hit_chance="0", base_concussion=1),
+    ],
+)
+
+ammo_40mm_he_hv = AmmoType(
+    name="40×53mm HE",
+    abbreviation="HE",
+    ballistic_data=[
+        BallisticData(range_hexes=40, penetration=2.6, damage_class=10),
+        BallisticData(range_hexes=100, penetration=2.6, damage_class=10),
+        BallisticData(range_hexes=200, penetration=2.6, damage_class=10),
+        BallisticData(range_hexes=400, penetration=2.6, damage_class=10),
+    ],
+    explosive_data=[
+        ExplosiveData(range_hexes=0, shrapnel_penetration=2.5, shrapnel_damage_class=3, base_shrapnel_hit_chance="6", base_concussion=353),
+        ExplosiveData(range_hexes=1, shrapnel_penetration=2.4, shrapnel_damage_class=3, base_shrapnel_hit_chance="1", base_concussion=100),
+        ExplosiveData(range_hexes=2, shrapnel_penetration=2.2, shrapnel_damage_class=3, base_shrapnel_hit_chance="-3", base_concussion=31),
+        ExplosiveData(range_hexes=3, shrapnel_penetration=2.0, shrapnel_damage_class=3, base_shrapnel_hit_chance="-6", base_concussion=16),
+        ExplosiveData(range_hexes=5, shrapnel_penetration=1.6, shrapnel_damage_class=2, base_shrapnel_hit_chance="-9", base_concussion=7),
+        ExplosiveData(range_hexes=10, shrapnel_penetration=1.0, shrapnel_damage_class=1, base_shrapnel_hit_chance="-15", base_concussion=2),
+    ],
+)
+
 ammo_40mm_heat = AmmoType(
     name="40×46mm HEAT",
     abbreviation="HEAT",
@@ -3852,6 +3981,160 @@ ammo_40mm_he = AmmoType(
         ExplosiveData(range_hexes=3, shrapnel_penetration=0.7, shrapnel_damage_class=1, base_shrapnel_hit_chance="6", base_concussion=13),
         ExplosiveData(range_hexes=5, shrapnel_penetration=0.4, shrapnel_damage_class=1, base_shrapnel_hit_chance="2", base_concussion=6),
         ExplosiveData(range_hexes=10, shrapnel_penetration=0.0, shrapnel_damage_class=1, base_shrapnel_hit_chance="0", base_concussion=1),
+    ],
+)
+
+ammo_66mm_heat_pzf44 = AmmoType(
+    name="66mm HEAT (PZF 44)",
+    abbreviation="HEAT",
+    ballistic_data=[
+        BallisticData(range_hexes=r, penetration=8900, damage_class=10)
+        for r in [40, 100, 200, 400]
+    ],
+    explosive_data=[
+        ExplosiveData(range_hexes=0, shrapnel_penetration=5.2, shrapnel_damage_class=7, base_shrapnel_hit_chance="15", base_concussion=1100),
+        ExplosiveData(range_hexes=1, shrapnel_penetration=5.1, shrapnel_damage_class=7, base_shrapnel_hit_chance="3", base_concussion=252),
+        ExplosiveData(range_hexes=2, shrapnel_penetration=4.8, shrapnel_damage_class=7, base_shrapnel_hit_chance="0", base_concussion=72),
+        ExplosiveData(range_hexes=3, shrapnel_penetration=4.6, shrapnel_damage_class=7, base_shrapnel_hit_chance="0", base_concussion=36),
+        ExplosiveData(range_hexes=5, shrapnel_penetration=4.2, shrapnel_damage_class=6, base_shrapnel_hit_chance="0", base_concussion=16),
+        ExplosiveData(range_hexes=10, shrapnel_penetration=3.4, shrapnel_damage_class=6, base_shrapnel_hit_chance="0", base_concussion=5),
+    ],
+)
+
+ammo_66mm_he_pzf44 = AmmoType(
+    name="66mm HE (PZF 44)",
+    abbreviation="HE",
+    ballistic_data=[
+        BallisticData(range_hexes=r, penetration=6.1, damage_class=10)
+        for r in [40, 100, 200, 400]
+    ],
+    explosive_data=[
+        ExplosiveData(range_hexes=0, shrapnel_penetration=6.0, shrapnel_damage_class=7, base_shrapnel_hit_chance="15", base_concussion=1300),
+        ExplosiveData(range_hexes=1, shrapnel_penetration=5.9, shrapnel_damage_class=7, base_shrapnel_hit_chance="3", base_concussion=287),
+        ExplosiveData(range_hexes=2, shrapnel_penetration=5.6, shrapnel_damage_class=7, base_shrapnel_hit_chance="0", base_concussion=81),
+        ExplosiveData(range_hexes=3, shrapnel_penetration=5.4, shrapnel_damage_class=7, base_shrapnel_hit_chance="0", base_concussion=40),
+        ExplosiveData(range_hexes=5, shrapnel_penetration=4.9, shrapnel_damage_class=7, base_shrapnel_hit_chance="0", base_concussion=17),
+        ExplosiveData(range_hexes=10, shrapnel_penetration=3.9, shrapnel_damage_class=6, base_shrapnel_hit_chance="0", base_concussion=6),
+    ],
+)
+
+
+ammo_67mm_heat_armbrust = AmmoType(
+    name="67mm HEAT (Armbrust)",
+    abbreviation="HEAT",
+    ballistic_data=[
+        BallisticData(range_hexes=r, penetration=6600, damage_class=10)
+        for r in [40, 100, 200, 400]
+    ],
+    explosive_data=[
+        ExplosiveData(range_hexes=0, shrapnel_penetration=5.2, shrapnel_damage_class=7, base_shrapnel_hit_chance="15", base_concussion=1100),
+        ExplosiveData(range_hexes=1, shrapnel_penetration=5.1, shrapnel_damage_class=7, base_shrapnel_hit_chance="3", base_concussion=252),
+        ExplosiveData(range_hexes=2, shrapnel_penetration=4.8, shrapnel_damage_class=7, base_shrapnel_hit_chance="0", base_concussion=72),
+        ExplosiveData(range_hexes=3, shrapnel_penetration=4.6, shrapnel_damage_class=7, base_shrapnel_hit_chance="0", base_concussion=36),
+        ExplosiveData(range_hexes=5, shrapnel_penetration=4.2, shrapnel_damage_class=6, base_shrapnel_hit_chance="0", base_concussion=16),
+        ExplosiveData(range_hexes=10, shrapnel_penetration=3.4, shrapnel_damage_class=6, base_shrapnel_hit_chance="0", base_concussion=5),
+    ],
+)
+
+ammo_67mm_he_armbrust = AmmoType(
+    name="67mm HE (Armbrust)",
+    abbreviation="HE",
+    ballistic_data=[
+        BallisticData(range_hexes=r, penetration=4.2, damage_class=10)
+        for r in [40, 100, 200, 400]
+    ],
+    explosive_data=[
+        ExplosiveData(range_hexes=0, shrapnel_penetration=1.4, shrapnel_damage_class=1, base_shrapnel_hit_chance="*6", base_concussion=1100),
+        ExplosiveData(range_hexes=1, shrapnel_penetration=1.2, shrapnel_damage_class=1, base_shrapnel_hit_chance="*2", base_concussion=252),
+        ExplosiveData(range_hexes=2, shrapnel_penetration=0.8, shrapnel_damage_class=1, base_shrapnel_hit_chance="38", base_concussion=72),
+        ExplosiveData(range_hexes=3, shrapnel_penetration=0.6, shrapnel_damage_class=1, base_shrapnel_hit_chance="16", base_concussion=36),
+        ExplosiveData(range_hexes=5, shrapnel_penetration=0.3, shrapnel_damage_class=1, base_shrapnel_hit_chance="5", base_concussion=16),
+        ExplosiveData(range_hexes=10, shrapnel_penetration=0.0, shrapnel_damage_class=1, base_shrapnel_hit_chance="0", base_concussion=5),
+    ],
+)
+
+ammo_64mm_heat_rpg18 = AmmoType(
+    name="64mm HEAT (RPG 18)",
+    abbreviation="HEAT",
+    ballistic_data=[
+        BallisticData(range_hexes=r, penetration=5900, damage_class=10)
+        for r in [40, 100, 200, 400]
+    ],
+    explosive_data=[
+        ExplosiveData(range_hexes=0, shrapnel_penetration=4.8, shrapnel_damage_class=7, base_shrapnel_hit_chance="15", base_concussion=1000),
+        ExplosiveData(range_hexes=1, shrapnel_penetration=4.7, shrapnel_damage_class=7, base_shrapnel_hit_chance="3", base_concussion=232),
+        ExplosiveData(range_hexes=2, shrapnel_penetration=4.5, shrapnel_damage_class=6, base_shrapnel_hit_chance="0", base_concussion=67),
+        ExplosiveData(range_hexes=3, shrapnel_penetration=4.3, shrapnel_damage_class=6, base_shrapnel_hit_chance="0", base_concussion=34),
+        ExplosiveData(range_hexes=5, shrapnel_penetration=3.9, shrapnel_damage_class=6, base_shrapnel_hit_chance="0", base_concussion=15),
+        ExplosiveData(range_hexes=10, shrapnel_penetration=3.1, shrapnel_damage_class=5, base_shrapnel_hit_chance="0", base_concussion=5),
+    ],
+)
+
+ammo_85mm_heat_rpg7 = AmmoType(
+    name="85mm HEAT (RPG-7V)",
+    abbreviation="HEAT",
+    ballistic_data=[
+        BallisticData(range_hexes=r, penetration=7200, damage_class=10)
+        for r in [40, 100, 200, 400]
+    ],
+    explosive_data=[
+        ExplosiveData(range_hexes=0, shrapnel_penetration=7.2, shrapnel_damage_class=8, base_shrapnel_hit_chance="11", base_concussion=2000),
+        ExplosiveData(range_hexes=1, shrapnel_penetration=7.1, shrapnel_damage_class=8, base_shrapnel_hit_chance="2", base_concussion=393),
+        ExplosiveData(range_hexes=2, shrapnel_penetration=6.9, shrapnel_damage_class=8, base_shrapnel_hit_chance="0", base_concussion=105),
+        ExplosiveData(range_hexes=3, shrapnel_penetration=6.7, shrapnel_damage_class=8, base_shrapnel_hit_chance="0", base_concussion=52),
+        ExplosiveData(range_hexes=5, shrapnel_penetration=6.2, shrapnel_damage_class=8, base_shrapnel_hit_chance="0", base_concussion=22),
+        ExplosiveData(range_hexes=10, shrapnel_penetration=5.2, shrapnel_damage_class=7, base_shrapnel_hit_chance="0", base_concussion=7),
+    ],
+)
+
+ammo_85mm_he_rpg7 = AmmoType(
+    name="85mm HE (RPG-7V)",
+    abbreviation="HE",
+    ballistic_data=[
+        BallisticData(range_hexes=r, penetration=8.2, damage_class=10)
+        for r in [40, 100, 200, 400]
+    ],
+    explosive_data=[
+        ExplosiveData(range_hexes=0, shrapnel_penetration=8.1, shrapnel_damage_class=9, base_shrapnel_hit_chance="11", base_concussion=2400),
+        ExplosiveData(range_hexes=1, shrapnel_penetration=8.0, shrapnel_damage_class=9, base_shrapnel_hit_chance="2", base_concussion=441),
+        ExplosiveData(range_hexes=2, shrapnel_penetration=7.7, shrapnel_damage_class=9, base_shrapnel_hit_chance="0", base_concussion=115),
+        ExplosiveData(range_hexes=3, shrapnel_penetration=7.5, shrapnel_damage_class=8, base_shrapnel_hit_chance="0", base_concussion=57),
+        ExplosiveData(range_hexes=5, shrapnel_penetration=7.0, shrapnel_damage_class=8, base_shrapnel_hit_chance="0", base_concussion=24),
+        ExplosiveData(range_hexes=10, shrapnel_penetration=5.9, shrapnel_damage_class=8, base_shrapnel_hit_chance="0", base_concussion=8),
+    ],
+)
+
+ammo_94mm_heat_law80 = AmmoType(
+    name="94mm HEAT (LAW 80)",
+    abbreviation="HEAT",
+    ballistic_data=[
+        BallisticData(range_hexes=r, penetration=17000, damage_class=10)
+        for r in [40, 100, 200, 400]
+    ],
+    explosive_data=[
+        ExplosiveData(range_hexes=0, shrapnel_penetration=8.3, shrapnel_damage_class=9, base_shrapnel_hit_chance="10", base_concussion=2600),
+        ExplosiveData(range_hexes=1, shrapnel_penetration=8.2, shrapnel_damage_class=9, base_shrapnel_hit_chance="2", base_concussion=480),
+        ExplosiveData(range_hexes=2, shrapnel_penetration=8.0, shrapnel_damage_class=9, base_shrapnel_hit_chance="0", base_concussion=123),
+        ExplosiveData(range_hexes=3, shrapnel_penetration=7.7, shrapnel_damage_class=9, base_shrapnel_hit_chance="0", base_concussion=60),
+        ExplosiveData(range_hexes=5, shrapnel_penetration=7.3, shrapnel_damage_class=9, base_shrapnel_hit_chance="0", base_concussion=26),
+        ExplosiveData(range_hexes=10, shrapnel_penetration=6.2, shrapnel_damage_class=8, base_shrapnel_hit_chance="0", base_concussion=9),
+    ],
+)
+
+ammo_66mm_heat_m72 = AmmoType(
+    name="66mm HEAT (M72 A2)",
+    abbreviation="HEAT",
+    ballistic_data=[
+        BallisticData(range_hexes=r, penetration=6800, damage_class=10)
+        for r in [40, 100, 200, 400]
+    ],
+    explosive_data=[
+        ExplosiveData(range_hexes=0, shrapnel_penetration=5.0, shrapnel_damage_class=7, base_shrapnel_hit_chance="15", base_concussion=1100),
+        ExplosiveData(range_hexes=1, shrapnel_penetration=4.9, shrapnel_damage_class=7, base_shrapnel_hit_chance="3", base_concussion=245),
+        ExplosiveData(range_hexes=2, shrapnel_penetration=4.7, shrapnel_damage_class=7, base_shrapnel_hit_chance="0", base_concussion=70),
+        ExplosiveData(range_hexes=3, shrapnel_penetration=4.5, shrapnel_damage_class=7, base_shrapnel_hit_chance="0", base_concussion=36),
+        ExplosiveData(range_hexes=5, shrapnel_penetration=4.1, shrapnel_damage_class=6, base_shrapnel_hit_chance="0", base_concussion=15),
+        ExplosiveData(range_hexes=10, shrapnel_penetration=3.3, shrapnel_damage_class=5, base_shrapnel_hit_chance="0", base_concussion=5),
     ],
 )
 
@@ -8192,6 +8475,176 @@ atchisson_assault_12 = Weapon(
     ballistic_data=atchisson_ballistic
 )
 
+hk_69a1 = Weapon(
+    name="H & K 69A1",
+    weight=4.1,
+    description="Compact grenade launcher with folding stock. Single shot, break-action design.",
+    caliber=Caliber.CAL_40x46MM,
+    weapon_type=WeaponType.GRENADE_LAUNCHER,
+    country=Country.WEST_GERMANY,
+    length_folded=18,
+    length_deployed=27,
+    reload_time=10,
+    self_loading_action=False,
+    ammo_capacity=1,
+    ammo_weight=0.51,
+    ammo_feed_device=AmmoFeedDevice.ROUND,
+    ammunition_types=[ammo_40mm_heat_standard, ammo_40mm_he_hk],
+    sustained_auto_burst=11,
+    aim_time_modifiers={
+        1: -19, 2: -10, 3: -8, 4: -6, 5: -5, 6: -4, 7: -3
+    },
+    ballistic_data=WeaponBallisticData(
+        angle_of_impact=[
+            RangeData(40, 0),
+            RangeData(100, 1),
+            RangeData(200, 4),
+        ],
+        ballistic_accuracy=[
+            RangeData(40, 23),
+            RangeData(100, 10),
+            RangeData(200, 1),
+        ],
+        time_of_flight=[
+            RangeData(40, 11),
+            RangeData(100, 33),
+            RangeData(200, 80),
+        ],
+    ),
+)
+
+hk_79 = Weapon(
+    name="H & K 79",
+    weight=14.9,
+    description="Under-barrel grenade launcher for G3 or G41 rifles. Barrel drops down for loading.",
+    caliber=Caliber.CAL_40x46MM,
+    weapon_type=WeaponType.GRENADE_LAUNCHER,
+    country=Country.WEST_GERMANY,
+    length_deployed=40,
+    reload_time=12,
+    self_loading_action=False,
+    ammo_capacity=1,
+    ammo_weight=0.51,
+    ammo_feed_device=AmmoFeedDevice.ROUND,
+    ammunition_types=[ammo_40mm_heat_standard, ammo_40mm_he_hk],
+    sustained_auto_burst=7,
+    aim_time_modifiers={
+        1: -26, 2: -16, 3: -10, 4: -7, 5: -6, 6: -4
+    },
+    ballistic_data=WeaponBallisticData(
+        angle_of_impact=[
+            RangeData(40, 0),
+            RangeData(100, 1),
+            RangeData(200, 4),
+        ],
+        ballistic_accuracy=[
+            RangeData(40, 23),
+            RangeData(100, 10),
+            RangeData(200, 1),
+        ],
+        time_of_flight=[
+            RangeData(40, 11),
+            RangeData(100, 33),
+            RangeData(200, 80),
+        ],
+    ),
+)
+
+armscor_6 = Weapon(
+    name="Armscor 6",
+    weight=15.0,
+    description="Six shot semi-automatic grenade launcher using a revolver type feed. Provided with collimating sight.",
+    caliber=Caliber.CAL_40x46MM,
+    weapon_type=WeaponType.GRENADE_LAUNCHER,
+    country=Country.SOUTH_AFRICA,
+    length_folded=22,
+    length_deployed=31,
+    reload_time=24,
+    self_loading_action=True,
+    ammo_capacity=6,
+    ammo_weight=0.51,
+    ammo_feed_device=AmmoFeedDevice.ROUND,
+    ammunition_types=[ammo_40mm_heat_standard, ammo_40mm_he_armscor],
+    sustained_auto_burst=7,
+    aim_time_modifiers={
+        1: -26, 2: -16, 3: -10, 4: -8, 5: -6, 6: -5, 7: -3
+    },
+    ballistic_data=WeaponBallisticData(
+        angle_of_impact=[
+            RangeData(40, 0),
+            RangeData(100, 1),
+            RangeData(200, 4),
+        ],
+        ballistic_accuracy=[
+            RangeData(40, 23),
+            RangeData(100, 10),
+            RangeData(200, 1),
+        ],
+        time_of_flight=[
+            RangeData(40, 11),
+            RangeData(100, 33),
+            RangeData(200, 80),
+        ],
+    ),
+    built_in_optics=True,
+)
+
+
+ak74_gp = Weapon(
+    name="AK 74 with 30mm Grenade Launcher",
+    weight=10.1,
+    description="AK 74 rifle with 30mm grenade launcher (GP-type). Similar to US M203.",
+    caliber=Caliber.CAL_30MM_VOG,
+    weapon_type=WeaponType.GRENADE_LAUNCHER,
+    country=Country.USSR,
+    length_deployed=37,
+    reload_time=12,
+    self_loading_action=False,
+    ammo_capacity=1,
+    ammo_weight=0.56,
+    ammo_feed_device=AmmoFeedDevice.ROUND,
+    ammunition_types=[ammo_30mm_he_ak],
+    sustained_auto_burst=8,
+    aim_time_modifiers={
+        1: -23, 2: -13, 3: -9, 4: -7, 5: -5
+    },
+    ballistic_data=WeaponBallisticData(
+        angle_of_impact=[RangeData(40, 0), RangeData(100, 1), RangeData(200, 4)],
+        ballistic_accuracy=[RangeData(40, 23), RangeData(100, 5), RangeData(200, -4)],
+        time_of_flight=[RangeData(40, 11), RangeData(100, 35), RangeData(200, 81)],
+    ),
+)
+
+ags_17 = Weapon(
+    name="AGS-17 Plamya",
+    weight=140.5,
+    description="Automatic 30mm grenade launcher on tripod. Introduced in 1975.",
+    caliber=Caliber.CAL_30MM_VOG,
+    weapon_type=WeaponType.AUTOMATIC_GRENADE_LAUNCHER,
+    country=Country.USSR,
+    length_deployed=33,
+    reload_time=12,
+    self_loading_action=True,
+    full_auto=True,
+    full_auto_rof=1,
+    ammo_capacity=29,
+    ammo_weight=24.0,
+    ammo_feed_device=AmmoFeedDevice.DRUM,
+    ammunition_types=[ammo_30mm_he_ags],
+    sustained_auto_burst=1,
+    aim_time_modifiers={
+        1: -38, 2: -28, 3: -22, 4: -18, 5: -15, 6: -10, 7: -8, 8: -6, 9: -5, 10: -4, 11: -3, 12: -2, 13: -1
+    },
+    ballistic_data=WeaponBallisticData(
+        angle_of_impact=[RangeData(40, 0), RangeData(100, 0), RangeData(200, 0), RangeData(400, 1)],
+        minimum_arc=[RangeData(40, 0.2), RangeData(100, 0.4), RangeData(200, 0.8), RangeData(400, 2.0)],
+        ballistic_accuracy=[RangeData(40, 32), RangeData(100, 19), RangeData(200, 9), RangeData(400, 0)],
+        time_of_flight=[RangeData(40, 4), RangeData(100, 11), RangeData(200, 24), RangeData(400, 57)],
+    ),
+    built_in_bipod=True,
+)
+
+
 m79 = Weapon(
     name="M79 Grenade Launcher",
     weight=6.5,
@@ -8274,13 +8727,22 @@ m174 = Weapon(
     weapon_type=WeaponType.AUTOMATIC_GRENADE_LAUNCHER,
     country=Country.USA,
     length_deployed=28,
-    reload_time=5,
+    reload_time=14,
     self_loading_action=True,
     full_auto=True,
     full_auto_rof=3,
+    ammo_capacity=12,
+    ammo_weight=9.9,
+    ammo_feed_device=AmmoFeedDevice.DRUM,
     ammunition_types=[ammo_40mm_heat, ammo_40mm_he],
+    sustained_auto_burst=4,
     built_in_bipod=True,
     ballistic_data=WeaponBallisticData(
+        angle_of_impact=[
+            RangeData(40, 0),
+            RangeData(100, 1),
+            RangeData(200, 4),
+        ],
         minimum_arc=[
             RangeData(40, 7),
             RangeData(100, 2),
@@ -8296,6 +8758,180 @@ m174 = Weapon(
             RangeData(100, 33),
             RangeData(200, 80),
         ],
+    ),
+)
+
+m19 = Weapon(
+    name="M19 Automatic Grenade Launcher",
+    weight=137.2,
+    description="Automatic 40mm grenade launcher (Mk 19). Uses its own longer 40mm grenades.",
+    caliber=Caliber.CAL_40x53MM,
+    weapon_type=WeaponType.AUTOMATIC_GRENADE_LAUNCHER,
+    country=Country.USA,
+    length_deployed=41,
+    reload_time=14,
+    self_loading_action=True,
+    full_auto=True,
+    full_auto_rof=3,
+    ammo_capacity=50,
+    ammo_weight=45.2,
+    ammo_feed_device=AmmoFeedDevice.BELT,
+    ammunition_types=[ammo_40mm_heat_hv, ammo_40mm_he_hv],
+    sustained_auto_burst=4,
+    aim_time_modifiers={
+        1: -40, 2: -30, 3: -25, 4: -21, 5: -17, 6: -15, 7: -10, 8: -8, 9: -6, 10: -5, 11: -3
+    },
+    ballistic_data=WeaponBallisticData(
+        angle_of_impact=[RangeData(40, 0), RangeData(100, 0), RangeData(200, 0), RangeData(400, 1)],
+        minimum_arc=[RangeData(40, 0.8), RangeData(100, 2.0), RangeData(200, 4.0), RangeData(400, 8.0)],
+        ballistic_accuracy=[RangeData(40, 27), RangeData(100, 14), RangeData(200, 5), RangeData(400, -4)],
+        time_of_flight=[RangeData(40, 3), RangeData(100, 9), RangeData(200, 21), RangeData(400, 52)],
+    ),
+    built_in_bipod=True,
+)
+
+pzf_44 = Weapon(
+    name="PZF 44 2A1 Lanze",
+    weight=22.7,
+    description="Reloadable RPG launcher similar to Soviet RPG 7V.",
+    caliber=Caliber.CAL_66MM,
+    weapon_type=WeaponType.ROCKET_PROPELLED_GRENADE_LAUNCHER,
+    country=Country.WEST_GERMANY,
+    length_folded=35,
+    length_deployed=46,
+    reload_time=28,
+    self_loading_action=False,
+    ammo_capacity=1,
+    ammo_weight=5.5,
+    ammo_feed_device=AmmoFeedDevice.ROUND,
+    ammunition_types=[ammo_66mm_heat_pzf44, ammo_66mm_he_pzf44],
+    aim_time_modifiers={
+        1: -28, 2: -18, 3: -11, 4: -9, 5: -7, 6: -6, 7: -4, 8: -3, 9: -2, 10: -1
+    },
+    ballistic_data=WeaponBallisticData(
+        angle_of_impact=[RangeData(40, 0), RangeData(100, 0), RangeData(200, 0), RangeData(400, 1)],
+        ballistic_accuracy=[RangeData(40, 14), RangeData(100, 2), RangeData(200, -7), RangeData(400, -17)],
+        time_of_flight=[RangeData(40, 4), RangeData(100, 9), RangeData(200, 20), RangeData(400, 45)]
+    )
+)
+
+armbrust = Weapon(
+    name="Armbrust",
+    weight=16.0,
+    description="One-shot disposable rocket launcher with counter-mass for recoilless effect.",
+    caliber=Caliber.CAL_67MM,
+    weapon_type=WeaponType.ROCKET_PROPELLED_GRENADE,
+    country=Country.WEST_GERMANY,
+    length_deployed=34,
+    reload_time=14,
+    self_loading_action=False,
+    ammo_capacity=1,
+    ammo_weight=16.0,
+    ammo_feed_device=AmmoFeedDevice.ROUND,
+    ammunition_types=[ammo_67mm_heat_armbrust, ammo_67mm_he_armbrust],
+    aim_time_modifiers={
+        1: -26, 2: -16, 3: -10, 4: -8, 5: -6, 6: -5, 7: -4, 8: -3, 9: -2, 10: -1
+    },
+    ballistic_data=WeaponBallisticData(
+        angle_of_impact=[RangeData(40, 0), RangeData(100, 0), RangeData(200, 0), RangeData(400, 1)],
+        ballistic_accuracy=[RangeData(40, 12), RangeData(100, -1), RangeData(200, -10), RangeData(400, -20)],
+        time_of_flight=[RangeData(40, 4), RangeData(100, 10), RangeData(200, 21), RangeData(400, 50)]
+    )
+)
+
+rpg_18 = Weapon(
+    name="RPG 18",
+    weight=14.3,
+    description="Disposable 64mm anti-tank rocket launcher similar to US M72 LAW.",
+    caliber=Caliber.CAL_64MM,
+    weapon_type=WeaponType.ROCKET_PROPELLED_GRENADE,
+    country=Country.USSR,
+    length_folded=28,
+    length_deployed=39,
+    reload_time=20,
+    self_loading_action=False,
+    ammo_capacity=1,
+    ammo_weight=16.0,
+    ammo_feed_device=AmmoFeedDevice.ROUND,
+    ammunition_types=[ammo_64mm_heat_rpg18],
+    ballistic_data=WeaponBallisticData(
+        angle_of_impact=[RangeData(40, 0), RangeData(100, 0), RangeData(200, 1), RangeData(400, 2)],
+        ballistic_accuracy=[RangeData(40, 16), RangeData(100, 5), RangeData(200, -5), RangeData(400, -14)],
+        time_of_flight=[RangeData(40, 7), RangeData(100, 17), RangeData(200, 36), RangeData(400, 78)]
+    )
+)
+
+rpg_7v = Weapon(
+    name="RPG 7V",
+    weight=20.4,
+    description="Standard man-portable anti-tank weapon of the Soviet army. Reload time assumes propellant charge is pre-screwed.",
+    caliber=Caliber.CAL_85MM,
+    weapon_type=WeaponType.ROCKET_PROPELLED_GRENADE_LAUNCHER,
+    country=Country.USSR,
+    length_folded=39,
+    length_deployed=54,
+    reload_time=15,
+    self_loading_action=False,
+    ammo_capacity=1,
+    ammo_weight=5.0,
+    ammo_feed_device=AmmoFeedDevice.ROUND,
+    ammunition_types=[ammo_85mm_heat_rpg7, ammo_85mm_he_rpg7],
+    aim_time_modifiers={
+        1: -28, 2: -18, 3: -11, 4: -9, 5: -7, 6: -6, 7: -5, 8: -4, 9: -3, 10: -2, 11: -1, 12: 0
+    },
+    ballistic_data=WeaponBallisticData(
+        ballistic_accuracy=[RangeData(40, 15), RangeData(100, 4), RangeData(200, -6), RangeData(400, -15)],
+        time_of_flight=[RangeData(40, 2), RangeData(100, 6), RangeData(200, 14), RangeData(400, 30)],
+    ),
+)
+
+law_80 = Weapon(
+    name="LAW 80",
+    weight=21.2,
+    description="One-shot disposable weapon with built-in 9mm spotting rifle (5 round capacity).",
+    caliber=Caliber.CAL_94MM,
+    weapon_type=WeaponType.ROCKET_PROPELLED_GRENADE,
+    country=Country.UK,
+    length_folded=39,
+    length_deployed=59,
+    reload_time=20,
+    self_loading_action=False,
+    ammo_capacity=1,
+    ammo_weight=21.2,
+    ammo_feed_device=AmmoFeedDevice.ROUND,
+    ammunition_types=[ammo_94mm_heat_law80],
+    aim_time_modifiers={
+        1: -28, 2: -18, 3: -11, 4: -9, 5: -7, 6: -5, 7: -4, 8: -3, 9: -2, 10: -1
+    },
+    ballistic_data=WeaponBallisticData(
+        angle_of_impact=[RangeData(40, 0), RangeData(100, 0), RangeData(200, 1), RangeData(400, 2)],
+        ballistic_accuracy=[RangeData(40, 8), RangeData(100, -4), RangeData(200, -14), RangeData(400, -23)],
+        time_of_flight=[RangeData(40, 5), RangeData(100, 15), RangeData(200, 35), RangeData(400, 85)],
+    ),
+)
+
+m72_a2_law = Weapon(
+    name="M72 A2 LAW",
+    weight=5.2,
+    description="Standard NATO disposable anti-tank launcher. Reload time includes extending tube and deploying sights.",
+    caliber=Caliber.CAL_66MM,
+    weapon_type=WeaponType.ROCKET_PROPELLED_GRENADE,
+    country=Country.USA,
+    length_folded=26,
+    length_deployed=35,
+    reload_time=14,
+    self_loading_action=False,
+    ammo_capacity=1,
+    ammo_weight=5.2,
+    ammo_feed_device=AmmoFeedDevice.ROUND,
+    ammunition_types=[ammo_66mm_heat_m72],
+    aim_time_modifiers={
+        1: -20, 2: -11, 3: -8, 4: -6, 5: -5, 6: -4, 7: -3, 8: -2
+    },
+    ballistic_data=WeaponBallisticData(
+        angle_of_impact=[RangeData(40, 0), RangeData(100, 0), RangeData(200, 1), RangeData(400, 1)],
+        ballistic_accuracy=[RangeData(40, 11), RangeData(100, -1), RangeData(200, -11), RangeData(400, -20)],
+        time_of_flight=[RangeData(40, 5), RangeData(100, 14), RangeData(200, 32), RangeData(400, 75)],
     ),
 )
 
@@ -8397,7 +9033,19 @@ WEAPONS_LIST = [
     remington_m870,
     high_standard_m10b,
     atchisson_assault_12,
+    hk_69a1,
+    hk_79,
+    armscor_6,
+    ak74_gp,
+    ags_17,
     m79,
     m203,
     m174,
+    m19,
+    pzf_44,
+    armbrust,
+    rpg_18,
+    rpg_7v,
+    law_80,
+    m72_a2_law
 ]
