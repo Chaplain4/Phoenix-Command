@@ -8,7 +8,8 @@ from phoenix_command.models.enums import AmmoFeedDevice, Caliber, WeaponType, Co
 # ============================================================================
 ammo_556_fmj = AmmoType(
     name="5.56mm NATO Full Metal Jacket",
-    abbreviation="FMJ",
+    description="FMJ",
+    weight=1.1,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=15, damage_class=6),
         BallisticData(range_hexes=20, penetration=15, damage_class=6),
@@ -23,7 +24,8 @@ ammo_556_fmj = AmmoType(
 
 ammo_556_jhp = AmmoType(
     name="5.56mm NATO Jacketed Hollow Point",
-    abbreviation="JHP",
+    description="JHP",
+    weight=1.1,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=15, damage_class=8),
         BallisticData(range_hexes=20, penetration=14, damage_class=8),
@@ -38,7 +40,8 @@ ammo_556_jhp = AmmoType(
 
 ammo_556_ap = AmmoType(
     name="5.56mm NATO Armor Piercing",
-    abbreviation="AP",
+    description="AP",
+    weight=1.1,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=21, damage_class=6),
         BallisticData(range_hexes=20, penetration=21, damage_class=6),
@@ -56,7 +59,8 @@ ammo_556_ap = AmmoType(
 # ============================================================================
 ammo_9mm_fmj = AmmoType(
     name="9mm Parabellum Full Metal Jacket",
-    abbreviation="FMJ",
+    description="FMJ",
+    weight=0.5,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=2.1, damage_class=3),
         BallisticData(range_hexes=20, penetration=1.9, damage_class=3),
@@ -71,7 +75,8 @@ ammo_9mm_fmj = AmmoType(
 
 ammo_9mm_jhp = AmmoType(
     name="9mm Parabellum Jacketed Hollow Point",
-    abbreviation="JHP",
+    description="JHP",
+    weight=0.5,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=2.0, damage_class=4),
         BallisticData(range_hexes=20, penetration=1.8, damage_class=4),
@@ -86,7 +91,8 @@ ammo_9mm_jhp = AmmoType(
 
 ammo_9mm_ap = AmmoType(
     name="9mm Parabellum Armor Piercing",
-    abbreviation="AP",
+    description="AP",
+    weight=0.5,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=2.9, damage_class=3),
         BallisticData(range_hexes=20, penetration=2.7, damage_class=3),
@@ -101,7 +107,8 @@ ammo_9mm_ap = AmmoType(
 
 ammo_9mm_v2_fmj = AmmoType(
     name="9mm Parabellum FMJ (v2)",
-    abbreviation="FMJ",
+    description="FMJ",
+    weight=0.41,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=1.9, damage_class=3),
         BallisticData(range_hexes=20, penetration=1.8, damage_class=3),
@@ -116,7 +123,8 @@ ammo_9mm_v2_fmj = AmmoType(
 
 ammo_9mm_v2_jhp = AmmoType(
     name="9mm Parabellum JHP (v2)",
-    abbreviation="JHP",
+    description="JHP",
+    weight=0.41,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=1.9, damage_class=4),
         BallisticData(range_hexes=20, penetration=1.7, damage_class=4),
@@ -131,7 +139,8 @@ ammo_9mm_v2_jhp = AmmoType(
 
 ammo_9mm_v2_ap = AmmoType(
     name="9mm Parabellum AP (v2)",
-    abbreviation="AP",
+    description="AP",
+    weight=0.41,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=2.7, damage_class=3),
         BallisticData(range_hexes=20, penetration=2.5, damage_class=2),
@@ -146,7 +155,8 @@ ammo_9mm_v2_ap = AmmoType(
 
 ammo_9mm_vp70_fmj = AmmoType(
     name="9mm Parabellum FMJ (VP70M)",
-    abbreviation="FMJ",
+    description="FMJ",
+    weight=0.69,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=2.0, damage_class=3),
         BallisticData(range_hexes=20, penetration=1.9, damage_class=3),
@@ -160,7 +170,8 @@ ammo_9mm_vp70_fmj = AmmoType(
 )
 ammo_9mm_vp70_jhp = AmmoType(
     name="9mm Parabellum JHP (VP70M)",
-    abbreviation="JHP",
+    description="JHP",
+    weight=0.69,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=2.0, damage_class=4),
         BallisticData(range_hexes=20, penetration=1.8, damage_class=4),
@@ -174,7 +185,8 @@ ammo_9mm_vp70_jhp = AmmoType(
 )
 ammo_9mm_vp70_ap = AmmoType(
     name="9mm Parabellum AP (VP70M)",
-    abbreviation="AP",
+    description="AP",
+    weight=0.69,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=2.9, damage_class=3),
         BallisticData(range_hexes=20, penetration=2.6, damage_class=3),
@@ -189,7 +201,8 @@ ammo_9mm_vp70_ap = AmmoType(
 
 ammo_9mm_m93r_fmj = AmmoType(
     name="9mm Parabellum FMJ (M93R)",
-    abbreviation="FMJ",
+    description="FMJ",
+    weight=0.69,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=2.2, damage_class=3),
         BallisticData(range_hexes=20, penetration=2.0, damage_class=3),
@@ -204,7 +217,8 @@ ammo_9mm_m93r_fmj = AmmoType(
 
 ammo_9mm_m93r_jhp = AmmoType(
     name="9mm Parabellum JHP (M93R)",
-    abbreviation="JHP",
+    description="JHP",
+    weight=0.69,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=2.1, damage_class=5),
         BallisticData(range_hexes=20, penetration=2.0, damage_class=4),
@@ -219,7 +233,8 @@ ammo_9mm_m93r_jhp = AmmoType(
 
 ammo_9mm_m93r_ap = AmmoType(
     name="9mm Parabellum JHP (M93R)",
-    abbreviation="JHP",
+    description="JHP",
+    weight=0.69,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=3.1, damage_class=3),
         BallisticData(range_hexes=20, penetration=2.9, damage_class=3),
@@ -234,7 +249,8 @@ ammo_9mm_m93r_ap = AmmoType(
 
 ammo_9mm_m92f_fmj = AmmoType(
     name="9mm Parabellum FMJ (M92F)",
-    abbreviation="FMJ",
+    weight=0.6,
+    description="FMJ",
     ballistic_data=[
         BallisticData(range_hexes=10,  penetration=2.4, damage_class=3),
         BallisticData(range_hexes=20, penetration=2.2, damage_class=3),
@@ -249,7 +265,8 @@ ammo_9mm_m92f_fmj = AmmoType(
 
 ammo_9mm_m92f_jhp = AmmoType(
     name="9mm Parabellum JHP (M92F)",
-    abbreviation="JHP",
+    description="JHP",
+    weight=0.6,
     ballistic_data=[
         BallisticData(range_hexes=10,  penetration=2.3, damage_class=5),
         BallisticData(range_hexes=20,  penetration=2.1, damage_class=5),
@@ -264,7 +281,8 @@ ammo_9mm_m92f_jhp = AmmoType(
 
 ammo_9mm_m92f_ap = AmmoType(
     name="9mm Parabellum AP (M92F)",
-    abbreviation="AP",
+    description="AP",
+    weight=0.6,
     ballistic_data=[
         BallisticData(range_hexes=10,  penetration=3.4, damage_class=3),
         BallisticData(range_hexes=20,  penetration=3.1, damage_class=3),
@@ -279,7 +297,8 @@ ammo_9mm_m92f_ap = AmmoType(
 
 ammo_545x18_fmj = AmmoType(
     name="5.45 x 18mm FMJ (PSM)",
-    abbreviation="FMJ",
+    description="FMJ",
+    weight=0.25,
     ballistic_data=[
         BallisticData(range_hexes=10,  penetration=1.2, damage_class=1),
         BallisticData(range_hexes=20,  penetration=1.1, damage_class=1),
@@ -291,7 +310,8 @@ ammo_545x18_fmj = AmmoType(
 
 ammo_545x18_jhp = AmmoType(
     name="5.45 x 18mm JHP (PSM)",
-    abbreviation="JHP",
+    description="JHP",
+    weight=0.25,
     ballistic_data=[
         BallisticData(range_hexes=10,  penetration=1.2, damage_class=2),
         BallisticData(range_hexes=20,  penetration=1.0, damage_class=1),
@@ -303,7 +323,8 @@ ammo_545x18_jhp = AmmoType(
 
 ammo_545x18_ap = AmmoType(
     name="5.45 x 18mm AP (PSM)",
-    abbreviation="AP",
+    description="AP",
+    weight=0.25,
     ballistic_data=[
         BallisticData(range_hexes=10,  penetration=1.7, damage_class=1),
         BallisticData(range_hexes=20,  penetration=1.5, damage_class=1),
@@ -318,7 +339,8 @@ ammo_545x18_ap = AmmoType(
 # ============================================================================
 ammo_9x18_fmj = AmmoType(
     name="9 x 18mm Makarov Full Metal Jacket",
-    abbreviation="FMJ",
+    description="FMJ",
+    weight=0.4,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=1.2, damage_class=2),
         BallisticData(range_hexes=20, penetration=1.1, damage_class=2),
@@ -331,7 +353,8 @@ ammo_9x18_fmj = AmmoType(
 
 ammo_9x18_jhp = AmmoType(
     name="9 x 18mm Makarov Jacketed Hollow Point",
-    abbreviation="JHP",
+    description="JHP",
+    weight=0.4,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=1.2, damage_class=3),
         BallisticData(range_hexes=20, penetration=1.0, damage_class=3),
@@ -344,7 +367,8 @@ ammo_9x18_jhp = AmmoType(
 
 ammo_9x18_ap = AmmoType(
     name="9 x 18mm Makarov Armor Piercing",
-    abbreviation="AP",
+    description="AP",
+    weight=0.4,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=1.7, damage_class=2),
         BallisticData(range_hexes=20, penetration=1.5, damage_class=2),
@@ -360,7 +384,8 @@ ammo_9x18_ap = AmmoType(
 # ============================================================================
 ammo_762x25_fmj = AmmoType(
     name="7.62 x 25mm Full Metal Jacket",
-    abbreviation="FMJ",
+    description="FMJ",
+    weight=0.33,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=2.7, damage_class=3),
         BallisticData(range_hexes=20, penetration=2.5, damage_class=3),
@@ -375,7 +400,8 @@ ammo_762x25_fmj = AmmoType(
 
 ammo_762x25_jhp = AmmoType(
     name="7.62 x 25mm Jacketed Hollow Point",
-    abbreviation="JHP",
+    description="JHP",
+    weight=0.33,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=2.6, damage_class=5),
         BallisticData(range_hexes=20, penetration=2.4, damage_class=5),
@@ -390,7 +416,8 @@ ammo_762x25_jhp = AmmoType(
 
 ammo_762x25_ap = AmmoType(
     name="7.62 x 25mm Armor Piercing",
-    abbreviation="AP",
+    description="AP",
+    weight=0.33,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=3.8, damage_class=3),
         BallisticData(range_hexes=20, penetration=3.6, damage_class=3),
@@ -409,7 +436,8 @@ ammo_762x25_ap = AmmoType(
 
 ammo_45_m15_fmj = AmmoType(
     name="45 ACP FMJ (M15)",
-    abbreviation="FMJ",
+    description="FMJ",
+    weight=0.7,
     ballistic_data=[
         BallisticData(range_hexes=10,  penetration=1.5, damage_class=3),
         BallisticData(range_hexes=20,  penetration=1.4, damage_class=3),
@@ -424,7 +452,8 @@ ammo_45_m15_fmj = AmmoType(
 
 ammo_45_m15_jhp = AmmoType(
     name="45 ACP JHP (M15)",
-    abbreviation="JHP",
+    description="JHP",
+    weight=0.7,
     ballistic_data=[
         BallisticData(range_hexes=10,  penetration=1.4, damage_class=4),
         BallisticData(range_hexes=20,  penetration=1.3, damage_class=3),
@@ -439,7 +468,8 @@ ammo_45_m15_jhp = AmmoType(
 
 ammo_45_m15_ap = AmmoType(
     name="45 ACP AP (M15)",
-    abbreviation="AP",
+    description="AP",
+    weight=0.7,
     ballistic_data=[
         BallisticData(range_hexes=10,  penetration=2.1, damage_class=3),
         BallisticData(range_hexes=20,  penetration=2.0, damage_class=3),
@@ -454,7 +484,8 @@ ammo_45_m15_ap = AmmoType(
 
 ammo_45_m1911_fmj = AmmoType(
     name="45 ACP FMJ (M1911A1)",
-    abbreviation="FMJ",
+    description="FMJ",
+    weight=0.7,
     ballistic_data=[
         BallisticData(range_hexes=10,  penetration=1.6, damage_class=3),
         BallisticData(range_hexes=20,  penetration=1.5, damage_class=3),
@@ -469,7 +500,8 @@ ammo_45_m1911_fmj = AmmoType(
 
 ammo_45_m1911_jhp = AmmoType(
     name="45 ACP JHP (M1911A1)",
-    abbreviation="JHP",
+    description="JHP",
+    weight=0.7,
     ballistic_data=[
         BallisticData(range_hexes=10,  penetration=1.5, damage_class=4),
         BallisticData(range_hexes=20,  penetration=1.4, damage_class=4),
@@ -484,7 +516,8 @@ ammo_45_m1911_jhp = AmmoType(
 
 ammo_45_m1911_ap = AmmoType(
     name="45 ACP AP (M1911A1)",
-    abbreviation="AP",
+    description="AP",
+    weight=0.7,
     ballistic_data=[
         BallisticData(range_hexes=10,  penetration=2.2, damage_class=3),
         BallisticData(range_hexes=20,  penetration=2.1, damage_class=3),
@@ -502,7 +535,8 @@ ammo_45_m1911_ap = AmmoType(
 # ============================================================================
 ammo_32acp_fmj = AmmoType(
     name=".32 ACP Full Metal Jacket",
-    abbreviation="FMJ",
+    description="FMJ",
+    weight=0.31,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=1.0, damage_class=1),
         BallisticData(range_hexes=20, penetration=0.9, damage_class=1),
@@ -515,7 +549,8 @@ ammo_32acp_fmj = AmmoType(
 
 ammo_32acp_jhp = AmmoType(
     name=".32 ACP Jacketed Hollow Point",
-    abbreviation="JHP",
+    description="JHP",
+    weight=0.31,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=0.9, damage_class=2),
         BallisticData(range_hexes=20, penetration=0.8, damage_class=2),
@@ -528,7 +563,8 @@ ammo_32acp_jhp = AmmoType(
 
 ammo_32acp_ap = AmmoType(
     name=".32 ACP Armor Piercing",
-    abbreviation="AP",
+    description="AP",
+    weight=0.31,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=1.4, damage_class=1),
         BallisticData(range_hexes=20, penetration=1.2, damage_class=1),
@@ -613,7 +649,8 @@ pistol_9mm_ballistic = WeaponBallisticData(
 
 ammo_9mm_pa3_fmj = AmmoType(
     name="9mm Parabellum FMJ (PA3-DM)",
-    abbreviation="FMJ",
+    description="FMJ",
+    weight=1.1,
     ballistic_data=[
         BallisticData(range_hexes=10,  penetration=2.5, damage_class=3),
         BallisticData(range_hexes=20,  penetration=2.3, damage_class=3),
@@ -628,7 +665,8 @@ ammo_9mm_pa3_fmj = AmmoType(
 
 ammo_9mm_pa3_jhp = AmmoType(
     name="9mm Parabellum JHP (PA3-DM)",
-    abbreviation="JHP",
+    description="JHP",
+    weight=1.1,
     ballistic_data=[
         BallisticData(range_hexes=10,  penetration=2.4, damage_class=5),
         BallisticData(range_hexes=20,  penetration=2.2, damage_class=5),
@@ -643,7 +681,8 @@ ammo_9mm_pa3_jhp = AmmoType(
 
 ammo_9mm_pa3_ap = AmmoType(
     name="9mm Parabellum AP (PA3-DM)",
-    abbreviation="AP",
+    description="AP",
+    weight=1.1,
     ballistic_data=[
         BallisticData(range_hexes=10,  penetration=3.6, damage_class=3),
         BallisticData(range_hexes=20,  penetration=3.3, damage_class=3),
@@ -658,7 +697,8 @@ ammo_9mm_pa3_ap = AmmoType(
 
 ammo_9mm_f1_fmj = AmmoType(
     name="9mm Parabellum FMJ (F1)",
-    abbreviation="FMJ",
+    description="FMJ",
+    weight=1.4,
     ballistic_data=[
         BallisticData(range_hexes=10,  penetration=2.1, damage_class=3),
         BallisticData(range_hexes=20,  penetration=1.9, damage_class=3),
@@ -673,7 +713,8 @@ ammo_9mm_f1_fmj = AmmoType(
 
 ammo_9mm_f1_jhp = AmmoType(
     name="9mm Parabellum JHP (F1)",
-    abbreviation="JHP",
+    description="JHP",
+    weight=1.4,
     ballistic_data=[
         BallisticData(range_hexes=10,  penetration=2.0, damage_class=4),
         BallisticData(range_hexes=20,  penetration=1.9, damage_class=4),
@@ -688,7 +729,8 @@ ammo_9mm_f1_jhp = AmmoType(
 
 ammo_9mm_f1_ap = AmmoType(
     name="9mm Parabellum AP (F1)",
-    abbreviation="AP",
+    description="AP",
+    weight=1.4,
     ballistic_data=[
         BallisticData(range_hexes=10,  penetration=3.0, damage_class=3),
         BallisticData(range_hexes=20,  penetration=2.7, damage_class=3),
@@ -703,7 +745,8 @@ ammo_9mm_f1_ap = AmmoType(
 
 ammo_9mm_mpi81_fmj = AmmoType(
     name="9mm Parabellum FMJ (MPi 81)",
-    abbreviation="FMJ",
+    description="FMJ",
+    weight=1.4,
     ballistic_data=[
         BallisticData(range_hexes=10,  penetration=2.3, damage_class=3),
         BallisticData(range_hexes=20,  penetration=2.1, damage_class=3),
@@ -718,7 +761,8 @@ ammo_9mm_mpi81_fmj = AmmoType(
 
 ammo_9mm_mpi81_jhp = AmmoType(
     name="9mm Parabellum JHP (MPi 81)",
-    abbreviation="JHP",
+    description="JHP",
+    weight=1.4,
     ballistic_data=[
         BallisticData(range_hexes=10,  penetration=2.2, damage_class=5),
         BallisticData(range_hexes=20,  penetration=2.0, damage_class=4),
@@ -733,7 +777,8 @@ ammo_9mm_mpi81_jhp = AmmoType(
 
 ammo_9mm_mpi81_ap = AmmoType(
     name="9mm Parabellum AP (MPi 81)",
-    abbreviation="AP",
+    description="AP",
+    weight=1.4,
     ballistic_data=[
         BallisticData(range_hexes=10,  penetration=3.2, damage_class=3),
         BallisticData(range_hexes=20,  penetration=3.0, damage_class=3),
@@ -748,7 +793,8 @@ ammo_9mm_mpi81_ap = AmmoType(
 
 ammo_32acp_m61_fmj = AmmoType(
     name=".32 ACP FMJ (M61)",
-    abbreviation="FMJ",
+    description="FMJ",
+    weight=0.9,
     ballistic_data=[
         BallisticData(range_hexes=10,  penetration=1.2, damage_class=2),
         BallisticData(range_hexes=20,  penetration=1.1, damage_class=1),
@@ -761,7 +807,8 @@ ammo_32acp_m61_fmj = AmmoType(
 
 ammo_32acp_m61_jhp = AmmoType(
     name=".32 ACP JHP (M61)",
-    abbreviation="JHP",
+    description="JHP",
+    weight=0.9,
     ballistic_data=[
         BallisticData(range_hexes=10,  penetration=1.1, damage_class=3),
         BallisticData(range_hexes=20,  penetration=1.0, damage_class=2),
@@ -774,7 +821,8 @@ ammo_32acp_m61_jhp = AmmoType(
 
 ammo_32acp_m61_ap = AmmoType(
     name=".32 ACP AP (M61)",
-    abbreviation="AP",
+    description="AP",
+    weight=0.9,
     ballistic_data=[
         BallisticData(range_hexes=10,  penetration=1.7, damage_class=2),
         BallisticData(range_hexes=20,  penetration=1.5, damage_class=1),
@@ -787,7 +835,8 @@ ammo_32acp_m61_ap = AmmoType(
 
 ammo_9mm_mat49_fmj = AmmoType(
     name="9mm Parabellum FMJ (MAT 49)",
-    abbreviation="FMJ",
+    description="FMJ",
+    weight=1.5,
     ballistic_data=[
         BallisticData(range_hexes=10,  penetration=2.4, damage_class=3),
         BallisticData(range_hexes=20,  penetration=2.2, damage_class=3),
@@ -802,7 +851,8 @@ ammo_9mm_mat49_fmj = AmmoType(
 
 ammo_9mm_mat49_jhp = AmmoType(
     name="9mm Parabellum JHP (MAT 49)",
-    abbreviation="JHP",
+    description="JHP",
+    weight=1.5,
     ballistic_data=[
         BallisticData(range_hexes=10,  penetration=2.3, damage_class=5),
         BallisticData(range_hexes=20,  penetration=2.1, damage_class=5),
@@ -817,7 +867,8 @@ ammo_9mm_mat49_jhp = AmmoType(
 
 ammo_9mm_mat49_ap = AmmoType(
     name="9mm Parabellum AP (MAT 49)",
-    abbreviation="AP",
+    description="AP",
+    weight=1.5,
     ballistic_data=[
         BallisticData(range_hexes=10,  penetration=3.4, damage_class=3),
         BallisticData(range_hexes=20,  penetration=3.1, damage_class=3),
@@ -832,7 +883,8 @@ ammo_9mm_mat49_ap = AmmoType(
 
 ammo_9mm_mp5_fmj = AmmoType(
     name="9mm Parabellum FMJ (MP5)",
-    abbreviation="FMJ",
+    description="FMJ",
+    weight=1.2,
     ballistic_data=[
         BallisticData(range_hexes=10,  penetration=2.5, damage_class=3),
         BallisticData(range_hexes=20,  penetration=2.3, damage_class=3),
@@ -847,7 +899,8 @@ ammo_9mm_mp5_fmj = AmmoType(
 
 ammo_9mm_mp5_jhp = AmmoType(
     name="9mm Parabellum JHP (MP5)",
-    abbreviation="JHP",
+    description="JHP",
+    weight=1.2,
     ballistic_data=[
         BallisticData(range_hexes=10,  penetration=2.4, damage_class=5),
         BallisticData(range_hexes=20,  penetration=2.2, damage_class=5),
@@ -862,7 +915,8 @@ ammo_9mm_mp5_jhp = AmmoType(
 
 ammo_9mm_mp5_ap = AmmoType(
     name="9mm Parabellum AP (MP5)",
-    abbreviation="AP",
+    description="AP",
+    weight=1.2,
     ballistic_data=[
         BallisticData(range_hexes=10,  penetration=3.6, damage_class=3),
         BallisticData(range_hexes=20,  penetration=3.3, damage_class=3),
@@ -877,7 +931,8 @@ ammo_9mm_mp5_ap = AmmoType(
 
 ammo_9mm_mp5k_fmj = AmmoType(
     name="9mm Parabellum FMJ (MP5K)",
-    abbreviation="FMJ",
+    description="FMJ",
+    weight=1.2,
     ballistic_data=[
         BallisticData(range_hexes=10,  penetration=2.2, damage_class=3),
         BallisticData(range_hexes=20,  penetration=2.0, damage_class=3),
@@ -892,7 +947,8 @@ ammo_9mm_mp5k_fmj = AmmoType(
 
 ammo_9mm_mp5k_jhp = AmmoType(
     name="9mm Parabellum JHP (MP5K)",
-    abbreviation="JHP",
+    description="JHP",
+    weight=1.2,
     ballistic_data=[
         BallisticData(range_hexes=10,  penetration=2.1, damage_class=5),
         BallisticData(range_hexes=20,  penetration=2.0, damage_class=4),
@@ -907,7 +963,8 @@ ammo_9mm_mp5k_jhp = AmmoType(
 
 ammo_9mm_mp5k_ap = AmmoType(
     name="9mm Parabellum AP (MP5K)",
-    abbreviation="AP",
+    description="AP",
+    weight=1.2,
     ballistic_data=[
         BallisticData(range_hexes=10,  penetration=3.1, damage_class=3),
         BallisticData(range_hexes=20,  penetration=2.9, damage_class=3),
@@ -922,7 +979,8 @@ ammo_9mm_mp5k_ap = AmmoType(
 
 ammo_556_hk53_fmj = AmmoType(
     name="5.56mm NATO FMJ (HK 53)",
-    abbreviation="FMJ",
+    description="FMJ",
+    weight=1.4,
     ballistic_data=[
         BallisticData(range_hexes=10,  penetration=10, damage_class=5),
         BallisticData(range_hexes=20,  penetration=9.9, damage_class=5),
@@ -937,7 +995,8 @@ ammo_556_hk53_fmj = AmmoType(
 
 ammo_556_hk53_jhp = AmmoType(
     name="5.56mm NATO JHP (HK 53)",
-    abbreviation="JHP",
+    description="JHP",
+    weight=1.4,
     ballistic_data=[
         BallisticData(range_hexes=10,  penetration=10, damage_class=7),
         BallisticData(range_hexes=20,  penetration=9.5, damage_class=7),
@@ -952,7 +1011,8 @@ ammo_556_hk53_jhp = AmmoType(
 
 ammo_556_hk53_ap = AmmoType(
     name="5.56mm NATO AP (HK 53)",
-    abbreviation="AP",
+    description="AP",
+    weight=1.4,
     ballistic_data=[
         BallisticData(range_hexes=10,  penetration=15, damage_class=5),
         BallisticData(range_hexes=20,  penetration=14, damage_class=5),
@@ -967,7 +1027,8 @@ ammo_556_hk53_ap = AmmoType(
 
 ammo_9mm_uzi_fmj = AmmoType(
     name="9mm Parabellum FMJ (Uzi)",
-    abbreviation="FMJ",
+    description="FMJ",
+    weight=1.3,
     ballistic_data=[
         BallisticData(range_hexes=10,  penetration=2.5, damage_class=3),
         BallisticData(range_hexes=20,  penetration=2.3, damage_class=3),
@@ -982,7 +1043,8 @@ ammo_9mm_uzi_fmj = AmmoType(
 
 ammo_9mm_uzi_jhp = AmmoType(
     name="9mm Parabellum JHP (Uzi)",
-    abbreviation="JHP",
+    description="JHP",
+    weight=1.3,
     ballistic_data=[
         BallisticData(range_hexes=10,  penetration=2.4, damage_class=5),
         BallisticData(range_hexes=20,  penetration=2.2, damage_class=5),
@@ -997,7 +1059,8 @@ ammo_9mm_uzi_jhp = AmmoType(
 
 ammo_9mm_uzi_ap = AmmoType(
     name="9mm Parabellum AP (Uzi)",
-    abbreviation="AP",
+    description="AP",
+    weight=1.3,
     ballistic_data=[
         BallisticData(range_hexes=10,  penetration=3.6, damage_class=3),
         BallisticData(range_hexes=20,  penetration=3.3, damage_class=3),
@@ -1012,7 +1075,8 @@ ammo_9mm_uzi_ap = AmmoType(
 
 ammo_9mm_miniuzi_fmj = AmmoType(
     name="9mm Parabellum FMJ (Mini Uzi)",
-    abbreviation="FMJ",
+    description="FMJ",
+    weight=1.3,
     ballistic_data=[
         BallisticData(range_hexes=10,  penetration=1.9, damage_class=3),
         BallisticData(range_hexes=20,  penetration=1.8, damage_class=3),
@@ -1027,7 +1091,8 @@ ammo_9mm_miniuzi_fmj = AmmoType(
 
 ammo_9mm_miniuzi_jhp = AmmoType(
     name="9mm Parabellum JHP (Mini Uzi)",
-    abbreviation="JHP",
+    description="JHP",
+    weight=1.3,
     ballistic_data=[
         BallisticData(range_hexes=10,  penetration=1.9, damage_class=4),
         BallisticData(range_hexes=20,  penetration=1.7, damage_class=4),
@@ -1042,7 +1107,8 @@ ammo_9mm_miniuzi_jhp = AmmoType(
 
 ammo_9mm_miniuzi_ap = AmmoType(
     name="9mm Parabellum AP (Mini Uzi)",
-    abbreviation="AP",
+    description="AP",
+    weight=1.3,
     ballistic_data=[
         BallisticData(range_hexes=10,  penetration=2.7, damage_class=3),
         BallisticData(range_hexes=20,  penetration=2.5, damage_class=2),
@@ -1057,7 +1123,8 @@ ammo_9mm_miniuzi_ap = AmmoType(
 
 ammo_9mm_m12s_fmj = AmmoType(
     name="9mm Parabellum FMJ (M12S)",
-    abbreviation="FMJ",
+    description="FMJ",
+    weight=1.3,
     ballistic_data=[
         BallisticData(range_hexes=10,  penetration=2.3, damage_class=3),
         BallisticData(range_hexes=20,  penetration=2.1, damage_class=3),
@@ -1072,7 +1139,8 @@ ammo_9mm_m12s_fmj = AmmoType(
 
 ammo_9mm_m12s_jhp = AmmoType(
     name="9mm Parabellum JHP (M12S)",
-    abbreviation="JHP",
+    description="JHP",
+    weight=1.3,
     ballistic_data=[
         BallisticData(range_hexes=10,  penetration=2.2, damage_class=5),
         BallisticData(range_hexes=20,  penetration=2.0, damage_class=4),
@@ -1087,7 +1155,8 @@ ammo_9mm_m12s_jhp = AmmoType(
 
 ammo_9mm_m12s_ap = AmmoType(
     name="9mm Parabellum AP (M12S)",
-    abbreviation="AP",
+    description="AP",
+    weight=1.3,
     ballistic_data=[
         BallisticData(range_hexes=10,  penetration=3.2, damage_class=3),
         BallisticData(range_hexes=20,  penetration=3.0, damage_class=3),
@@ -1102,7 +1171,8 @@ ammo_9mm_m12s_ap = AmmoType(
 
 ammo_9mm_spectre_fmj = AmmoType(
     name="9mm Parabellum FMJ (Spectre)",
-    abbreviation="FMJ",
+    description="FMJ",
+    weight=1.6,
     ballistic_data=[
         BallisticData(range_hexes=10,  penetration=2.5, damage_class=3),
         BallisticData(range_hexes=20,  penetration=2.3, damage_class=3),
@@ -1117,7 +1187,8 @@ ammo_9mm_spectre_fmj = AmmoType(
 
 ammo_9mm_spectre_jhp = AmmoType(
     name="9mm Parabellum JHP (Spectre)",
-    abbreviation="JHP",
+    description="JHP",
+    weight=1.6,
     ballistic_data=[
         BallisticData(range_hexes=10,  penetration=2.4, damage_class=5),
         BallisticData(range_hexes=20,  penetration=2.2, damage_class=5),
@@ -1132,7 +1203,8 @@ ammo_9mm_spectre_jhp = AmmoType(
 
 ammo_9mm_spectre_ap = AmmoType(
     name="9mm Parabellum AP (Spectre)",
-    abbreviation="AP",
+    description="AP",
+    weight=1.6,
     ballistic_data=[
         BallisticData(range_hexes=10,  penetration=3.6, damage_class=3),
         BallisticData(range_hexes=20,  penetration=3.3, damage_class=3),
@@ -1147,7 +1219,8 @@ ammo_9mm_spectre_ap = AmmoType(
 
 ammo_9mm_bxp_fmj = AmmoType(
     name="9mm Parabellum FMJ (Armscor BXP)",
-    abbreviation="FMJ",
+    description="FMJ",
+    weight=1.2,
     ballistic_data=[
         BallisticData(range_hexes=10,  penetration=1.7, damage_class=2),
         BallisticData(range_hexes=20,  penetration=1.5, damage_class=2),
@@ -1161,7 +1234,8 @@ ammo_9mm_bxp_fmj = AmmoType(
 
 ammo_9mm_bxp_jhp = AmmoType(
     name="9mm Parabellum JHP (Armscor BXP)",
-    abbreviation="JHP",
+    description="JHP",
+    weight=1.2,
     ballistic_data=[
         BallisticData(range_hexes=10,  penetration=1.6, damage_class=4),
         BallisticData(range_hexes=20,  penetration=1.5, damage_class=3),
@@ -1175,7 +1249,8 @@ ammo_9mm_bxp_jhp = AmmoType(
 
 ammo_9mm_bxp_ap = AmmoType(
     name="9mm Parabellum AP (Armscor BXP)",
-    abbreviation="AP",
+    description="AP",
+    weight=1.2,
     ballistic_data=[
         BallisticData(range_hexes=10,  penetration=2.3, damage_class=2),
         BallisticData(range_hexes=20,  penetration=2.1, damage_class=2),
@@ -1189,7 +1264,8 @@ ammo_9mm_bxp_ap = AmmoType(
 
 ammo_545_aks74u_fmj = AmmoType(
     name="5.45 x 39.5mm FMJ (AKS-74U)",
-    abbreviation="FMJ",
+    description="FMJ",
+    weight=1.3,
     ballistic_data=[
         BallisticData(range_hexes=10,  penetration=11, damage_class=5),
         BallisticData(range_hexes=20,  penetration=10, damage_class=5),
@@ -1204,7 +1280,8 @@ ammo_545_aks74u_fmj = AmmoType(
 
 ammo_545_aks74u_jhp = AmmoType(
     name="5.45 x 39.5mm JHP (AKS-74U)",
-    abbreviation="JHP",
+    description="JHP",
+    weight=1.3,
     ballistic_data=[
         BallisticData(range_hexes=10,  penetration=10, damage_class=7),
         BallisticData(range_hexes=20,  penetration=9.9, damage_class=7),
@@ -1219,7 +1296,8 @@ ammo_545_aks74u_jhp = AmmoType(
 
 ammo_545_aks74u_ap = AmmoType(
     name="5.45 x 39.5mm AP (AKS-74U)",
-    abbreviation="AP",
+    description="AP",
+    weight=1.3,
     ballistic_data=[
         BallisticData(range_hexes=10,  penetration=15, damage_class=5),
         BallisticData(range_hexes=20,  penetration=15, damage_class=5),
@@ -1234,7 +1312,8 @@ ammo_545_aks74u_ap = AmmoType(
 
 ammo_9mm_sterling_fmj = AmmoType(
     name="9mm Parabellum FMJ (Sterling Mk 7)",
-    abbreviation="FMJ",
+    description="FMJ",
+    weight=1.2,
     ballistic_data=[
         BallisticData(range_hexes=10,  penetration=2.3, damage_class=3),
         BallisticData(range_hexes=20,  penetration=2.1, damage_class=3),
@@ -1249,7 +1328,8 @@ ammo_9mm_sterling_fmj = AmmoType(
 
 ammo_9mm_sterling_jhp = AmmoType(
     name="9mm Parabellum JHP (Sterling Mk 7)",
-    abbreviation="JHP",
+    description="JHP",
+    weight=1.2,
     ballistic_data=[
         BallisticData(range_hexes=10,  penetration=2.2, damage_class=5),
         BallisticData(range_hexes=20,  penetration=2.0, damage_class=4),
@@ -1264,7 +1344,8 @@ ammo_9mm_sterling_jhp = AmmoType(
 
 ammo_9mm_sterling_ap = AmmoType(
     name="9mm Parabellum AP (Sterling Mk 7)",
-    abbreviation="AP",
+    description="AP",
+    weight=1.2,
     ballistic_data=[
         BallisticData(range_hexes=10,  penetration=3.2, damage_class=3),
         BallisticData(range_hexes=20,  penetration=3.0, damage_class=3),
@@ -1279,7 +1360,8 @@ ammo_9mm_sterling_ap = AmmoType(
 
 ammo_9mm_mac10_fmj = AmmoType(
     name="9mm Parabellum FMJ (MAC 10)",
-    abbreviation="FMJ",
+    description="FMJ",
+    weight=1.4,
     ballistic_data=[
         BallisticData(range_hexes=10,  penetration=2.1, damage_class=3),
         BallisticData(range_hexes=20,  penetration=1.9, damage_class=3),
@@ -1294,7 +1376,8 @@ ammo_9mm_mac10_fmj = AmmoType(
 
 ammo_9mm_mac10_jhp = AmmoType(
     name="9mm Parabellum JHP (MAC 10)",
-    abbreviation="JHP",
+    description="JHP",
+    weight=1.4,
     ballistic_data=[
         BallisticData(range_hexes=10,  penetration=2.0, damage_class=4),
         BallisticData(range_hexes=20,  penetration=1.9, damage_class=4),
@@ -1309,7 +1392,8 @@ ammo_9mm_mac10_jhp = AmmoType(
 
 ammo_9mm_mac10_ap = AmmoType(
     name="9mm Parabellum AP (MAC 10)",
-    abbreviation="AP",
+    description="AP",
+    weight=1.4,
     ballistic_data=[
         BallisticData(range_hexes=10,  penetration=3.0, damage_class=3),
         BallisticData(range_hexes=20,  penetration=2.7, damage_class=3),
@@ -1324,7 +1408,8 @@ ammo_9mm_mac10_ap = AmmoType(
 
 ammo_45acp_mac10_fmj = AmmoType(
     name=".45 ACP FMJ (MAC 10)",
-    abbreviation="FMJ",
+    description="FMJ",
+    weight=2.2,
     ballistic_data=[
         BallisticData(range_hexes=10,  penetration=1.7, damage_class=3),
         BallisticData(range_hexes=20,  penetration=1.6, damage_class=2),
@@ -1339,7 +1424,8 @@ ammo_45acp_mac10_fmj = AmmoType(
 
 ammo_45acp_mac10_jhp = AmmoType(
     name=".45 ACP JHP (MAC 10)",
-    abbreviation="JHP",
+    description="JHP",
+    weight=2.2,
     ballistic_data=[
         BallisticData(range_hexes=10,  penetration=1.6, damage_class=4),
         BallisticData(range_hexes=20,  penetration=1.5, damage_class=3),
@@ -1354,7 +1440,8 @@ ammo_45acp_mac10_jhp = AmmoType(
 
 ammo_45acp_mac10_ap = AmmoType(
     name=".45 ACP AP (MAC 10)",
-    abbreviation="AP",
+    description="AP",
+    weight=2.2,
     ballistic_data=[
         BallisticData(range_hexes=10,  penetration=2.4, damage_class=3),
         BallisticData(range_hexes=20,  penetration=2.2, damage_class=2),
@@ -1369,7 +1456,8 @@ ammo_45acp_mac10_ap = AmmoType(
 
 ammo_556_bushmaster_fmj = AmmoType(
     name="5.56mm NATO FMJ (Bushmaster)",
-    abbreviation="FMJ",
+    description="FMJ",
+    weight=1.0,
     ballistic_data=[
         BallisticData(range_hexes=10,  penetration=13, damage_class=6),
         BallisticData(range_hexes=20,  penetration=12, damage_class=6),
@@ -1384,7 +1472,8 @@ ammo_556_bushmaster_fmj = AmmoType(
 
 ammo_556_bushmaster_jhp = AmmoType(
     name="5.56mm NATO JHP (Bushmaster)",
-    abbreviation="JHP",
+    description="JHP",
+    weight=1.0,
     ballistic_data=[
         BallisticData(range_hexes=10,  penetration=13, damage_class=7),
         BallisticData(range_hexes=20,  penetration=12, damage_class=7),
@@ -1399,7 +1488,8 @@ ammo_556_bushmaster_jhp = AmmoType(
 
 ammo_556_bushmaster_ap = AmmoType(
     name="5.56mm NATO AP (Bushmaster)",
-    abbreviation="AP",
+    description="AP",
+    weight=1.0,
     ballistic_data=[
         BallisticData(range_hexes=10,  penetration=18, damage_class=6),
         BallisticData(range_hexes=20,  penetration=18, damage_class=5),
@@ -1414,7 +1504,8 @@ ammo_556_bushmaster_ap = AmmoType(
 
 ammo_556_aug_fmj = AmmoType(
     name="5.56mm NATO FMJ (AUG)",
-    abbreviation="FMJ",
+    description="FMJ",
+    weight=1.1,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=15.0, damage_class=6),
         BallisticData(range_hexes=20, penetration=14.0, damage_class=6),
@@ -1429,7 +1520,8 @@ ammo_556_aug_fmj = AmmoType(
 
 ammo_556_aug_jhp = AmmoType(
     name="5.56mm NATO JHP (AUG)",
-    abbreviation="JHP",
+    description="JHP",
+    weight=1.1,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=14.0, damage_class=8),
         BallisticData(range_hexes=20, penetration=14.0, damage_class=8),
@@ -1444,7 +1536,8 @@ ammo_556_aug_jhp = AmmoType(
 
 ammo_556_aug_ap = AmmoType(
     name="5.56mm NATO AP (AUG)",
-    abbreviation="AP",
+    description="AP",
+    weight=1.1,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=21.0, damage_class=6),
         BallisticData(range_hexes=20, penetration=20.0, damage_class=6),
@@ -1459,7 +1552,8 @@ ammo_556_aug_ap = AmmoType(
 
 ammo_762_l1a1_fmj = AmmoType(
     name="7.62mm NATO FMJ (L1A1)",
-    abbreviation="FMJ",
+    description="FMJ",
+    weight=1.6,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=18.0, damage_class=8),
         BallisticData(range_hexes=20, penetration=18.0, damage_class=8),
@@ -1474,7 +1568,8 @@ ammo_762_l1a1_fmj = AmmoType(
 
 ammo_762_l1a1_jhp = AmmoType(
     name="7.62mm NATO JHP (L1A1)",
-    abbreviation="JHP",
+    description="JHP",
+    weight=1.6,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=18.0, damage_class=9),
         BallisticData(range_hexes=20, penetration=17.0, damage_class=9),
@@ -1489,7 +1584,8 @@ ammo_762_l1a1_jhp = AmmoType(
 
 ammo_762_l1a1_ap = AmmoType(
     name="7.62mm NATO AP (L1A1)",
-    abbreviation="AP",
+    description="AP",
+    weight=1.6,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=26.0, damage_class=8),
         BallisticData(range_hexes=20, penetration=25.0, damage_class=7),
@@ -1504,7 +1600,8 @@ ammo_762_l1a1_ap = AmmoType(
 
 ammo_762_fal_fmj = AmmoType(
     name="7.62mm NATO FMJ (FN FAL)",
-    abbreviation="FMJ",
+    description="FMJ",
+    weight=1.4,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=19.0, damage_class=8),
         BallisticData(range_hexes=20, penetration=19.0, damage_class=8),
@@ -1519,7 +1616,8 @@ ammo_762_fal_fmj = AmmoType(
 
 ammo_762_fal_jhp = AmmoType(
     name="7.62mm NATO JHP (FN FAL)",
-    abbreviation="JHP",
+    description="JHP",
+    weight=1.4,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=18.0, damage_class=9),
         BallisticData(range_hexes=20, penetration=18.0, damage_class=9),
@@ -1534,7 +1632,8 @@ ammo_762_fal_jhp = AmmoType(
 
 ammo_762_fal_ap = AmmoType(
     name="7.62mm NATO AP (FN FAL)",
-    abbreviation="AP",
+    description="AP",
+    weight=1.4,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=27.0, damage_class=8),
         BallisticData(range_hexes=20, penetration=26.0, damage_class=8),
@@ -1549,7 +1648,8 @@ ammo_762_fal_ap = AmmoType(
 
 ammo_556_fnc_fmj = AmmoType(
     name="5.56mm NATO FMJ (FNC)",
-    abbreviation="FMJ",
+    description="FMJ",
+    weight=1.2,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=15.0, damage_class=6),
         BallisticData(range_hexes=20, penetration=15.0, damage_class=6),
@@ -1564,7 +1664,8 @@ ammo_556_fnc_fmj = AmmoType(
 
 ammo_556_fnc_jhp = AmmoType(
     name="5.56mm NATO JHP (FNC)",
-    abbreviation="JHP",
+    description="JHP",
+    weight=1.2,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=15.0, damage_class=8),
         BallisticData(range_hexes=20, penetration=14.0, damage_class=8),
@@ -1579,7 +1680,8 @@ ammo_556_fnc_jhp = AmmoType(
 
 ammo_556_fnc_ap = AmmoType(
     name="5.56mm NATO AP (FNC)",
-    abbreviation="AP",
+    description="AP",
+    weight=1.2,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=22.0, damage_class=6),
         BallisticData(range_hexes=20, penetration=21.0, damage_class=6),
@@ -1594,7 +1696,8 @@ ammo_556_fnc_ap = AmmoType(
 
 ammo_75_m1949_fmj = AmmoType(
     name="7.5 x 54mm FMJ (M1949)",
-    abbreviation="FMJ",
+    description="FMJ",
+    weight=0.95,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=18.0, damage_class=7),
         BallisticData(range_hexes=20, penetration=18.0, damage_class=7),
@@ -1609,7 +1712,8 @@ ammo_75_m1949_fmj = AmmoType(
 
 ammo_75_m1949_jhp = AmmoType(
     name="7.5 x 54mm JHP (M1949)",
-    abbreviation="JHP",
+    description="JHP",
+    weight=0.95,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=17.0, damage_class=9),
         BallisticData(range_hexes=20, penetration=17.0, damage_class=9),
@@ -1624,7 +1728,8 @@ ammo_75_m1949_jhp = AmmoType(
 
 ammo_75_m1949_ap = AmmoType(
     name="7.5 x 54mm AP (M1949)",
-    abbreviation="AP",
+    description="AP",
+    weight=0.95,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=26.0, damage_class=7),
         BallisticData(range_hexes=20, penetration=25.0, damage_class=7),
@@ -1639,7 +1744,8 @@ ammo_75_m1949_ap = AmmoType(
 
 ammo_556_famas_fmj = AmmoType(
     name="5.56mm NATO FMJ (FA MAS)",
-    abbreviation="FMJ",
+    description="FMJ",
+    weight=1.0,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=15.0, damage_class=6),
         BallisticData(range_hexes=20, penetration=15.0, damage_class=6),
@@ -1654,7 +1760,8 @@ ammo_556_famas_fmj = AmmoType(
 
 ammo_556_famas_jhp = AmmoType(
     name="5.56mm NATO JHP (FA MAS)",
-    abbreviation="JHP",
+    description="JHP",
+    weight=1.0,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=15.0, damage_class=8),
         BallisticData(range_hexes=20, penetration=14.0, damage_class=8),
@@ -1669,7 +1776,8 @@ ammo_556_famas_jhp = AmmoType(
 
 ammo_556_famas_ap = AmmoType(
     name="5.56mm NATO AP (FA MAS)",
-    abbreviation="AP",
+    description="AP",
+    weight=1.0,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=22.0, damage_class=6),
         BallisticData(range_hexes=20, penetration=21.0, damage_class=6),
@@ -1683,7 +1791,8 @@ ammo_556_famas_ap = AmmoType(
 )
 
 ammo_762_frf2_fmj = AmmoType(
-    name="7.62mm NATO FMJ (FR F2)", abbreviation="FMJ",
+    name="7.62mm NATO FMJ (FR F2)", description="FMJ",
+    weight=1.1,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=20.0, damage_class=8),
         BallisticData(range_hexes=20, penetration=19.0, damage_class=8),
@@ -1697,7 +1806,8 @@ ammo_762_frf2_fmj = AmmoType(
 )
 
 ammo_762_frf2_jhp = AmmoType(
-    name="7.62mm NATO JHP (FR F2)", abbreviation="JHP",
+    name="7.62mm NATO JHP (FR F2)", description="JHP",
+    weight=1.1,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=19.0, damage_class=9),
         BallisticData(range_hexes=20, penetration=18.0, damage_class=9),
@@ -1711,7 +1821,8 @@ ammo_762_frf2_jhp = AmmoType(
 )
 
 ammo_762_frf2_ap = AmmoType(
-    name="7.62mm NATO AP (FR F2)", abbreviation="AP",
+    name="7.62mm NATO AP (FR F2)", description="AP",
+    weight=1.1,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=28.0, damage_class=8),
         BallisticData(range_hexes=20, penetration=27.0, damage_class=8),
@@ -1725,7 +1836,8 @@ ammo_762_frf2_ap = AmmoType(
 )
 
 ammo_762_g3_fmj = AmmoType(
-    name="7.62mm NATO FMJ (G3)", abbreviation="FMJ",
+    name="7.62mm NATO FMJ (G3)", description="FMJ",
+    weight=1.4,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=17.0, damage_class=8),
         BallisticData(range_hexes=20, penetration=16.0, damage_class=7),
@@ -1739,7 +1851,8 @@ ammo_762_g3_fmj = AmmoType(
 )
 
 ammo_762_g3_jhp = AmmoType(
-    name="7.62mm NATO JHP (G3)", abbreviation="JHP",
+    name="7.62mm NATO JHP (G3)", description="JHP",
+    weight=1.4,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=16.0, damage_class=9),
         BallisticData(range_hexes=20, penetration=16.0, damage_class=9),
@@ -1753,7 +1866,8 @@ ammo_762_g3_jhp = AmmoType(
 )
 
 ammo_762_g3_ap = AmmoType(
-    name="7.62mm NATO AP (G3)", abbreviation="AP",
+    name="7.62mm NATO AP (G3)", description="AP",
+    weight=1.4,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=24.0, damage_class=7),
         BallisticData(range_hexes=20, penetration=23.0, damage_class=7),
@@ -1767,7 +1881,8 @@ ammo_762_g3_ap = AmmoType(
 )
 
 ammo_556_g41_fmj = AmmoType(
-    name="5.56mm NATO FMJ (G41)", abbreviation="FMJ",
+    name="5.56mm NATO FMJ (G41)", description="FMJ",
+    weight=1.1,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=16.0, damage_class=6),
         BallisticData(range_hexes=20, penetration=15.0, damage_class=6),
@@ -1781,7 +1896,8 @@ ammo_556_g41_fmj = AmmoType(
 )
 
 ammo_556_g41_jhp = AmmoType(
-    name="5.56mm NATO JHP (G41)", abbreviation="JHP",
+    name="5.56mm NATO JHP (G41)", description="JHP",
+    weight=1.1,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=15.0, damage_class=8),
         BallisticData(range_hexes=20, penetration=15.0, damage_class=8),
@@ -1795,7 +1911,8 @@ ammo_556_g41_jhp = AmmoType(
 )
 
 ammo_556_g41_ap = AmmoType(
-    name="5.56mm NATO AP (G41)", abbreviation="AP",
+    name="5.56mm NATO AP (G41)", description="AP",
+    weight=1.1,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=23.0, damage_class=6),
         BallisticData(range_hexes=20, penetration=22.0, damage_class=6),
@@ -1809,7 +1926,8 @@ ammo_556_g41_ap = AmmoType(
 )
 
 ammo_47_g11_fmj = AmmoType(
-    name="4.7mm Caseless FMJ", abbreviation="FMJ",
+    name="4.7mm Caseless FMJ", description="FMJ",
+    weight=0.77,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=18.0, damage_class=5),
         BallisticData(range_hexes=20, penetration=18.0, damage_class=5),
@@ -1823,7 +1941,8 @@ ammo_47_g11_fmj = AmmoType(
 )
 
 ammo_47_g11_jhp = AmmoType(
-    name="4.7mm Caseless JHP", abbreviation="JHP",
+    name="4.7mm Caseless JHP", description="JHP",
+    weight=0.77,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=18.0, damage_class=7),
         BallisticData(range_hexes=20, penetration=17.0, damage_class=7),
@@ -1837,7 +1956,8 @@ ammo_47_g11_jhp = AmmoType(
 )
 
 ammo_47_g11_ap = AmmoType(
-    name="4.7mm Caseless AP", abbreviation="AP",
+    name="4.7mm Caseless AP", description="AP",
+    weight=0.77,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=26.0, damage_class=5),
         BallisticData(range_hexes=20, penetration=25.0, damage_class=5),
@@ -1851,7 +1971,8 @@ ammo_47_g11_ap = AmmoType(
 )
 
 ammo_300wm_wa2000_fmj = AmmoType(
-    name=".300 Win Mag FMJ", abbreviation="FMJ",
+    name=".300 Win Mag FMJ", description="FMJ",
+    weight=0.9,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=28.0, damage_class=8),
         BallisticData(range_hexes=20, penetration=27.0, damage_class=8),
@@ -1865,7 +1986,8 @@ ammo_300wm_wa2000_fmj = AmmoType(
 )
 
 ammo_300wm_wa2000_jhp = AmmoType(
-    name=".300 Win Mag JHP", abbreviation="JHP",
+    name=".300 Win Mag JHP", description="JHP",
+    weight=0.9,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=26.0, damage_class=10),
         BallisticData(range_hexes=20, penetration=26.0, damage_class=10),
@@ -1879,7 +2001,8 @@ ammo_300wm_wa2000_jhp = AmmoType(
 )
 
 ammo_300wm_wa2000_ap = AmmoType(
-    name=".300 Win Mag AP", abbreviation="AP",
+    name=".300 Win Mag AP", description="AP",
+    weight=0.9,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=39.0, damage_class=8),
         BallisticData(range_hexes=20, penetration=38.0, damage_class=8),
@@ -1893,7 +2016,8 @@ ammo_300wm_wa2000_ap = AmmoType(
 )
 
 ammo_762x39_amd65_fmj = AmmoType(
-    name="7.62 x 39mm FMJ", abbreviation="FMJ",
+    name="7.62 x 39mm FMJ", description="FMJ",
+    weight=1.8,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=11.0, damage_class=7),
         BallisticData(range_hexes=20, penetration=10.0, damage_class=7),
@@ -1907,7 +2031,8 @@ ammo_762x39_amd65_fmj = AmmoType(
 )
 
 ammo_762x39_amd65_jhp = AmmoType(
-    name="7.62 x 39mm JHP", abbreviation="JHP",
+    name="7.62 x 39mm JHP", description="JHP",
+    weight=1.8,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=10.0, damage_class=8),
         BallisticData(range_hexes=20, penetration=9.9, damage_class=8),
@@ -1921,7 +2046,8 @@ ammo_762x39_amd65_jhp = AmmoType(
 )
 
 ammo_762x39_amd65_ap = AmmoType(
-    name="7.62 x 39mm AP", abbreviation="AP",
+    name="7.62 x 39mm AP", description="AP",
+    weight=1.8,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=15.0, damage_class=6),
         BallisticData(range_hexes=20, penetration=15.0, damage_class=6),
@@ -1935,7 +2061,8 @@ ammo_762x39_amd65_ap = AmmoType(
 )
 
 ammo_556_galil_fmj = AmmoType(
-    name="5.56mm NATO FMJ (Galil)", abbreviation="FMJ",
+    name="5.56mm NATO FMJ (Galil)", description="FMJ",
+    weight=1.6,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=16.0, damage_class=6),
         BallisticData(range_hexes=20, penetration=15.0, damage_class=6),
@@ -1949,7 +2076,8 @@ ammo_556_galil_fmj = AmmoType(
 )
 
 ammo_556_galil_jhp = AmmoType(
-    name="5.56mm NATO JHP (Galil)", abbreviation="JHP",
+    name="5.56mm NATO JHP (Galil)", description="JHP",
+    weight=1.6,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=15.0, damage_class=8),
         BallisticData(range_hexes=20, penetration=15.0, damage_class=8),
@@ -1963,7 +2091,8 @@ ammo_556_galil_jhp = AmmoType(
 )
 
 ammo_556_galil_ap = AmmoType(
-    name="5.56mm NATO AP (Galil)", abbreviation="AP",
+    name="5.56mm NATO AP (Galil)", description="AP",
+    weight=1.6,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=22.0, damage_class=6),
         BallisticData(range_hexes=20, penetration=21.0, damage_class=6),
@@ -1977,7 +2106,8 @@ ammo_556_galil_ap = AmmoType(
 )
 
 ammo_762_galil_fmj = AmmoType(
-    name="7.62mm NATO FMJ (Galil)", abbreviation="FMJ",
+    name="7.62mm NATO FMJ (Galil)", description="FMJ",
+    weight=2.0,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=20.0, damage_class=8),
         BallisticData(range_hexes=20, penetration=19.0, damage_class=8),
@@ -1991,7 +2121,8 @@ ammo_762_galil_fmj = AmmoType(
 )
 
 ammo_762_galil_jhp = AmmoType(
-    name="7.62mm NATO JHP (Galil)", abbreviation="JHP",
+    name="7.62mm NATO JHP (Galil)", description="JHP",
+    weight=2.0,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=19.0, damage_class=9),
         BallisticData(range_hexes=20, penetration=18.0, damage_class=9),
@@ -2005,7 +2136,8 @@ ammo_762_galil_jhp = AmmoType(
 )
 
 ammo_762_galil_ap = AmmoType(
-    name="7.62mm NATO AP (Galil)", abbreviation="AP",
+    name="7.62mm NATO AP (Galil)", description="AP",
+    weight=2.0,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=28.0, damage_class=8),
         BallisticData(range_hexes=20, penetration=27.0, damage_class=8),
@@ -2019,7 +2151,8 @@ ammo_762_galil_ap = AmmoType(
 )
 
 ammo_762_beretta_bm59_fmj = AmmoType(
-    name="7.62mm NATO FMJ (Beretta)", abbreviation="FMJ",
+    name="7.62mm NATO FMJ (Beretta)", description="FMJ",
+    weight=1.5,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=18.0, damage_class=8),
         BallisticData(range_hexes=20, penetration=18.0, damage_class=8),
@@ -2033,7 +2166,8 @@ ammo_762_beretta_bm59_fmj = AmmoType(
 )
 
 ammo_762_beretta_bm59_jhp = AmmoType(
-    name="7.62mm NATO JHP (Beretta)", abbreviation="JHP",
+    name="7.62mm NATO JHP (Beretta)", description="JHP",
+    weight=1.5,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=18.0, damage_class=9),
         BallisticData(range_hexes=20, penetration=17.0, damage_class=9),
@@ -2047,7 +2181,8 @@ ammo_762_beretta_bm59_jhp = AmmoType(
 )
 
 ammo_762_beretta_bm59_ap = AmmoType(
-    name="7.62mm NATO AP (Beretta)", abbreviation="AP",
+    name="7.62mm NATO AP (Beretta)", description="AP",
+    weight=1.5,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=26.0, damage_class=8),
         BallisticData(range_hexes=20, penetration=25.0, damage_class=7),
@@ -2061,7 +2196,8 @@ ammo_762_beretta_bm59_ap = AmmoType(
 )
 
 ammo_556_sc70_fmj = AmmoType(
-    name="5.56mm NATO FMJ (SC 70)", abbreviation="FMJ",
+    name="5.56mm NATO FMJ (SC 70)", description="FMJ",
+    weight=1.1,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=15.0, damage_class=6),
         BallisticData(range_hexes=20, penetration=14.0, damage_class=6),
@@ -2075,7 +2211,8 @@ ammo_556_sc70_fmj = AmmoType(
 )
 
 ammo_556_sc70_jhp = AmmoType(
-    name="5.56mm NATO JHP (SC 70)", abbreviation="JHP",
+    name="5.56mm NATO JHP (SC 70)", description="JHP",
+    weight=1.1,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=14.0, damage_class=8),
         BallisticData(range_hexes=20, penetration=14.0, damage_class=8),
@@ -2089,7 +2226,8 @@ ammo_556_sc70_jhp = AmmoType(
 )
 
 ammo_556_sc70_ap = AmmoType(
-    name="5.56mm NATO AP (SC 70)", abbreviation="AP",
+    name="5.56mm NATO AP (SC 70)", description="AP",
+    weight=1.1,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=21.0, damage_class=6),
         BallisticData(range_hexes=20, penetration=20.0, damage_class=6),
@@ -2103,7 +2241,8 @@ ammo_556_sc70_ap = AmmoType(
 )
 
 ammo_762_type64_fmj = AmmoType(
-    name="7.62mm NATO FMJ (Type 64)", abbreviation="FMJ",
+    name="7.62mm NATO FMJ (Type 64)", description="FMJ",
+    weight=1.6,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=13.0, damage_class=7),
         BallisticData(range_hexes=20, penetration=13.0, damage_class=7),
@@ -2117,7 +2256,8 @@ ammo_762_type64_fmj = AmmoType(
 )
 
 ammo_762_type64_jhp = AmmoType(
-    name="7.62mm NATO JHP (Type 64)", abbreviation="JHP",
+    name="7.62mm NATO JHP (Type 64)", description="JHP",
+    weight=1.6,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=13.0, damage_class=9),
         BallisticData(range_hexes=20, penetration=12.0, damage_class=9),
@@ -2131,7 +2271,8 @@ ammo_762_type64_jhp = AmmoType(
 )
 
 ammo_762_type64_ap = AmmoType(
-    name="7.62mm NATO AP (Type 64)", abbreviation="AP",
+    name="7.62mm NATO AP (Type 64)", description="AP",
+    weight=1.6,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=19.0, damage_class=7),
         BallisticData(range_hexes=20, penetration=18.0, damage_class=7),
@@ -2145,7 +2286,8 @@ ammo_762_type64_ap = AmmoType(
 )
 
 ammo_556_r4_fmj = AmmoType(
-    name="5.56mm NATO FMJ (R4)", abbreviation="FMJ",
+    name="5.56mm NATO FMJ (R4)", description="FMJ",
+    weight=1.8,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=16.0, damage_class=6),
         BallisticData(range_hexes=20, penetration=15.0, damage_class=6),
@@ -2159,7 +2301,8 @@ ammo_556_r4_fmj = AmmoType(
 )
 
 ammo_556_r4_jhp = AmmoType(
-    name="5.56mm NATO JHP (R4)", abbreviation="JHP",
+    name="5.56mm NATO JHP (R4)", description="JHP",
+    weight=1.8,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=15.0, damage_class=8),
         BallisticData(range_hexes=20, penetration=14.0, damage_class=8),
@@ -2173,7 +2316,8 @@ ammo_556_r4_jhp = AmmoType(
 )
 
 ammo_556_r4_ap = AmmoType(
-    name="5.56mm NATO AP (R4)", abbreviation="AP",
+    name="5.56mm NATO AP (R4)", description="AP",
+    weight=1.8,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=22.0, damage_class=6),
         BallisticData(range_hexes=20, penetration=21.0, damage_class=6),
@@ -2187,7 +2331,8 @@ ammo_556_r4_ap = AmmoType(
 )
 
 ammo_762x39_akm_fmj = AmmoType(
-    name="7.62x39mm FMJ", abbreviation="FMJ",
+    name="7.62x39mm FMJ", description="FMJ",
+    weight=1.8,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=11.0, damage_class=7),
         BallisticData(range_hexes=20, penetration=11.0, damage_class=7),
@@ -2201,7 +2346,8 @@ ammo_762x39_akm_fmj = AmmoType(
 )
 
 ammo_762x39_akm_jhp = AmmoType(
-    name="7.62x39mm JHP", abbreviation="JHP",
+    name="7.62x39mm JHP", description="JHP",
+    weight=1.8,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=11.0, damage_class=8),
         BallisticData(range_hexes=20, penetration=10.0, damage_class=8),
@@ -2215,7 +2361,8 @@ ammo_762x39_akm_jhp = AmmoType(
 )
 
 ammo_762x39_akm_ap = AmmoType(
-    name="7.62x39mm AP", abbreviation="AP",
+    name="7.62x39mm AP", description="AP",
+    weight=1.8,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=16.0, damage_class=7),
         BallisticData(range_hexes=20, penetration=15.0, damage_class=6),
@@ -2229,7 +2376,8 @@ ammo_762x39_akm_ap = AmmoType(
 )
 
 ammo_545x39_ak74_fmj = AmmoType(
-    name="5.45x39.5mm FMJ", abbreviation="FMJ",
+    name="5.45x39.5mm FMJ", description="FMJ",
+    weight=1.1,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=14.0, damage_class=6),
         BallisticData(range_hexes=20, penetration=13.0, damage_class=6),
@@ -2243,7 +2391,8 @@ ammo_545x39_ak74_fmj = AmmoType(
 )
 
 ammo_545x39_ak74_jhp = AmmoType(
-    name="5.45x39.5mm JHP", abbreviation="JHP",
+    name="5.45x39.5mm JHP", description="JHP",
+    weight=1.1,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=13.0, damage_class=7),
         BallisticData(range_hexes=20, penetration=13.0, damage_class=7),
@@ -2257,7 +2406,8 @@ ammo_545x39_ak74_jhp = AmmoType(
 )
 
 ammo_545x39_ak74_ap = AmmoType(
-    name="5.45x39.5mm AP", abbreviation="AP",
+    name="5.45x39.5mm AP", description="AP",
+    weight=1.1,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=19.0, damage_class=6),
         BallisticData(range_hexes=20, penetration=18.0, damage_class=5),
@@ -2271,7 +2421,8 @@ ammo_545x39_ak74_ap = AmmoType(
 )
 
 ammo_762x54_svd_fmj = AmmoType(
-    name="7.62x54mm FMJ", abbreviation="FMJ",
+    name="7.62x54mm FMJ", description="FMJ",
+    weight=0.68,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=23.0, damage_class=8),
         BallisticData(range_hexes=20, penetration=22.0, damage_class=8),
@@ -2285,7 +2436,8 @@ ammo_762x54_svd_fmj = AmmoType(
 )
 
 ammo_762x54_svd_jhp = AmmoType(
-    name="7.62x54mm JHP", abbreviation="JHP",
+    name="7.62x54mm JHP", description="JHP",
+    weight=0.68,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=22.0, damage_class=10),
         BallisticData(range_hexes=20, penetration=21.0, damage_class=9),
@@ -2299,7 +2451,8 @@ ammo_762x54_svd_jhp = AmmoType(
 )
 
 ammo_762x54_svd_ap = AmmoType(
-    name="7.62x54mm AP", abbreviation="AP",
+    name="7.62x54mm AP", description="AP",
+    weight=0.68,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=32.0, damage_class=8),
         BallisticData(range_hexes=20, penetration=31.0, damage_class=8),
@@ -2313,7 +2466,8 @@ ammo_762x54_svd_ap = AmmoType(
 )
 
 ammo_762nato_l1a1_fmj = AmmoType(
-    name="7.62mm NATO FMJ", abbreviation="FMJ",
+    name="7.62mm NATO FMJ", description="FMJ",
+    weight=1.5,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=19.0, damage_class=8),
         BallisticData(range_hexes=20, penetration=19.0, damage_class=8),
@@ -2327,7 +2481,8 @@ ammo_762nato_l1a1_fmj = AmmoType(
 )
 
 ammo_762nato_l1a1_jhp = AmmoType(
-    name="7.62mm NATO JHP", abbreviation="JHP",
+    name="7.62mm NATO JHP", description="JHP",
+    weight=1.5,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=18.0, damage_class=9),
         BallisticData(range_hexes=20, penetration=18.0, damage_class=9),
@@ -2341,7 +2496,8 @@ ammo_762nato_l1a1_jhp = AmmoType(
 )
 
 ammo_762nato_l1a1_ap = AmmoType(
-    name="7.62mm NATO AP", abbreviation="AP",
+    name="7.62mm NATO AP", description="AP",
+    weight=1.5,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=27.0, damage_class=8),
         BallisticData(range_hexes=20, penetration=26.0, damage_class=8),
@@ -2355,7 +2511,8 @@ ammo_762nato_l1a1_ap = AmmoType(
 )
 
 ammo_556nato_enfield_fmj = AmmoType(
-    name="5.56mm NATO FMJ", abbreviation="FMJ",
+    name="5.56mm NATO FMJ", description="FMJ",
+    weight=1.0,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=16.0, damage_class=6),
         BallisticData(range_hexes=20, penetration=16.0, damage_class=6),
@@ -2369,7 +2526,8 @@ ammo_556nato_enfield_fmj = AmmoType(
 )
 
 ammo_556nato_enfield_jhp = AmmoType(
-    name="5.56mm NATO JHP", abbreviation="JHP",
+    name="5.56mm NATO JHP", description="JHP",
+    weight=1.0,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=16.0, damage_class=8),
         BallisticData(range_hexes=20, penetration=15.0, damage_class=8),
@@ -2383,7 +2541,8 @@ ammo_556nato_enfield_jhp = AmmoType(
 )
 
 ammo_556nato_enfield_ap = AmmoType(
-    name="5.56mm NATO AP", abbreviation="AP",
+    name="5.56mm NATO AP", description="AP",
+    weight=1.0,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=23.0, damage_class=6),
         BallisticData(range_hexes=20, penetration=22.0, damage_class=6),
@@ -2397,7 +2556,8 @@ ammo_556nato_enfield_ap = AmmoType(
 )
 
 ammo_762nato_m14_fmj = AmmoType(
-    name="7.62mm NATO FMJ", abbreviation="FMJ",
+    name="7.62mm NATO FMJ", description="FMJ",
+    weight=1.5,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=20.0, damage_class=8),
         BallisticData(range_hexes=20, penetration=19.0, damage_class=8),
@@ -2411,7 +2571,8 @@ ammo_762nato_m14_fmj = AmmoType(
 )
 
 ammo_762nato_m14_jhp = AmmoType(
-    name="7.62mm NATO JHP", abbreviation="JHP",
+    name="7.62mm NATO JHP", description="JHP",
+    weight=1.5,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=19.0, damage_class=9),
         BallisticData(range_hexes=20, penetration=18.0, damage_class=9),
@@ -2425,7 +2586,8 @@ ammo_762nato_m14_jhp = AmmoType(
 )
 
 ammo_762nato_m14_ap = AmmoType(
-    name="7.62mm NATO AP", abbreviation="AP",
+    name="7.62mm NATO AP", description="AP",
+    weight=1.5,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=28.0, damage_class=8),
         BallisticData(range_hexes=20, penetration=27.0, damage_class=8),
@@ -2440,7 +2602,8 @@ ammo_762nato_m14_ap = AmmoType(
 )
 
 ammo_556nato_m16a1_fmj = AmmoType(
-    name="5.56mm NATO FMJ (M16A1)", abbreviation="FMJ",
+    name="5.56mm NATO FMJ (M16A1)", description="FMJ",
+    weight=1.0,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=17.0, damage_class=6),
         BallisticData(range_hexes=20, penetration=16.0, damage_class=6),
@@ -2454,7 +2617,8 @@ ammo_556nato_m16a1_fmj = AmmoType(
 )
 
 ammo_556nato_m16a1_jhp = AmmoType(
-    name="5.56mm NATO JHP (M16A1)", abbreviation="JHP",
+    name="5.56mm NATO JHP (M16A1)", description="JHP",
+    weight=1.0,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=16.0, damage_class=8),
         BallisticData(range_hexes=20, penetration=15.0, damage_class=8),
@@ -2468,7 +2632,8 @@ ammo_556nato_m16a1_jhp = AmmoType(
 )
 
 ammo_556nato_m16a1_ap = AmmoType(
-    name="5.56mm NATO AP (M16A1)", abbreviation="AP",
+    name="5.56mm NATO AP (M16A1)", description="AP",
+    weight=1.0,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=23.0, damage_class=6),
         BallisticData(range_hexes=20, penetration=22.0, damage_class=6),
@@ -2482,7 +2647,8 @@ ammo_556nato_m16a1_ap = AmmoType(
 )
 
 ammo_556nato_xm177_fmj = AmmoType(
-    name="5.56mm NATO FMJ (CAR 16)", abbreviation="FMJ",
+    name="5.56mm NATO FMJ (CAR 16)", description="FMJ",
+    weight=1.0,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=14.0, damage_class=6),
         BallisticData(range_hexes=20, penetration=13.0, damage_class=6),
@@ -2496,7 +2662,8 @@ ammo_556nato_xm177_fmj = AmmoType(
 )
 
 ammo_556nato_xm177_jhp = AmmoType(
-    name="5.56mm NATO JHP (CAR 16)", abbreviation="JHP",
+    name="5.56mm NATO JHP (CAR 16)", description="JHP",
+    weight=1.0,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=14.0, damage_class=8),
         BallisticData(range_hexes=20, penetration=13.0, damage_class=7),
@@ -2510,7 +2677,8 @@ ammo_556nato_xm177_jhp = AmmoType(
 )
 
 ammo_556nato_xm177_ap = AmmoType(
-    name="5.56mm NATO AP (CAR 16)", abbreviation="AP",
+    name="5.56mm NATO AP (CAR 16)", description="AP",
+    weight=1.0,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=20.0, damage_class=6),
         BallisticData(range_hexes=20, penetration=19.0, damage_class=6),
@@ -2524,7 +2692,8 @@ ammo_556nato_xm177_ap = AmmoType(
 )
 
 ammo_556nato_m16a2_fmj = AmmoType(
-    name="5.56mm NATO FMJ (M16A2)", abbreviation="FMJ",
+    name="5.56mm NATO FMJ (M16A2)", description="FMJ",
+    weight=1.0,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=17.0, damage_class=6),
         BallisticData(range_hexes=20, penetration=16.0, damage_class=6),
@@ -2538,7 +2707,8 @@ ammo_556nato_m16a2_fmj = AmmoType(
 )
 
 ammo_556nato_m16a2_jhp = AmmoType(
-    name="5.56mm NATO JHP (M16A2)", abbreviation="JHP",
+    name="5.56mm NATO JHP (M16A2)", description="JHP",
+    weight=1.0,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=16.0, damage_class=8),
         BallisticData(range_hexes=20, penetration=15.0, damage_class=8),
@@ -2552,7 +2722,8 @@ ammo_556nato_m16a2_jhp = AmmoType(
 )
 
 ammo_556nato_m16a2_ap = AmmoType(
-    name="5.56mm NATO AP (M16A2)", abbreviation="AP",
+    name="5.56mm NATO AP (M16A2)", description="AP",
+    weight=1.0,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=24.0, damage_class=6),
         BallisticData(range_hexes=20, penetration=23.0, damage_class=6),
@@ -2566,7 +2737,8 @@ ammo_556nato_m16a2_ap = AmmoType(
 )
 
 ammo_762nato_m40a1_fmj = AmmoType(
-    name="7.62mm NATO FMJ (M40A1)", abbreviation="FMJ",
+    name="7.62mm NATO FMJ (M40A1)", description="FMJ",
+    weight=0.06,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=20.0, damage_class=8),
         BallisticData(range_hexes=20, penetration=19.0, damage_class=8),
@@ -2580,7 +2752,8 @@ ammo_762nato_m40a1_fmj = AmmoType(
 )
 
 ammo_762nato_m40a1_jhp = AmmoType(
-    name="7.62mm NATO JHP (M40A1)", abbreviation="JHP",
+    name="7.62mm NATO JHP (M40A1)", description="JHP",
+    weight=0.06,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=19.0, damage_class=9),
         BallisticData(range_hexes=20, penetration=18.0, damage_class=9),
@@ -2594,7 +2767,8 @@ ammo_762nato_m40a1_jhp = AmmoType(
 )
 
 ammo_762nato_m40a1_ap = AmmoType(
-    name="7.62mm NATO AP (M40A1)", abbreviation="AP",
+    name="7.62mm NATO AP (M40A1)", description="AP",
+    weight=0.06,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=28.0, damage_class=8),
         BallisticData(range_hexes=20, penetration=27.0, damage_class=8),
@@ -2608,7 +2782,8 @@ ammo_762nato_m40a1_ap = AmmoType(
 )
 
 ammo_556nato_steyr_fmj = AmmoType(
-    name="5.56mm NATO FMJ (Steyr LSW)", abbreviation="FMJ",
+    name="5.56mm NATO FMJ (Steyr LSW)", description="FMJ",
+    weight=1.5,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=17.0, damage_class=6),
         BallisticData(range_hexes=20, penetration=16.0, damage_class=6),
@@ -2622,7 +2797,8 @@ ammo_556nato_steyr_fmj = AmmoType(
 )
 
 ammo_556nato_steyr_jhp = AmmoType(
-    name="5.56mm NATO JHP (Steyr LSW)", abbreviation="JHP",
+    name="5.56mm NATO JHP (Steyr LSW)", description="JHP",
+    weight=1.5,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=16.0, damage_class=8),
         BallisticData(range_hexes=20, penetration=15.0, damage_class=8),
@@ -2636,7 +2812,8 @@ ammo_556nato_steyr_jhp = AmmoType(
 )
 
 ammo_556nato_steyr_ap = AmmoType(
-    name="5.56mm NATO AP (Steyr LSW)", abbreviation="AP",
+    name="5.56mm NATO AP (Steyr LSW)", description="AP",
+    weight=1.5,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=23.0, damage_class=6),
         BallisticData(range_hexes=20, penetration=22.0, damage_class=6),
@@ -2650,7 +2827,8 @@ ammo_556nato_steyr_ap = AmmoType(
 )
 
 ammo_762nato_fnmag_fmj = AmmoType(
-    name="7.62mm NATO FMJ (FN MAG)", abbreviation="FMJ",
+    name="7.62mm NATO FMJ (FN MAG)", description="FMJ",
+    weight=3.2,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=19.0, damage_class=8),
         BallisticData(range_hexes=20, penetration=19.0, damage_class=8),
@@ -2664,7 +2842,8 @@ ammo_762nato_fnmag_fmj = AmmoType(
 )
 
 ammo_762nato_fnmag_jhp = AmmoType(
-    name="7.62mm NATO JHP (FN MAG)", abbreviation="JHP",
+    name="7.62mm NATO JHP (FN MAG)", description="JHP",
+    weight=3.2,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=18.0, damage_class=9),
         BallisticData(range_hexes=20, penetration=18.0, damage_class=9),
@@ -2678,7 +2857,8 @@ ammo_762nato_fnmag_jhp = AmmoType(
 )
 
 ammo_762nato_fnmag_ap = AmmoType(
-    name="7.62mm NATO AP (FN MAG)", abbreviation="AP",
+    name="7.62mm NATO AP (FN MAG)", description="AP",
+    weight=3.2,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=27.0, damage_class=8),
         BallisticData(range_hexes=20, penetration=26.0, damage_class=8),
@@ -2692,7 +2872,8 @@ ammo_762nato_fnmag_ap = AmmoType(
 )
 
 ammo_762x54_type67_fmj = AmmoType(
-    name="7.62x54mm FMJ (Type 67)", abbreviation="FMJ",
+    name="7.62x54mm FMJ (Type 67)", description="FMJ",
+    weight=5.8,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=23.0, damage_class=8),
         BallisticData(range_hexes=20, penetration=22.0, damage_class=8),
@@ -2706,7 +2887,8 @@ ammo_762x54_type67_fmj = AmmoType(
 )
 
 ammo_762x54_type67_jhp = AmmoType(
-    name="7.62x54mm JHP (Type 67)", abbreviation="JHP",
+    name="7.62x54mm JHP (Type 67)", description="JHP",
+    weight=5.8,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=22.0, damage_class=10),
         BallisticData(range_hexes=20, penetration=22.0, damage_class=9),
@@ -2720,7 +2902,8 @@ ammo_762x54_type67_jhp = AmmoType(
 )
 
 ammo_762x54_type67_ap = AmmoType(
-    name="7.62x54mm AP (Type 67)", abbreviation="AP",
+    name="7.62x54mm AP (Type 67)", description="AP",
+    weight=5.8,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=33.0, damage_class=8),
         BallisticData(range_hexes=20, penetration=32.0, damage_class=8),
@@ -2734,7 +2917,8 @@ ammo_762x54_type67_ap = AmmoType(
 )
 
 ammo_762nato_aa762_fmj = AmmoType(
-    name="7.62mm NATO FMJ (AA 7.62)", abbreviation="FMJ",
+    name="7.62mm NATO FMJ (AA 7.62)", description="FMJ",
+    weight=6.5,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=19.0, damage_class=8),
         BallisticData(range_hexes=20, penetration=19.0, damage_class=8),
@@ -2748,7 +2932,8 @@ ammo_762nato_aa762_fmj = AmmoType(
 )
 
 ammo_762nato_aa762_jhp = AmmoType(
-    name="7.62mm NATO JHP (AA 7.62)", abbreviation="JHP",
+    name="7.62mm NATO JHP (AA 7.62)", description="JHP",
+    weight=6.5,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=19.0, damage_class=9),
         BallisticData(range_hexes=20, penetration=18.0, damage_class=9),
@@ -2762,7 +2947,8 @@ ammo_762nato_aa762_jhp = AmmoType(
 )
 
 ammo_762nato_aa762_ap = AmmoType(
-    name="7.62mm NATO AP (AA 7.62)", abbreviation="AP",
+    name="7.62mm NATO AP (AA 7.62)", description="AP",
+    weight=6.5,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=27.0, damage_class=8),
         BallisticData(range_hexes=20, penetration=26.0, damage_class=8),
@@ -2776,7 +2962,8 @@ ammo_762nato_aa762_ap = AmmoType(
 )
 
 ammo_556nato_hk13e_fmj = AmmoType(
-    name="5.56mm NATO FMJ (HK 13E)", abbreviation="FMJ",
+    name="5.56mm NATO FMJ (HK 13E)", description="FMJ",
+    weight=1.1,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=17.0, damage_class=6),
         BallisticData(range_hexes=20, penetration=16.0, damage_class=6),
@@ -2790,7 +2977,8 @@ ammo_556nato_hk13e_fmj = AmmoType(
 )
 
 ammo_556nato_hk13e_jhp = AmmoType(
-    name="5.56mm NATO JHP (HK 13E)", abbreviation="JHP",
+    name="5.56mm NATO JHP (HK 13E)", description="JHP",
+    weight=1.1,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=16.0, damage_class=8),
         BallisticData(range_hexes=20, penetration=15.0, damage_class=8),
@@ -2804,7 +2992,8 @@ ammo_556nato_hk13e_jhp = AmmoType(
 )
 
 ammo_556nato_hk13e_ap = AmmoType(
-    name="5.56mm NATO AP (HK 13E)", abbreviation="AP",
+    name="5.56mm NATO AP (HK 13E)", description="AP",
+    weight=1.1,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=23.0, damage_class=6),
         BallisticData(range_hexes=20, penetration=23.0, damage_class=6),
@@ -2818,7 +3007,8 @@ ammo_556nato_hk13e_ap = AmmoType(
 )
 
 ammo_762nato_hk11e_fmj = AmmoType(
-    name="7.62mm NATO FMJ (HK 11E)", abbreviation="FMJ",
+    name="7.62mm NATO FMJ (HK 11E)", description="FMJ",
+    weight=1.5,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=17.0, damage_class=8),
         BallisticData(range_hexes=20, penetration=17.0, damage_class=8),
@@ -2832,7 +3022,8 @@ ammo_762nato_hk11e_fmj = AmmoType(
 )
 
 ammo_762nato_hk11e_jhp = AmmoType(
-    name="7.62mm NATO JHP (HK 11E)", abbreviation="JHP",
+    name="7.62mm NATO JHP (HK 11E)", description="JHP",
+    weight=1.5,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=17.0, damage_class=9),
         BallisticData(range_hexes=20, penetration=16.0, damage_class=9),
@@ -2846,7 +3037,8 @@ ammo_762nato_hk11e_jhp = AmmoType(
 )
 
 ammo_762nato_hk11e_ap = AmmoType(
-    name="7.62mm NATO AP (HK 11E)", abbreviation="AP",
+    name="7.62mm NATO AP (HK 11E)", description="AP",
+    weight=1.5,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=25.0, damage_class=7),
         BallisticData(range_hexes=20, penetration=24.0, damage_class=7),
@@ -2860,7 +3052,8 @@ ammo_762nato_hk11e_ap = AmmoType(
 )
 
 ammo_556nato_hk23e_fmj = AmmoType(
-    name="5.56mm NATO FMJ (HK 23E)", abbreviation="FMJ",
+    name="5.56mm NATO FMJ (HK 23E)", description="FMJ",
+    weight=6.2,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=16.0, damage_class=6),
         BallisticData(range_hexes=20, penetration=16.0, damage_class=6),
@@ -2874,7 +3067,8 @@ ammo_556nato_hk23e_fmj = AmmoType(
 )
 
 ammo_556nato_hk23e_jhp = AmmoType(
-    name="5.56mm NATO JHP (HK 23E)", abbreviation="JHP",
+    name="5.56mm NATO JHP (HK 23E)", description="JHP",
+    weight=6.2,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=16.0, damage_class=8),
         BallisticData(range_hexes=20, penetration=15.0, damage_class=8),
@@ -2888,7 +3082,8 @@ ammo_556nato_hk23e_jhp = AmmoType(
 )
 
 ammo_556nato_hk23e_ap = AmmoType(
-    name="5.56mm NATO AP (HK 23E)", abbreviation="AP",
+    name="5.56mm NATO AP (HK 23E)", description="AP",
+    weight=6.2,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=23.0, damage_class=6),
         BallisticData(range_hexes=20, penetration=22.0, damage_class=6),
@@ -2902,7 +3097,8 @@ ammo_556nato_hk23e_ap = AmmoType(
 )
 
 ammo_762nato_hk21e_fmj = AmmoType(
-    name="7.62mm NATO FMJ (HK 21E)", abbreviation="FMJ",
+    name="7.62mm NATO FMJ (HK 21E)", description="FMJ",
+    weight=6.5,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=19.0, damage_class=8),
         BallisticData(range_hexes=20, penetration=19.0, damage_class=8),
@@ -2916,7 +3112,8 @@ ammo_762nato_hk21e_fmj = AmmoType(
 )
 
 ammo_762nato_hk21e_jhp = AmmoType(
-    name="7.62mm NATO JHP (HK 21E)", abbreviation="JHP",
+    name="7.62mm NATO JHP (HK 21E)", description="JHP",
+    weight=6.5,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=19.0, damage_class=9),
         BallisticData(range_hexes=20, penetration=18.0, damage_class=9),
@@ -2930,7 +3127,8 @@ ammo_762nato_hk21e_jhp = AmmoType(
 )
 
 ammo_762nato_hk21e_ap = AmmoType(
-    name="7.62mm NATO AP (HK 21E)", abbreviation="AP",
+    name="7.62mm NATO AP (HK 21E)", description="AP",
+    weight=6.5,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=27.0, damage_class=8),
         BallisticData(range_hexes=20, penetration=26.0, damage_class=8),
@@ -2944,7 +3142,8 @@ ammo_762nato_hk21e_ap = AmmoType(
 )
 
 ammo_762nato_mg3_fmj = AmmoType(
-    name="7.62mm NATO FMJ (MG3)", abbreviation="FMJ",
+    name="7.62mm NATO FMJ (MG3)", description="FMJ",
+    weight=6.5,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=18.0, damage_class=8),
         BallisticData(range_hexes=20, penetration=18.0, damage_class=8),
@@ -2958,7 +3157,8 @@ ammo_762nato_mg3_fmj = AmmoType(
 )
 
 ammo_762nato_mg3_jhp = AmmoType(
-    name="7.62mm NATO JHP (MG3)", abbreviation="JHP",
+    name="7.62mm NATO JHP (MG3)", description="JHP",
+    weight=6.5,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=18.0, damage_class=9),
         BallisticData(range_hexes=20, penetration=17.0, damage_class=9),
@@ -2972,7 +3172,8 @@ ammo_762nato_mg3_jhp = AmmoType(
 )
 
 ammo_762nato_mg3_ap = AmmoType(
-    name="7.62mm NATO AP (MG3)", abbreviation="AP",
+    name="7.62mm NATO AP (MG3)", description="AP",
+    weight=6.5,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=26.0, damage_class=8),
         BallisticData(range_hexes=20, penetration=25.0, damage_class=7),
@@ -2986,7 +3187,8 @@ ammo_762nato_mg3_ap = AmmoType(
 )
 
 ammo_556nato_galil_fmj = AmmoType(
-    name="5.56mm NATO FMJ (Galil ARM)", abbreviation="FMJ",
+    name="5.56mm NATO FMJ (Galil ARM)", description="FMJ",
+    weight=2.2,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=16.0, damage_class=6),
         BallisticData(range_hexes=20, penetration=15.0, damage_class=6),
@@ -3000,7 +3202,8 @@ ammo_556nato_galil_fmj = AmmoType(
 )
 
 ammo_556nato_galil_jhp = AmmoType(
-    name="5.56mm NATO JHP (Galil ARM)", abbreviation="JHP",
+    name="5.56mm NATO JHP (Galil ARM)", description="JHP",
+    weight=2.2,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=15.0, damage_class=8),
         BallisticData(range_hexes=20, penetration=15.0, damage_class=8),
@@ -3014,7 +3217,8 @@ ammo_556nato_galil_jhp = AmmoType(
 )
 
 ammo_556nato_galil_ap = AmmoType(
-    name="5.56mm NATO AP (Galil ARM)", abbreviation="AP",
+    name="5.56mm NATO AP (Galil ARM)", description="AP",
+    weight=2.2,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=22.0, damage_class=6),
         BallisticData(range_hexes=20, penetration=21.0, damage_class=6),
@@ -3027,7 +3231,8 @@ ammo_556nato_galil_ap = AmmoType(
 )
 
 ammo_556nato_beretta_fmj = AmmoType(
-    name="5.56mm NATO FMJ (Beretta M70-78)", abbreviation="FMJ",
+    name="5.56mm NATO FMJ (Beretta M70-78)", description="FMJ",
+    weight=1.7,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=16.0, damage_class=6),
         BallisticData(range_hexes=20, penetration=15.0, damage_class=6),
@@ -3041,7 +3246,8 @@ ammo_556nato_beretta_fmj = AmmoType(
 )
 
 ammo_556nato_beretta_jhp = AmmoType(
-    name="5.56mm NATO JHP (Beretta M70-78)", abbreviation="JHP",
+    name="5.56mm NATO JHP (Beretta M70-78)", description="JHP",
+    weight=1.7,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=15.0, damage_class=8),
         BallisticData(range_hexes=20, penetration=14.0, damage_class=8),
@@ -3055,7 +3261,8 @@ ammo_556nato_beretta_jhp = AmmoType(
 )
 
 ammo_556nato_beretta_ap = AmmoType(
-    name="5.56mm NATO AP (Beretta M70-78)", abbreviation="AP",
+    name="5.56mm NATO AP (Beretta M70-78)", description="AP",
+    weight=1.7,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=22.0, damage_class=6),
         BallisticData(range_hexes=20, penetration=21.0, damage_class=6),
@@ -3069,7 +3276,8 @@ ammo_556nato_beretta_ap = AmmoType(
 )
 
 ammo_545sov_rpk74_fmj = AmmoType(
-    name="5.45x39.5mm FMJ (RPK 74)", abbreviation="FMJ",
+    name="5.45x39.5mm FMJ (RPK 74)", description="FMJ",
+    weight=1.5,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=17.0, damage_class=6),
         BallisticData(range_hexes=20, penetration=16.0, damage_class=6),
@@ -3079,11 +3287,12 @@ ammo_545sov_rpk74_fmj = AmmoType(
         BallisticData(range_hexes=200, penetration=7.5, damage_class=4),
         BallisticData(range_hexes=300, penetration=4.9, damage_class=3),
         BallisticData(range_hexes=400, penetration=3.2, damage_class=2, beyond_max_range=True)
-    ] #
+    ]
 )
 
 ammo_545sov_rpk74_jhp = AmmoType(
-    name="5.45x39.5mm JHP (RPK 74)", abbreviation="JHP",
+    name="5.45x39.5mm JHP (RPK 74)", description="JHP",
+    weight=1.5,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=16.0, damage_class=8),
         BallisticData(range_hexes=20, penetration=16.0, damage_class=8),
@@ -3097,7 +3306,8 @@ ammo_545sov_rpk74_jhp = AmmoType(
 )
 
 ammo_545sov_rpk74_ap = AmmoType(
-    name="5.45x39.5mm AP (RPK 74)", abbreviation="AP",
+    name="5.45x39.5mm AP (RPK 74)", description="AP",
+    weight=1.5,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=24.0, damage_class=6),
         BallisticData(range_hexes=20, penetration=23.0, damage_class=6),
@@ -3111,7 +3321,8 @@ ammo_545sov_rpk74_ap = AmmoType(
 )
 
 ammo_762sov_rpk_fmj = AmmoType(
-    name="7.62x39mm FMJ (RPK)", abbreviation="FMJ",
+    name="7.62x39mm FMJ (RPK)", description="FMJ",
+    weight=4.6,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=12.0, damage_class=7),
         BallisticData(range_hexes=20, penetration=11.0, damage_class=7),
@@ -3125,7 +3336,8 @@ ammo_762sov_rpk_fmj = AmmoType(
 )
 
 ammo_762sov_rpk_jhp = AmmoType(
-    name="7.62x39mm JHP (RPK)", abbreviation="JHP",
+    name="7.62x39mm JHP (RPK)", description="JHP",
+    weight=4.6,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=11.0, damage_class=8),
         BallisticData(range_hexes=20, penetration=11.0, damage_class=8),
@@ -3139,7 +3351,8 @@ ammo_762sov_rpk_jhp = AmmoType(
 )
 
 ammo_762sov_rpk_ap = AmmoType(
-    name="7.62x39mm AP (RPK)", abbreviation="AP",
+    name="7.62x39mm AP (RPK)", description="AP",
+    weight=4.6,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=17.0, damage_class=7),
         BallisticData(range_hexes=20, penetration=16.0, damage_class=7),
@@ -3153,7 +3366,8 @@ ammo_762sov_rpk_ap = AmmoType(
 )
 
 ammo_762R_rp46_fmj = AmmoType(
-    name="7.62x54mmR FMJ (RP 46)", abbreviation="FMJ",
+    name="7.62x54mmR FMJ (RP 46)", description="FMJ",
+    weight=14.3,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=23.0, damage_class=8),
         BallisticData(range_hexes=20, penetration=23.0, damage_class=8),
@@ -3167,7 +3381,8 @@ ammo_762R_rp46_fmj = AmmoType(
 )
 
 ammo_762R_rp46_jhp = AmmoType(
-    name="7.62x54mmR JHP (RP 46)", abbreviation="JHP",
+    name="7.62x54mmR JHP (RP 46)", description="JHP",
+    weight=14.3,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=22.0, damage_class=10),
         BallisticData(range_hexes=20, penetration=22.0, damage_class=10),
@@ -3181,7 +3396,8 @@ ammo_762R_rp46_jhp = AmmoType(
 )
 
 ammo_762R_rp46_ap = AmmoType(
-    name="7.62x54mmR AP (RP 46)", abbreviation="AP",
+    name="7.62x54mmR AP (RP 46)", description="AP",
+    weight=14.3,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=33.0, damage_class=8),
         BallisticData(range_hexes=20, penetration=32.0, damage_class=8),
@@ -3195,7 +3411,8 @@ ammo_762R_rp46_ap = AmmoType(
 )
 
 ammo_762sov_rpd_fmj = AmmoType(
-    name="7.62x39mm FMJ (RPD)", abbreviation="FMJ",
+    name="7.62x39mm FMJ (RPD)", description="FMJ",
+    weight=5.3,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=11.0, damage_class=7),
         BallisticData(range_hexes=20, penetration=10.0, damage_class=7),
@@ -3209,7 +3426,8 @@ ammo_762sov_rpd_fmj = AmmoType(
 )
 
 ammo_762sov_rpd_jhp = AmmoType(
-    name="7.62x39mm JHP (RPD)", abbreviation="JHP",
+    name="7.62x39mm JHP (RPD)", description="JHP",
+    weight=5.3,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=10.0, damage_class=8),
         BallisticData(range_hexes=20, penetration=9.9, damage_class=8),
@@ -3223,7 +3441,8 @@ ammo_762sov_rpd_jhp = AmmoType(
 )
 
 ammo_762sov_rpd_ap = AmmoType(
-    name="7.62x39mm AP (RPD)", abbreviation="AP",
+    name="7.62x39mm AP (RPD)", description="AP",
+    weight=5.3,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=15.0, damage_class=6),
         BallisticData(range_hexes=20, penetration=14.0, damage_class=6),
@@ -3237,7 +3456,8 @@ ammo_762sov_rpd_ap = AmmoType(
 )
 
 ammo_762R_pkm_fmj = AmmoType(
-    name="7.62x54mmR FMJ (PKM)", abbreviation="FMJ",
+    name="7.62x54mmR FMJ (PKM)", description="FMJ",
+    weight=5.7,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=23.0, damage_class=8),
         BallisticData(range_hexes=20, penetration=22.0, damage_class=8),
@@ -3251,7 +3471,8 @@ ammo_762R_pkm_fmj = AmmoType(
 )
 
 ammo_762R_pkm_jhp = AmmoType(
-    name="7.62x54mmR JHP (PKM)", abbreviation="JHP",
+    name="7.62x54mmR JHP (PKM)", description="JHP",
+    weight=5.7,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=22.0, damage_class=10),
         BallisticData(range_hexes=20, penetration=21.0, damage_class=9),
@@ -3265,7 +3486,8 @@ ammo_762R_pkm_jhp = AmmoType(
 )
 
 ammo_762R_pkm_ap = AmmoType(
-    name="7.62x54mmR AP (PKM)", abbreviation="AP",
+    name="7.62x54mmR AP (PKM)", description="AP",
+    weight=5.7,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=32.0, damage_class=8),
         BallisticData(range_hexes=20, penetration=31.0, damage_class=8),
@@ -3279,7 +3501,8 @@ ammo_762R_pkm_ap = AmmoType(
 )
 
 ammo_127sov_nsv_fmj = AmmoType(
-    name="12.7x107mm FMJ (NSV)", abbreviation="FMJ",
+    name="12.7x107mm FMJ (NSV)", description="FMJ",
+    weight=17.0,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=45.0, damage_class=10),
         BallisticData(range_hexes=20, penetration=44.0, damage_class=10),
@@ -3293,7 +3516,8 @@ ammo_127sov_nsv_fmj = AmmoType(
 )
 
 ammo_127sov_nsv_jhp = AmmoType(
-    name="12.7x107mm JHP (NSV)", abbreviation="JHP",
+    name="12.7x107mm JHP (NSV)", description="JHP",
+    weight=17.0,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=43.0, damage_class=10),
         BallisticData(range_hexes=20, penetration=42.0, damage_class=10),
@@ -3307,7 +3531,8 @@ ammo_127sov_nsv_jhp = AmmoType(
 )
 
 ammo_127sov_nsv_ap = AmmoType(
-    name="12.7x107mm AP (NSV)", abbreviation="AP",
+    name="12.7x107mm AP (NSV)", description="AP",
+    weight=17.0,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=63.0, damage_class=10),
         BallisticData(range_hexes=20, penetration=62.0, damage_class=10),
@@ -3321,7 +3546,8 @@ ammo_127sov_nsv_ap = AmmoType(
 )
 
 ammo_556nato_lsw_fmj = AmmoType(
-    name="5.56mm NATO FMJ (Enfield LSW)", abbreviation="FMJ",
+    name="5.56mm NATO FMJ (Enfield LSW)", description="FMJ",
+    weight=1.0,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=16.0, damage_class=6),
         BallisticData(range_hexes=20, penetration=15.0, damage_class=6),
@@ -3335,7 +3561,8 @@ ammo_556nato_lsw_fmj = AmmoType(
 )
 
 ammo_556nato_lsw_jhp = AmmoType(
-    name="5.56mm NATO JHP (Enfield LSW)", abbreviation="JHP",
+    name="5.56mm NATO JHP (Enfield LSW)", description="JHP",
+    weight=1.0,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=15.0, damage_class=8),
         BallisticData(range_hexes=20, penetration=14.0, damage_class=8),
@@ -3349,7 +3576,8 @@ ammo_556nato_lsw_jhp = AmmoType(
 )
 
 ammo_556nato_lsw_ap = AmmoType(
-    name="5.56mm NATO AP (Enfield LSW)", abbreviation="AP",
+    name="5.56mm NATO AP (Enfield LSW)", description="AP",
+    weight=1.0,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=22.0, damage_class=6),
         BallisticData(range_hexes=20, penetration=21.0, damage_class=6),
@@ -3363,7 +3591,8 @@ ammo_556nato_lsw_ap = AmmoType(
 )
 
 ammo_762nato_bren_fmj = AmmoType(
-    name="7.62mm NATO FMJ (Bren L4)", abbreviation="FMJ",
+    name="7.62mm NATO FMJ (Bren L4)", description="FMJ",
+    weight=2.6,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=18.0, damage_class=8),
         BallisticData(range_hexes=20, penetration=18.0, damage_class=8),
@@ -3377,7 +3606,8 @@ ammo_762nato_bren_fmj = AmmoType(
 )
 
 ammo_762nato_bren_jhp = AmmoType(
-    name="7.62mm NATO JHP (Bren L4)", abbreviation="JHP",
+    name="7.62mm NATO JHP (Bren L4)", description="JHP",
+    weight=2.6,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=18.0, damage_class=9),
         BallisticData(range_hexes=20, penetration=17.0, damage_class=9),
@@ -3391,7 +3621,8 @@ ammo_762nato_bren_jhp = AmmoType(
 )
 
 ammo_762nato_bren_ap = AmmoType(
-    name="7.62mm NATO AP (Bren L4)", abbreviation="AP",
+    name="7.62mm NATO AP (Bren L4)", description="AP",
+    weight=2.6,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=26.0, damage_class=8),
         BallisticData(range_hexes=20, penetration=25.0, damage_class=7),
@@ -3405,7 +3636,8 @@ ammo_762nato_bren_ap = AmmoType(
 )
 
 ammo_762nato_l7a2_fmj = AmmoType(
-    name="7.62mm NATO FMJ (L7A2)", abbreviation="FMJ",
+    name="7.62mm NATO FMJ (L7A2)", description="FMJ",
+    weight=6.5,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=19.0, damage_class=8),
         BallisticData(range_hexes=20, penetration=19.0, damage_class=8),
@@ -3419,7 +3651,8 @@ ammo_762nato_l7a2_fmj = AmmoType(
 )
 
 ammo_762nato_l7a2_jhp = AmmoType(
-    name="7.62mm NATO JHP (L7A2)", abbreviation="JHP",
+    name="7.62mm NATO JHP (L7A2)", description="JHP",
+    weight=6.5,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=18.0, damage_class=9),
         BallisticData(range_hexes=20, penetration=18.0, damage_class=9),
@@ -3433,7 +3666,8 @@ ammo_762nato_l7a2_jhp = AmmoType(
 )
 
 ammo_762nato_l7a2_ap = AmmoType(
-    name="7.62mm NATO AP (L7A2)", abbreviation="AP",
+    name="7.62mm NATO AP (L7A2)", description="AP",
+    weight=6.5,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=27.0, damage_class=8),
         BallisticData(range_hexes=20, penetration=26.0, damage_class=8),
@@ -3447,7 +3681,8 @@ ammo_762nato_l7a2_ap = AmmoType(
 )
 
 ammo_556nato_m249_fmj = AmmoType(
-    name="5.56mm NATO FMJ (M249)", abbreviation="FMJ",
+    name="5.56mm NATO FMJ (M249)", description="FMJ",
+    weight=6.9,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=15.0, damage_class=6),
         BallisticData(range_hexes=20, penetration=15.0, damage_class=6),
@@ -3461,7 +3696,8 @@ ammo_556nato_m249_fmj = AmmoType(
 )
 
 ammo_556nato_m249_jhp = AmmoType(
-    name="5.56mm NATO JHP (M249)", abbreviation="JHP",
+    name="5.56mm NATO JHP (M249)", description="JHP",
+    weight=6.9,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=15.0, damage_class=8),
         BallisticData(range_hexes=20, penetration=14.0, damage_class=8),
@@ -3475,7 +3711,8 @@ ammo_556nato_m249_jhp = AmmoType(
 )
 
 ammo_556nato_m249_ap = AmmoType(
-    name="5.56mm NATO AP (M249)", abbreviation="AP",
+    name="5.56mm NATO AP (M249)", description="AP",
+    weight=6.9,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=22.0, damage_class=6),
         BallisticData(range_hexes=20, penetration=21.0, damage_class=6),
@@ -3489,7 +3726,8 @@ ammo_556nato_m249_ap = AmmoType(
 )
 
 ammo_762nato_m60_fmj = AmmoType(
-    name="7.62mm NATO FMJ (M60)", abbreviation="FMJ",
+    name="7.62mm NATO FMJ (M60)", description="FMJ",
+    weight=6.5,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=20.0, damage_class=8),
         BallisticData(range_hexes=20, penetration=19.0, damage_class=8),
@@ -3503,7 +3741,8 @@ ammo_762nato_m60_fmj = AmmoType(
 )
 
 ammo_762nato_m60_jhp = AmmoType(
-    name="7.62mm NATO JHP (M60)", abbreviation="JHP",
+    name="7.62mm NATO JHP (M60)", description="JHP",
+    weight=6.5,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=19.0, damage_class=9),
         BallisticData(range_hexes=20, penetration=19.0, damage_class=9),
@@ -3517,7 +3756,8 @@ ammo_762nato_m60_jhp = AmmoType(
 )
 
 ammo_762nato_m60_ap = AmmoType(
-    name="7.62mm NATO AP (M60)", abbreviation="AP",
+    name="7.62mm NATO AP (M60)", description="AP",
+    weight=6.5,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=28.0, damage_class=8),
         BallisticData(range_hexes=20, penetration=27.0, damage_class=8),
@@ -3531,7 +3771,8 @@ ammo_762nato_m60_ap = AmmoType(
 )
 
 ammo_762nato_m60e3_fmj = AmmoType(
-    name="7.62mm NATO FMJ (M60E3)", abbreviation="FMJ",
+    name="7.62mm NATO FMJ (M60E3)", description="FMJ",
+    weight=6.5,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=20.0, damage_class=8),
         BallisticData(range_hexes=20, penetration=20.0, damage_class=8),
@@ -3545,7 +3786,8 @@ ammo_762nato_m60e3_fmj = AmmoType(
 )
 
 ammo_762nato_m60e3_jhp = AmmoType(
-    name="7.62mm NATO JHP (M60E3)", abbreviation="JHP",
+    name="7.62mm NATO JHP (M60E3)", description="JHP",
+    weight=6.5,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=19.0, damage_class=9),
         BallisticData(range_hexes=20, penetration=19.0, damage_class=9),
@@ -3559,7 +3801,8 @@ ammo_762nato_m60e3_jhp = AmmoType(
 )
 
 ammo_762nato_m60e3_ap = AmmoType(
-    name="7.62mm NATO AP (M60E3)", abbreviation="AP",
+    name="7.62mm NATO AP (M60E3)", description="AP",
+    weight=6.5,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=28.0, damage_class=8),
         BallisticData(range_hexes=20, penetration=28.0, damage_class=8),
@@ -3573,7 +3816,8 @@ ammo_762nato_m60e3_ap = AmmoType(
 )
 
 ammo_50bmg_m2hb_fmj = AmmoType(
-    name=".50 Browning FMJ (M2HB)", abbreviation="FMJ",
+    name=".50 Browning FMJ (M2HB)", description="FMJ",
+    weight=28.8,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=40.0, damage_class=10),
         BallisticData(range_hexes=20, penetration=39.0, damage_class=10),
@@ -3587,7 +3831,8 @@ ammo_50bmg_m2hb_fmj = AmmoType(
 )
 
 ammo_50bmg_m2hb_jhp = AmmoType(
-    name=".50 Browning JHP (M2HB)", abbreviation="JHP",
+    name=".50 Browning JHP (M2HB)", description="JHP",
+    weight=28.8,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=38.0, damage_class=10),
         BallisticData(range_hexes=20, penetration=37.0, damage_class=10),
@@ -3601,7 +3846,8 @@ ammo_50bmg_m2hb_jhp = AmmoType(
 )
 
 ammo_50bmg_m2hb_ap = AmmoType(
-    name=".50 Browning AP (M2HB)", abbreviation="AP",
+    name=".50 Browning AP (M2HB)", description="AP",
+    weight=28.8,
     ballistic_data=[
         BallisticData(range_hexes=10, penetration=56.0, damage_class=10),
         BallisticData(range_hexes=20, penetration=55.0, damage_class=10),
@@ -3615,7 +3861,8 @@ ammo_50bmg_m2hb_ap = AmmoType(
 )
 
 ammo_12g_spas_aps = AmmoType(
-    name="12 Gauge APS (Franchi SPAS 12)", abbreviation="APS",
+    name="12 Gauge APS (Franchi SPAS 12)", description="APS",
+    weight=0.13,
     ballistic_data=[
         BallisticData(range_hexes=1, penetration=21.0, damage_class=9),
         BallisticData(range_hexes=2, penetration=21.0, damage_class=9),
@@ -3632,7 +3879,8 @@ ammo_12g_spas_aps = AmmoType(
 )
 
 ammo_12g_spas_shot = AmmoType(
-    name="12 Gauge Shot (00) (Franchi SPAS 12)", abbreviation="Shot", pellet_count=12,
+    name="12 Gauge Shot (00) (Franchi SPAS 12)", description="Shot", pellet_count=12,
+    weight=0.13,
     ballistic_data=[
         BallisticData(range_hexes=1, penetration=5.3, damage_class=8, shotgun_accuracy_level_modifier=-13, base_pellet_hit_chance=None, pattern_radius=0.0),
         BallisticData(range_hexes=2, penetration=1.6, damage_class=3, shotgun_accuracy_level_modifier=-8, base_pellet_hit_chance="*11", pattern_radius=0.0),
@@ -3649,7 +3897,8 @@ ammo_12g_spas_shot = AmmoType(
 )
 
 ammo_12g_caws_slug = AmmoType(
-    name="12 Gauge Slug (CAWS)", abbreviation="Slug",
+    name="12 Gauge Slug (CAWS)", description="Slug",
+    weight=2.1,
     ballistic_data=[
         BallisticData(range_hexes=1, penetration=7.0, damage_class=10),
         BallisticData(range_hexes=2, penetration=7.0, damage_class=10),
@@ -3666,7 +3915,8 @@ ammo_12g_caws_slug = AmmoType(
 )
 
 ammo_12g_caws_shot = AmmoType(
-    name="12 Gauge Shot (000) (CAWS)", abbreviation="Shot", pellet_count=8,
+    name="12 Gauge Shot (000) (CAWS)", description="Shot", pellet_count=8,
+    weight=2.1,
     ballistic_data=[
         BallisticData(range_hexes=1, penetration=5.6, damage_class=8, shotgun_accuracy_level_modifier=-13, base_pellet_hit_chance=None, pattern_radius=0.0),
         BallisticData(range_hexes=2, penetration=2.4, damage_class=4, shotgun_accuracy_level_modifier=-8, base_pellet_hit_chance="*7", pattern_radius=0.0),
@@ -3683,7 +3933,8 @@ ammo_12g_caws_shot = AmmoType(
 )
 
 ammo_12g_mossberg_slug = AmmoType(
-    name="12 Gauge Slug (Mossberg Bullpup)", abbreviation="Slug",
+    name="12 Gauge Slug (Mossberg Bullpup)", description="Slug",
+    weight=0.13,
     ballistic_data=[
         BallisticData(range_hexes=1, penetration=7.5, damage_class=10),
         BallisticData(range_hexes=2, penetration=7.4, damage_class=10),
@@ -3700,7 +3951,8 @@ ammo_12g_mossberg_slug = AmmoType(
 )
 
 ammo_12g_mossberg_shot = AmmoType(
-    name="12 Gauge Shot (00) (Mossberg Bullpup)", abbreviation="Shot", pellet_count=12,
+    name="12 Gauge Shot (00) (Mossberg Bullpup)", description="Shot", pellet_count=12,
+    weight=0.13,
     ballistic_data=[
         BallisticData(range_hexes=1, penetration=5.4, damage_class=8, shotgun_accuracy_level_modifier=-14, base_pellet_hit_chance=None, pattern_radius=0.0),
         BallisticData(range_hexes=2, penetration=1.7, damage_class=3, shotgun_accuracy_level_modifier=-9, base_pellet_hit_chance="*11", pattern_radius=0.0),
@@ -3717,7 +3969,8 @@ ammo_12g_mossberg_shot = AmmoType(
 )
 
 ammo_12g_remington_slug = AmmoType(
-    name="12 Gauge Slug (Remington M870)", abbreviation="Slug",
+    name="12 Gauge Slug (Remington M870)", description="Slug",
+    weight=0.13,
     ballistic_data=[
         BallisticData(range_hexes=1, penetration=7.7, damage_class=10),
         BallisticData(range_hexes=2, penetration=7.7, damage_class=10),
@@ -3734,7 +3987,8 @@ ammo_12g_remington_slug = AmmoType(
 )
 
 ammo_12g_remington_shot = AmmoType(
-    name="12 Gauge Shot (00) (Remington M870)", abbreviation="Shot", pellet_count=12,
+    name="12 Gauge Shot (00) (Remington M870)", description="Shot", pellet_count=12,
+    weight=0.13,
     ballistic_data=[
         BallisticData(range_hexes=1, penetration=5.4, damage_class=8, shotgun_accuracy_level_modifier=-14, base_pellet_hit_chance=None, pattern_radius=0.0),
         BallisticData(range_hexes=2, penetration=1.7, damage_class=3, shotgun_accuracy_level_modifier=-9, base_pellet_hit_chance="*11", pattern_radius=0.0),
@@ -3751,7 +4005,8 @@ ammo_12g_remington_shot = AmmoType(
 )
 
 ammo_12g_high_standard_slug = AmmoType(
-    name="12 Gauge Slug (High Standard M10B)", abbreviation="Slug",
+    name="12 Gauge Slug (High Standard M10B)", description="Slug",
+    weight=0.13,
     ballistic_data=[
         BallisticData(range_hexes=1, penetration=7.0, damage_class=10),
         BallisticData(range_hexes=2, penetration=7.0, damage_class=10),
@@ -3768,7 +4023,8 @@ ammo_12g_high_standard_slug = AmmoType(
 )
 
 ammo_12g_high_standard_shot = AmmoType(
-    name="12 Gauge Shot (00) (High Standard M10B)", abbreviation="Shot", pellet_count=12,
+    name="12 Gauge Shot (00) (High Standard M10B)", description="Shot", pellet_count=12,
+    weight=0.13,
     ballistic_data=[
         BallisticData(range_hexes=1, penetration=5.3, damage_class=8, shotgun_accuracy_level_modifier=-13, base_pellet_hit_chance=None, pattern_radius=0.0),
         BallisticData(range_hexes=2, penetration=1.6, damage_class=3, shotgun_accuracy_level_modifier=-8, base_pellet_hit_chance="*11", pattern_radius=0.0),
@@ -3785,7 +4041,8 @@ ammo_12g_high_standard_shot = AmmoType(
 )
 
 ammo_12g_atchisson_slug = AmmoType(
-    name="12 Gauge Slug (Atchisson Assault 12)", abbreviation="Slug",
+    name="12 Gauge Slug (Atchisson Assault 12)", description="Slug",
+    weight=4.6,
     ballistic_data=[
         BallisticData(range_hexes=1, penetration=7.0, damage_class=10),
         BallisticData(range_hexes=2, penetration=7.0, damage_class=10),
@@ -3802,7 +4059,8 @@ ammo_12g_atchisson_slug = AmmoType(
 )
 
 ammo_12g_atchisson_shot = AmmoType(
-    name="12 Gauge Shot (00) (Atchisson Assault 12)", abbreviation="Shot", pellet_count=12,
+    name="12 Gauge Shot (00) (Atchisson Assault 12)", description="Shot", pellet_count=12,
+    weight=4.6,
     ballistic_data=[
         BallisticData(range_hexes=1, penetration=5.4, damage_class=8, shotgun_accuracy_level_modifier=-13, base_pellet_hit_chance=None, pattern_radius=0.0),
         BallisticData(range_hexes=2, penetration=1.6, damage_class=3, shotgun_accuracy_level_modifier=-8, base_pellet_hit_chance="*11", pattern_radius=0.0),
@@ -3820,7 +4078,8 @@ ammo_12g_atchisson_shot = AmmoType(
 
 ammo_40mm_heat_standard = AmmoType(
     name="40×46mm HEAT",
-    abbreviation="HEAT",
+    description="HEAT",
+    weight=0.51,
     ballistic_data=[
         BallisticData(range_hexes=40, penetration=288, damage_class=10),
         BallisticData(range_hexes=100, penetration=288, damage_class=10),
@@ -3838,7 +4097,8 @@ ammo_40mm_heat_standard = AmmoType(
 
 ammo_40mm_he_hk = AmmoType(
     name="40×46mm HE (H&K)",
-    abbreviation="HE",
+    description="HE",
+    weight=0.51,
     ballistic_data=[
         BallisticData(range_hexes=40, penetration=2.0, damage_class=10),
         BallisticData(range_hexes=100, penetration=2.0, damage_class=10),
@@ -3856,7 +4116,8 @@ ammo_40mm_he_hk = AmmoType(
 
 ammo_40mm_he_armscor = AmmoType(
     name="40×46mm HE (Armscor)",
-    abbreviation="HE",
+    description="HE",
+    weight=0.51,
     ballistic_data=[
         BallisticData(range_hexes=40, penetration=2.0, damage_class=10),
         BallisticData(range_hexes=100, penetration=2.0, damage_class=10),
@@ -3874,7 +4135,8 @@ ammo_40mm_he_armscor = AmmoType(
 
 ammo_30mm_he_ak = AmmoType(
     name="30mm HE (VOG-17/VOG-25)",
-    abbreviation="HE",
+    description="HE",
+    weight=0.56,
     ballistic_data=[
         BallisticData(range_hexes=40, penetration=2.5, damage_class=10),
         BallisticData(range_hexes=100, penetration=2.5, damage_class=10),
@@ -3892,7 +4154,8 @@ ammo_30mm_he_ak = AmmoType(
 
 ammo_30mm_he_ags = AmmoType(
     name="30mm HE (VOG-17/VOG-25)",
-    abbreviation="HE",
+    description="HE",
+    weight=24.0,
     ballistic_data=[
         BallisticData(range_hexes=40, penetration=2.5, damage_class=10),
         BallisticData(range_hexes=100, penetration=2.5, damage_class=10),
@@ -3911,7 +4174,8 @@ ammo_30mm_he_ags = AmmoType(
 
 ammo_40mm_heat_hv = AmmoType(
     name="40×53mm HEAT",
-    abbreviation="HEAT",
+    description="HEAT",
+    weight=45.2,
     ballistic_data=[
         BallisticData(range_hexes=40, penetration=288, damage_class=10),
         BallisticData(range_hexes=100, penetration=288, damage_class=10),
@@ -3930,7 +4194,8 @@ ammo_40mm_heat_hv = AmmoType(
 
 ammo_40mm_he_hv = AmmoType(
     name="40×53mm HE",
-    abbreviation="HE",
+    description="HE",
+    weight=45.2,
     ballistic_data=[
         BallisticData(range_hexes=40, penetration=2.6, damage_class=10),
         BallisticData(range_hexes=100, penetration=2.6, damage_class=10),
@@ -3949,7 +4214,8 @@ ammo_40mm_he_hv = AmmoType(
 
 ammo_40mm_heat = AmmoType(
     name="40×46mm HEAT",
-    abbreviation="HEAT",
+    description="HEAT",
+    weight=0.51,
     ballistic_data=[
         BallisticData(range_hexes=40, penetration=288, damage_class=10),
         BallisticData(range_hexes=100, penetration=288, damage_class=10),
@@ -3968,7 +4234,8 @@ ammo_40mm_heat = AmmoType(
 
 ammo_40mm_he = AmmoType(
     name="40×46mm HE",
-    abbreviation="HE",
+    description="HE",
+    weight=0.51,
     ballistic_data=[
         BallisticData(range_hexes=40, penetration=2.1, damage_class=10),
         BallisticData(range_hexes=100, penetration=2.1, damage_class=10),
@@ -3986,7 +4253,8 @@ ammo_40mm_he = AmmoType(
 
 ammo_66mm_heat_pzf44 = AmmoType(
     name="66mm HEAT (PZF 44)",
-    abbreviation="HEAT",
+    description="HEAT",
+    weight=5.5,
     ballistic_data=[
         BallisticData(range_hexes=r, penetration=8900, damage_class=10)
         for r in [40, 100, 200, 400]
@@ -4003,7 +4271,8 @@ ammo_66mm_heat_pzf44 = AmmoType(
 
 ammo_66mm_he_pzf44 = AmmoType(
     name="66mm HE (PZF 44)",
-    abbreviation="HE",
+    description="HE",
+    weight=5.5,
     ballistic_data=[
         BallisticData(range_hexes=r, penetration=6.1, damage_class=10)
         for r in [40, 100, 200, 400]
@@ -4021,7 +4290,8 @@ ammo_66mm_he_pzf44 = AmmoType(
 
 ammo_67mm_heat_armbrust = AmmoType(
     name="67mm HEAT (Armbrust)",
-    abbreviation="HEAT",
+    description="HEAT",
+    weight=16.0,
     ballistic_data=[
         BallisticData(range_hexes=r, penetration=6600, damage_class=10)
         for r in [40, 100, 200, 400]
@@ -4038,7 +4308,8 @@ ammo_67mm_heat_armbrust = AmmoType(
 
 ammo_67mm_he_armbrust = AmmoType(
     name="67mm HE (Armbrust)",
-    abbreviation="HE",
+    description="HE",
+    weight=16.0,
     ballistic_data=[
         BallisticData(range_hexes=r, penetration=4.2, damage_class=10)
         for r in [40, 100, 200, 400]
@@ -4055,7 +4326,8 @@ ammo_67mm_he_armbrust = AmmoType(
 
 ammo_64mm_heat_rpg18 = AmmoType(
     name="64mm HEAT (RPG 18)",
-    abbreviation="HEAT",
+    description="HEAT",
+    weight=16.0,
     ballistic_data=[
         BallisticData(range_hexes=r, penetration=5900, damage_class=10)
         for r in [40, 100, 200, 400]
@@ -4072,7 +4344,8 @@ ammo_64mm_heat_rpg18 = AmmoType(
 
 ammo_85mm_heat_rpg7 = AmmoType(
     name="85mm HEAT (RPG-7V)",
-    abbreviation="HEAT",
+    description="HEAT",
+    weight=5.0,
     ballistic_data=[
         BallisticData(range_hexes=r, penetration=7200, damage_class=10)
         for r in [40, 100, 200, 400]
@@ -4089,7 +4362,8 @@ ammo_85mm_heat_rpg7 = AmmoType(
 
 ammo_85mm_he_rpg7 = AmmoType(
     name="85mm HE (RPG-7V)",
-    abbreviation="HE",
+    description="HE",
+    weight=5.0,
     ballistic_data=[
         BallisticData(range_hexes=r, penetration=8.2, damage_class=10)
         for r in [40, 100, 200, 400]
@@ -4106,7 +4380,8 @@ ammo_85mm_he_rpg7 = AmmoType(
 
 ammo_94mm_heat_law80 = AmmoType(
     name="94mm HEAT (LAW 80)",
-    abbreviation="HEAT",
+    description="HEAT",
+    weight=21.2,
     ballistic_data=[
         BallisticData(range_hexes=r, penetration=17000, damage_class=10)
         for r in [40, 100, 200, 400]
@@ -4123,7 +4398,8 @@ ammo_94mm_heat_law80 = AmmoType(
 
 ammo_66mm_heat_m72 = AmmoType(
     name="66mm HEAT (M72 A2)",
-    abbreviation="HEAT",
+    description="HEAT",
+    weight=5.2,
     ballistic_data=[
         BallisticData(range_hexes=r, penetration=6800, damage_class=10)
         for r in [40, 100, 200, 400]

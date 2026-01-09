@@ -406,6 +406,13 @@ class WeaponType(Enum):
     GRENADE_LAUNCHER = "Grenade Launcher"
 
 
+class GrenadeType(Enum):
+    """Grenade type classifications."""
+    FRAG = "Frag Grenade"
+    BLAST = "Blast Grenade"
+    ANTI_TANK = "Anti-tank Grenade"
+    DEMO_SATCHEL = "Demo Satchel"
+
 class Country(Enum):
     """Countries of weapon origin."""
     HUNGARY = "Hungary"

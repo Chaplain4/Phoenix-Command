@@ -1,7 +1,8 @@
 from dataclasses import dataclass, field
 from typing import Optional
 
-from phoenix_command.models.enums import AmmoFeedDevice, AdvancedHitLocation, ArmorMaterial, Caliber, WeaponType, Country
+from phoenix_command.models.enums import AmmoFeedDevice, AdvancedHitLocation, ArmorMaterial, Caliber, WeaponType, \
+    Country, GrenadeType
 
 
 @dataclass
@@ -23,35 +24,6 @@ class ExplosiveData:
     shrapnel_damage_class: int
     base_shrapnel_hit_chance: str
     base_concussion: int
-
-@dataclass
-class AmmoType:
-    """Ammunition type with name and ballistic characteristics at various ranges."""
-    name: str  # Full name like "5.56mm NATO FMJ" or "7.62mm AP"
-    abbreviation: str  # "FMJ", "JHP", "AP", etc.
-    ballistic_data: list[BallisticData] = field(default_factory=list)
-    explosive_data: list[ExplosiveData] = field(default_factory=list)
-    pellet_count: Optional[int] = None
-
-    def get_pen(self, range_hexes: int) -> float:
-        """Get penetration value for a given range."""
-        for i, data in enumerate(self.ballistic_data):
-            if range_hexes <= data.range_hexes:
-                return data.penetration
-            if i < len(self.ballistic_data) - 1:
-                if range_hexes < self.ballistic_data[i + 1].range_hexes:
-                    return data.penetration
-        return self.ballistic_data[-1].penetration if self.ballistic_data else 0.0
-
-    def get_dc(self, range_hexes: int) -> int:
-        """Get damage class for a given range."""
-        for i, data in enumerate(self.ballistic_data):
-            if range_hexes <= data.range_hexes:
-                return data.damage_class
-            if i < len(self.ballistic_data) - 1:
-                if range_hexes < self.ballistic_data[i + 1].range_hexes:
-                    return data.damage_class
-        return self.ballistic_data[-1].damage_class if self.ballistic_data else 0
 
 
 @dataclass
@@ -124,6 +96,33 @@ class Gear:
     weight: float  # in pounds
     description: str = field(default="", kw_only=True)
 
+
+@dataclass
+class AmmoType(Gear):
+    """Ammunition type with name and ballistic characteristics at various ranges."""
+    ballistic_data: list[BallisticData] = field(default_factory=list)
+    explosive_data: list[ExplosiveData] = field(default_factory=list)
+    pellet_count: Optional[int] = None
+
+    def get_pen(self, range_hexes: int) -> float:
+        """Get penetration value for a given range."""
+        for i, data in enumerate(self.ballistic_data):
+            if range_hexes <= data.range_hexes:
+                return data.penetration
+            if i < len(self.ballistic_data) - 1:
+                if range_hexes < self.ballistic_data[i + 1].range_hexes:
+                    return data.penetration
+        return self.ballistic_data[-1].penetration if self.ballistic_data else 0.0
+
+    def get_dc(self, range_hexes: int) -> int:
+        """Get damage class for a given range."""
+        for i, data in enumerate(self.ballistic_data):
+            if range_hexes <= data.range_hexes:
+                return data.damage_class
+            if i < len(self.ballistic_data) - 1:
+                if range_hexes < self.ballistic_data[i + 1].range_hexes:
+                    return data.damage_class
+        return self.ballistic_data[-1].damage_class if self.ballistic_data else 0
 
 @dataclass
 class ArmorLayer:
@@ -306,3 +305,13 @@ class Weapon(Gear):
             self.aim_time_modifiers = {}
         if self.ammunition_types is None:
             self.ammunition_types = []
+
+@dataclass
+class Grenade(Gear):
+    country: Country
+    grenade_type: GrenadeType
+    length: float
+    arm_time: int
+    fuse_length: int
+    range: range
+    explosive_data: list[ExplosiveData] = field(default_factory=list)
