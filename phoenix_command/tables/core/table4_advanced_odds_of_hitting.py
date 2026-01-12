@@ -302,3 +302,35 @@ class Table4AdvancedOddsOfHitting:
             max_aim = max_aim_map.get(modifier, 2)  # Default to 2 for unknown
 
         return modifier, max_aim
+
+    @classmethod
+    def get_target_size_by_alm_4f(cls, alm: float) -> float:
+        """
+        Retrieves the Target Size based on the ALM value.
+        - If alm < minimum: returns 0.0
+        - If alm > maximum: returns the maximum size (39.0)
+        - If intermediate: rounds down to the nearest lower ALM entry.
+
+        Args:
+            alm (float): The Aim Level Modifier (ALM) value.
+
+        Returns:
+            float: The Target Size based on floor-match logic.
+        """
+        # Mapping of ALM to Size from "Target Size Modifier Table / 4F"
+        table_4f_data = {
+            -15: 0.1, -10: 0.2, -7: 0.3, -5: 0.4, -3: 0.5, -2: 0.6, -1: 0.7,
+            0: 0.8, 1: 0.9, 2: 1.0, 3: 1.2, 4: 1.4, 5: 1.6, 6: 1.8, 7: 2.1,
+            8: 2.4, 9: 2.7, 10: 3.2, 11: 3.6, 12: 4.2, 13: 4.8, 14: 5.5,
+            15: 6.3, 16: 7.3, 17: 8.4, 18: 9.7, 19: 11.1, 20: 12.8, 21: 14.7,
+            22: 16.9, 23: 19.4, 24: 22.3, 25: 25.7, 26: 29.5, 27: 34.0, 28: 39.0
+        }
+        sorted_alms = sorted(table_4f_data.keys())
+        if alm < sorted_alms[0]:
+            return 0.1
+        if alm >= sorted_alms[-1]:
+            return table_4f_data[sorted_alms[-1]]
+        for table_alm in reversed(sorted_alms):
+            if alm >= table_alm:
+                return table_4f_data[table_alm]
+        return 0.1

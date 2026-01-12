@@ -81,6 +81,11 @@ class Character:
         """Knockout value = 0.5 × Will × Skill Level."""
         return int(0.5 * self.will * self.gun_combat_skill_level)
     
+    @property
+    def defensive_alm(self) -> int:
+        """Defensive Accuracy Level Modifier based on ISF."""
+        return Table1CharacterGeneration.get_defensive_alm(self.intelligence_skill_factor)
+    
     def add_gear(self, gear: Gear) -> None:
         """Add equipment to character."""
         self.equipment.append(gear)

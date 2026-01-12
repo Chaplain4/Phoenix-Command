@@ -1,7 +1,7 @@
 """Combat simulation for Phoenix Command."""
 
 import random
-from typing import Optional
+from typing import Optional, List
 
 from phoenix_command.models.character import Character
 from phoenix_command.models.enums import ShotType, TargetExposure, AccuracyModifiers, IncapacitationEffect
@@ -10,6 +10,7 @@ from phoenix_command.models.hit_result_advanced import ShotParameters, ShotResul
 from phoenix_command.tables.advanced_damage_tables.advanced_damage_calculator import AdvancedDamageCalculator
 from phoenix_command.tables.advanced_damage_tables.table_1_get_hit_location import Table1AdvancedDamageHitLocation
 from phoenix_command.tables.core.table4_advanced_odds_of_hitting import Table4AdvancedOddsOfHitting
+from phoenix_command.tables.core.table5_auto_pellet_shrapnel import Table5AutoPelletShrapnel
 from phoenix_command.tables.core.table8_healing_and_recovery import Table8HealingAndRecovery
 
 
@@ -19,10 +20,12 @@ class CombatSimulator:
     @staticmethod
     def _calculate_eal(
         shooter: Character,
+        target: Character,
         weapon: Weapon,
         range_hexes: int,
         target_exposure: TargetExposure,
-        shot_params: ShotParameters
+        shot_params: ShotParameters,
+        target_size_modifier_type: AccuracyModifiers = AccuracyModifiers.TARGET_SIZE
     ) -> int:
         """Calculate Effective Accuracy Level (EAL) for a shot."""
         max_aim_time_impulses = float('inf')
@@ -53,7 +56,7 @@ class CombatSimulator:
         stance_alm = shot_params.stance.value
         visibility_alm = shot_params.visibility.value
         target_size_alm = Table4AdvancedOddsOfHitting.get_standard_target_size_modifier_4e(
-            target_exposure, AccuracyModifiers.TARGET_SIZE
+            target_exposure, target_size_modifier_type
         )
         
         duck_alm = 0
@@ -62,7 +65,9 @@ class CombatSimulator:
         if shot_params.reflexive_duck_target:
             duck_alm -= 5
         
-        return aim_time_alm + range_alm + stance_alm + visibility_alm + movement_alm + target_size_alm + duck_alm
+        defensive_alm = target.defensive_alm
+        
+        return aim_time_alm + range_alm + stance_alm + visibility_alm + movement_alm + target_size_alm + duck_alm + defensive_alm
     
     @staticmethod
     def _determine_incapacitation(
@@ -141,12 +146,12 @@ class CombatSimulator:
         range_hexes: int,
         target_exposure: TargetExposure,
         shot_params: ShotParameters,
-        is_front_shot: bool = True
+        is_front_shot: bool
     ) -> ShotResult:
         """Simulate a single shot from shooter to target."""
         
         eal = CombatSimulator._calculate_eal(
-            shooter, weapon, range_hexes, target_exposure, shot_params
+            shooter, target, weapon, range_hexes, target_exposure, shot_params
         )
         
         odds = Table4AdvancedOddsOfHitting.get_odds_of_hitting_4g(eal, ShotType.SINGLE)
@@ -170,3 +175,81 @@ class CombatSimulator:
             recovery=recovery,
             incapacitation_time_phases=incap_time
         )
+
+    @staticmethod
+    def burst_fire(
+            shooter: Character,
+            targets: List[Character],
+            weapon: Weapon,
+            ammo: AmmoType,
+            ranges: List[int],
+            exposures: List[TargetExposure],
+            shot_params_list: List[ShotParameters],
+            is_front_shots: List[bool],
+            arc_of_fire: Optional[float] = None,
+            continuous_burst_impulses: int = 0,
+    ) -> List[List[ShotResult]]:
+
+        if not weapon.full_auto or not weapon.full_auto_rof:
+            raise ValueError("Weapon must be full auto capable")
+
+        if not (len(targets) == len(ranges) == len(exposures) == len(shot_params_list) == len(is_front_shots)):
+            raise ValueError("Input lists must have same length")
+
+        sab_penalty = (
+            continuous_burst_impulses * weapon.sustained_auto_burst
+            if continuous_burst_impulses > 0 and weapon.sustained_auto_burst
+            else 0
+        )
+
+        if arc_of_fire is None:
+            arc_of_fire = (
+                weapon.ballistic_data.get_minimum_arc(ranges[0])
+                if weapon.ballistic_data
+                else 0.4
+            )
+
+        results: List[List[ShotResult]] = []
+
+        for target, rng, exposure, shot_params, front in zip(
+                targets, ranges, exposures, shot_params_list, is_front_shots
+        ):
+            eal = CombatSimulator._calculate_eal(
+                shooter, target, weapon, rng, exposure, shot_params,
+                AccuracyModifiers.AUTO_ELEV
+            ) - sab_penalty
+
+            odds = Table4AdvancedOddsOfHitting.get_odds_of_hitting_4g(eal, ShotType.BURST)
+            roll = random.randint(0, 99)
+
+            if roll > odds:
+                results.append([ShotResult(hit=False, eal=eal, odds=odds, roll=roll)])
+                continue
+
+            hits = Table5AutoPelletShrapnel.get_fire_table_value5a(
+                arc_of_fire, weapon.full_auto_rof, 0
+            )
+
+            if hits <= 0:
+                results.append([ShotResult(hit=False, eal=eal, odds=0, roll=0)])
+                continue
+
+            target_results = []
+            for _ in range(hits):
+                dmg, effect, recovery, time = CombatSimulator._process_hit(
+                    target, ammo, rng, exposure, shot_params, front
+                )
+                target_results.append(ShotResult(
+                    hit=True,
+                    eal=eal,
+                    odds=100,
+                    roll=0,
+                    damage_result=dmg,
+                    incapacitation_effect=effect,
+                    recovery=recovery,
+                    incapacitation_time_phases=time,
+                ))
+
+            results.append(target_results)
+
+        return results

@@ -192,3 +192,49 @@ class Table1CharacterGeneration:
             raise ValueError("Combat actions must be between 1 and 24.")
 
         return mapping[combat_actions]
+
+    @staticmethod
+    def get_defensive_alm(intelligence_skill_factor: int) -> int:
+        """Returns the Defensive ALM based on Intelligence Skill Factor."""
+        if intelligence_skill_factor <= 3:
+            return 16
+        elif intelligence_skill_factor == 4:
+            return 13
+        elif intelligence_skill_factor == 5:
+            return 11
+        elif intelligence_skill_factor == 6:
+            return 10
+        elif intelligence_skill_factor == 7:
+            return 8
+        elif intelligence_skill_factor == 8:
+            return 7
+        elif intelligence_skill_factor == 9:
+            return 6
+        elif intelligence_skill_factor == 10:
+            return 5
+        elif intelligence_skill_factor == 11:
+            return 4
+        elif intelligence_skill_factor == 12:
+            return 3
+        elif 13 <= intelligence_skill_factor <= 14:
+            return 2
+        elif 15 <= intelligence_skill_factor <= 16:
+            return 1
+        elif intelligence_skill_factor == 17:
+            return 0
+        elif 18 <= intelligence_skill_factor <= 19:
+            return -1
+        elif 20 <= intelligence_skill_factor <= 22:
+            return -2
+        elif 23 <= intelligence_skill_factor <= 24:
+            return -3
+        elif 25 <= intelligence_skill_factor <= 27:
+            return -4
+        elif 28 <= intelligence_skill_factor <= 30:
+            return -5
+        elif 31 <= intelligence_skill_factor <= 34:
+            return -6
+        elif 35 <= intelligence_skill_factor <= 38:
+            return -7
+        else:  # 39+
+            return -8
