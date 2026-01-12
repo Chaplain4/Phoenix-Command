@@ -1,6 +1,13 @@
 from enum import Enum
 
 
+class TargetOrientation(Enum):
+    """Target orientation relative to shooter."""
+    FRONT_REAR = "FRONT_REAR"
+    OBLIQUE = "OBLIQUE"
+    RIGHT_SIDE = "RIGHT_SIDE"
+    LEFT_SIDE = "LEFT_SIDE"
+
 class ShooterStance(Enum):
     STANDING = 0
     KNEELING = 3

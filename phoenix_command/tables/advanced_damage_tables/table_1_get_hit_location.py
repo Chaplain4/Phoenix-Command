@@ -1,9 +1,27 @@
 import random
 
-from phoenix_command.models.enums import TargetExposure, AdvancedHitLocation
+from phoenix_command.models.enums import TargetExposure, AdvancedHitLocation, TargetOrientation
 
 
 class Table1AdvancedDamageHitLocation:
+
+    @classmethod
+    def get_hit_location(
+        cls,
+        exposure: TargetExposure,
+        orientation: TargetOrientation
+    ) -> AdvancedHitLocation:
+        """Get hit location based on target exposure and orientation."""
+        if orientation == TargetOrientation.FRONT_REAR:
+            return cls.get_hit_location_front_rear(exposure)
+        elif orientation == TargetOrientation.OBLIQUE:
+            return cls.get_hit_location_oblique(exposure)
+        elif orientation == TargetOrientation.RIGHT_SIDE:
+            return cls.get_hit_location_right_side(exposure)
+        elif orientation == TargetOrientation.LEFT_SIDE:
+            return cls.get_hit_location_left_side(exposure)
+        else:
+            return cls.get_hit_location_front_rear(exposure)
 
     @classmethod
     def get_hit_location_front_rear(cls, exposure: TargetExposure) -> AdvancedHitLocation:
