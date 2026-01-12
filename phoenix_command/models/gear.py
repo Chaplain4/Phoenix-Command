@@ -312,6 +312,6 @@ class Grenade(Gear):
     grenade_type: GrenadeType
     length: float
     arm_time: int
-    fuse_length: int
+    fuse_length: int #0 if impact fuse
     range: range
     explosive_data: list[ExplosiveData] = field(default_factory=list)
