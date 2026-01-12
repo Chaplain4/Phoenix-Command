@@ -1,14 +1,15 @@
 import random
 
-from phoenix_command.models.enums import MedicalAid
+from typing import Optional
+from phoenix_command.models.enums import MedicalAid, IncapacitationEffect
 from phoenix_command.models.recovery import Recovery
 
 
 class Table8HealingAndRecovery:
 
     @classmethod
-    def get_incapacitation_time_8b(cls, physical_damage_total: int) -> int:
-        """Return incapacitation time in phases (fully self-contained version)."""
+    def get_incapacitation_time_8b(cls, physical_damage_total: int, modifier: int = 0) -> int:
+        """Return incapacitation time in phases with optional modifier to roll."""
 
         INC_TABLE = {
             50: [4, 15, 29, 47, 73, 120],
@@ -23,7 +24,7 @@ class Table8HealingAndRecovery:
 
         row_key = max(k for k in INC_TABLE.keys() if k <= physical_damage_total)
 
-        r = random.randint(0, 9)
+        r = max(0, random.randint(0, 9) + modifier)
         if r == 0:
             col = 0
         elif 1 <= r <= 2:
@@ -108,3 +109,57 @@ class Table8HealingAndRecovery:
         }
 
         return Recovery(float(healing_days), aid_map)
+
+    @classmethod
+    def get_incapacitation_chance(cls, pd_with_shock: int, knockout_value: int) -> int:
+        """Return incapacitation chance percentage."""
+        if pd_with_shock < knockout_value / 10:
+            return 0
+        elif pd_with_shock < knockout_value:
+            return 10
+        elif pd_with_shock < knockout_value * 2:
+            return 25
+        elif pd_with_shock < knockout_value * 3:
+            return 75
+        else:
+            return 98
+
+    @classmethod
+    def get_incapacitation_effect(cls, pd_with_shock: int, knockout_value: int, effect_roll: int) -> Optional[IncapacitationEffect]:
+        """Return incapacitation effect based on damage level and roll."""
+        if pd_with_shock < knockout_value:
+            if effect_roll <= 0:
+                return IncapacitationEffect.KNOCKED_OUT
+            elif effect_roll <= 2:
+                return IncapacitationEffect.STUNNED
+            elif effect_roll <= 5:
+                return IncapacitationEffect.DAZED
+            else:
+                return IncapacitationEffect.DISORIENTED
+        elif pd_with_shock < knockout_value * 2:
+            if effect_roll <= 2:
+                return IncapacitationEffect.KNOCKED_OUT
+            elif effect_roll <= 8:
+                return IncapacitationEffect.STUNNED
+            elif effect_roll <= 16:
+                return IncapacitationEffect.DAZED
+            else:
+                return IncapacitationEffect.DISORIENTED
+        elif pd_with_shock < knockout_value * 3:
+            if effect_roll <= 13:
+                return IncapacitationEffect.KNOCKED_OUT
+            elif effect_roll <= 31:
+                return IncapacitationEffect.STUNNED
+            elif effect_roll <= 52:
+                return IncapacitationEffect.DAZED
+            else:
+                return IncapacitationEffect.DISORIENTED
+        else:
+            if effect_roll <= 26:
+                return IncapacitationEffect.KNOCKED_OUT
+            elif effect_roll <= 53:
+                return IncapacitationEffect.STUNNED
+            elif effect_roll <= 82:
+                return IncapacitationEffect.DAZED
+            else:
+                return IncapacitationEffect.DISORIENTED

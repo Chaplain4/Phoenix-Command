@@ -18,6 +18,7 @@ class Character:
 
     gun_combat_skill_level: int
 
+    physical_damage_total: int = 0
     equipment: list[Gear] = field(default_factory=list)
     
     @property
@@ -87,3 +88,7 @@ class Character:
     def remove_gear(self, gear: Gear) -> None:
         """Remove equipment from character."""
         self.equipment.remove(gear)
+    
+    def apply_damage(self, damage: int) -> None:
+        """Apply physical damage to character."""
+        self.physical_damage_total += damage

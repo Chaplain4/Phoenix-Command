@@ -8,6 +8,14 @@ class TargetOrientation(Enum):
     RIGHT_SIDE = "RIGHT_SIDE"
     LEFT_SIDE = "LEFT_SIDE"
 
+class IncapacitationEffect(Enum):
+    """Effects of incapacitation from wounds."""
+    NONE = "None"
+    DISORIENTED = "Disoriented"
+    DAZED = "Dazed"
+    STUNNED = "Stunned"
+    KNOCKED_OUT = "Knocked Out"
+
 class ShooterStance(Enum):
     STANDING = 0
     KNEELING = 3

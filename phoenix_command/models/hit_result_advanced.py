@@ -1,7 +1,8 @@
 from dataclasses import dataclass, field
 from typing import List, Optional
 
-from phoenix_command.models.enums import AdvancedHitLocation, ShooterStance, VisibilityModifier4C, TargetOrientation
+from phoenix_command.models.enums import AdvancedHitLocation, ShooterStance, VisibilityModifier4C, TargetOrientation, IncapacitationEffect
+from phoenix_command.models.recovery import Recovery
 
 
 @dataclass
@@ -36,3 +37,6 @@ class ShotResult:
     odds: int
     roll: int
     damage_result: Optional[DamageResult] = None
+    incapacitation_effect: Optional[IncapacitationEffect] = None
+    recovery: Optional[Recovery] = None
+    incapacitation_time_phases: Optional[int] = None
