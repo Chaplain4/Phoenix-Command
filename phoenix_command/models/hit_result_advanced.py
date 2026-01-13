@@ -1,8 +1,11 @@
 from dataclasses import dataclass, field
-from typing import List, Optional
+from typing import List, Optional, TYPE_CHECKING
 
-from phoenix_command.models.enums import AdvancedHitLocation, SituationStanceModifier4B, VisibilityModifier4C, TargetOrientation, IncapacitationEffect
+from phoenix_command.models.enums import AdvancedHitLocation, SituationStanceModifier4B, VisibilityModifier4C, TargetOrientation, IncapacitationEffect, TargetExposure
 from phoenix_command.models.recovery import Recovery
+
+if TYPE_CHECKING:
+    from phoenix_command.models.character import Character
 
 
 @dataclass
@@ -40,3 +43,23 @@ class ShotResult:
     incapacitation_effect: Optional[IncapacitationEffect] = None
     recovery: Optional[Recovery] = None
     incapacitation_time_phases: Optional[int] = None
+
+
+@dataclass
+class BurstElevationResult:
+    """Result of burst elevation check."""
+    hit: bool
+    eal: int
+    odds: int
+    roll: int
+    hits: int
+
+
+@dataclass
+class TargetGroup:
+    """Group of targets with their parameters."""
+    targets: List['Character']
+    ranges: List[int]
+    exposures: List[TargetExposure]
+    shot_params_list: List[ShotParameters]
+    is_front_shots: List[bool]
