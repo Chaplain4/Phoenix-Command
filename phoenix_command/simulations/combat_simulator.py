@@ -5,7 +5,7 @@ from typing import Optional, List
 
 from phoenix_command.models.character import Character
 from phoenix_command.models.enums import ShotType, TargetExposure, AccuracyModifiers, IncapacitationEffect
-from phoenix_command.models.gear import Weapon, AmmoType
+from phoenix_command.models.gear import Weapon, AmmoType, BallisticData
 from phoenix_command.models.hit_result_advanced import ShotParameters, ShotResult
 from phoenix_command.tables.advanced_damage_tables.advanced_damage_calculator import AdvancedDamageCalculator
 from phoenix_command.tables.advanced_damage_tables.table_1_get_hit_location import Table1AdvancedDamageHitLocation
@@ -53,8 +53,10 @@ class CombatSimulator:
         
         aim_time_alm = weapon.aim_time_modifiers.get(effective_aim_time_ac, 0) + shooter.skill_accuracy_level
         range_alm = Table4AdvancedOddsOfHitting.get_accuracy_level_modifier_by_range_4a(range_hexes)
-        stance_alm = shot_params.stance.value
-        visibility_alm = shot_params.visibility.value
+        
+        situation_stance_alm = sum(mod.value for mod in shot_params.situation_stance_modifiers)
+        visibility_alm = sum(mod.value for mod in shot_params.visibility_modifiers)
+        
         target_size_alm = Table4AdvancedOddsOfHitting.get_standard_target_size_modifier_4e(
             target_exposure, target_size_modifier_type
         )
@@ -67,7 +69,7 @@ class CombatSimulator:
         
         defensive_alm = target.defensive_alm
         
-        return aim_time_alm + range_alm + stance_alm + visibility_alm + movement_alm + target_size_alm + duck_alm + defensive_alm
+        return aim_time_alm + range_alm + situation_stance_alm + visibility_alm + movement_alm + target_size_alm + duck_alm + defensive_alm
     
     @staticmethod
     def _determine_incapacitation(
@@ -234,7 +236,108 @@ class CombatSimulator:
             raise ValueError("Weapon ballistic_data must have minimum_arc")
         
         return sab_penalty, min_arc
-    
+
+    @staticmethod
+    def _get_shotgun_data_at_range(
+            ammo: AmmoType, range_hexes: int
+    ) -> BallisticData:
+        """Get shotgun SALM, BPHC, and PR at given range."""
+        for data in ammo.ballistic_data:
+            if range_hexes <= data.range_hexes:
+                return data
+        raise ValueError("Range exceeds ammo ballistic_data")
+
+    @staticmethod
+    def _validate_shotgun_inputs(
+        targets: List[Character],
+        ranges: List[int],
+        exposures: List[TargetExposure],
+        shot_params_list: List[ShotParameters],
+        is_front_shots: List[bool]
+    ) -> None:
+        """Validate shotgun shot inputs."""
+        if not (len(targets) == len(ranges) == len(exposures) == len(shot_params_list) == len(is_front_shots)):
+            raise ValueError("Input lists must have same length")
+
+    @staticmethod
+    def _calculate_shotgun_eal(
+        shooter: Character,
+        target: Character,
+        weapon: Weapon,
+        range_hexes: int,
+        exposure: TargetExposure,
+        shot_params: ShotParameters,
+        salm: int
+    ) -> int:
+        """Calculate EAL for shotgun using larger of Target Size ALM or SALM."""
+        target_size_alm = Table4AdvancedOddsOfHitting.get_standard_target_size_modifier_4e(
+            exposure, AccuracyModifiers.TARGET_SIZE
+        )
+        eal_base = CombatSimulator._calculate_eal(
+            shooter, target, weapon, range_hexes, exposure, shot_params
+        )
+        return eal_base - target_size_alm + max(target_size_alm, salm)
+
+    @staticmethod
+    def _calculate_pellet_hits_per_target(
+        targets: List[Character],
+        ranges: List[int],
+        exposures: List[TargetExposure],
+        shot_params_list: List[ShotParameters],
+        is_front_shots: List[bool],
+        bphc: str
+    ) -> List[tuple[int, int, Character, int, TargetExposure, ShotParameters, bool, int]]:
+        """Calculate pellet hits for each target in pattern."""
+        pellet_hits_data = []
+        
+        for idx, (target, rng, exposure, params, front) in enumerate(zip(targets, ranges, exposures, shot_params_list, is_front_shots)):
+            target_size_modifier = Table4AdvancedOddsOfHitting.get_standard_target_size_modifier_4e(
+                exposure, AccuracyModifiers.AUTO_WIDTH
+            )
+            
+            if bphc.startswith('*'):
+                base_hits = int(bphc[1:])
+                pellet_hits = Table5AutoPelletShrapnel.get_shrapnel_pellet_hits_5a(
+                    base_hits, True, target_size_modifier
+                )
+                pellet_roll = 100
+            else:
+                pellet_hits = Table5AutoPelletShrapnel.get_shrapnel_pellet_hits_5a(
+                    int(bphc), False, target_size_modifier
+                )
+                pellet_roll = random.randint(0, 99)
+            
+            if pellet_hits > 0:
+                pellet_hits_data.append((idx, pellet_hits, target, rng, exposure, params, front, pellet_roll))
+        
+        return pellet_hits_data
+
+    @staticmethod
+    def _redistribute_pellets(
+        pellet_hits_data: List[tuple[int, int, Character, int, TargetExposure, ShotParameters, bool, int]],
+        pellet_count: int
+    ) -> List[tuple[int, int, Character, int, TargetExposure, ShotParameters, bool, int]]:
+        """Redistribute pellet hits if total exceeds pellet count."""
+        total_hits = sum(h[1] for h in pellet_hits_data)
+        if total_hits <= pellet_count:
+            return pellet_hits_data
+        
+        redistributed = []
+        remaining = pellet_count
+        for i, (idx, hits, target, rng, exposure, params, front, pellet_roll) in enumerate(pellet_hits_data):
+            if i == len(pellet_hits_data) - 1:
+                new_hits = remaining
+            else:
+                new_hits = max(1, int(pellet_count * (hits / total_hits)))
+                remaining -= new_hits
+            redistributed.append((idx, new_hits, target, rng, exposure, params, front, pellet_roll))
+        return redistributed
+
+    @staticmethod
+    def get_shotgun_pattern_radius(ammo: AmmoType, range_hexes: int) -> Optional[float]:
+        """Get shotgun pattern radius at given range."""
+        return CombatSimulator._get_shotgun_data_at_range(ammo, range_hexes).pattern_radius
+
     @staticmethod
     def single_shot(
         shooter: Character,
@@ -273,6 +376,66 @@ class CombatSimulator:
             recovery=recovery,
             incapacitation_time_phases=incap_time
         )
+
+    @staticmethod
+    def shotgun_shot(
+        shooter: Character,
+        targets: List[Character],
+        weapon: Weapon,
+        ammo: AmmoType,
+        ranges: List[int],
+        exposures: List[TargetExposure],
+        shot_params_list: List[ShotParameters],
+        is_front_shots: List[bool],
+        primary_target_idx: int = 0
+    ) -> List[List[ShotResult]]:
+        """Simulate shotgun shot with pattern hitting multiple targets."""
+        CombatSimulator._validate_shotgun_inputs(targets, ranges, exposures, shot_params_list, is_front_shots)
+        
+        primary_range = ranges[primary_target_idx]
+        primary_exposure = exposures[primary_target_idx]
+        primary_params = shot_params_list[primary_target_idx]
+        
+        data = CombatSimulator._get_shotgun_data_at_range(ammo, primary_range)
+
+        if data.shotgun_accuracy_level_modifier is None:
+            result = CombatSimulator.single_shot(
+                shooter, targets[primary_target_idx], weapon, ammo,
+                primary_range, primary_exposure, primary_params, is_front_shots[primary_target_idx]
+            )
+            return [[result] if i == primary_target_idx else [] for i in range(len(targets))]
+
+        eal = CombatSimulator._calculate_shotgun_eal(
+            shooter, targets[primary_target_idx], weapon, primary_range,
+            primary_exposure, primary_params, data.shotgun_accuracy_level_modifier
+        )
+        
+        odds = Table4AdvancedOddsOfHitting.get_odds_of_hitting_4g(eal, ShotType.SINGLE)
+        roll = random.randint(0, 99)
+        
+        if roll > odds:
+            return [[ShotResult(hit=False, eal=eal, odds=odds, roll=roll)] if i == primary_target_idx else [] for i in range(len(targets))]
+
+        if data.base_pellet_hit_chance is None:
+            pellet_hits_data = []
+        else:
+            pellet_hits_data = CombatSimulator._calculate_pellet_hits_per_target(
+                targets, ranges, exposures, shot_params_list, is_front_shots, data.base_pellet_hit_chance
+            )
+
+        if ammo.pellet_count is not None and pellet_hits_data:
+            pellet_hits_data = CombatSimulator._redistribute_pellets(pellet_hits_data, ammo.pellet_count)
+
+        results = [[] for _ in range(len(targets))]
+        for idx, hits, target, rng, exposure, params, front, _ in pellet_hits_data:
+            results[idx] = CombatSimulator._process_target_hits(
+                target, ammo, rng, exposure, params, front, hits
+            )
+        
+        if not results[primary_target_idx]:
+            results[primary_target_idx] = [ShotResult(hit=False, eal=eal, odds=odds, roll=roll)]
+        
+        return results
 
     @staticmethod
     def burst_fire(

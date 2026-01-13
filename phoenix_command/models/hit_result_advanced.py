@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from typing import List, Optional
 
-from phoenix_command.models.enums import AdvancedHitLocation, ShooterStance, VisibilityModifier4C, TargetOrientation, IncapacitationEffect
+from phoenix_command.models.enums import AdvancedHitLocation, SituationStanceModifier4B, VisibilityModifier4C, TargetOrientation, IncapacitationEffect
 from phoenix_command.models.recovery import Recovery
 
 
@@ -20,8 +20,8 @@ class DamageResult:
 class ShotParameters:
     """Parameters for a single shot."""
     aim_time_ac: int
-    stance: ShooterStance
-    visibility: VisibilityModifier4C
+    situation_stance_modifiers: List[SituationStanceModifier4B]
+    visibility_modifiers: List[VisibilityModifier4C]
     target_orientation: TargetOrientation = TargetOrientation.FRONT_REAR
     shooter_speed_hex_per_impulse: float = 0.0
     target_speed_hex_per_impulse: float = 0.0
