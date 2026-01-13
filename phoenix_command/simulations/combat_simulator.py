@@ -138,6 +138,104 @@ class CombatSimulator:
         return damage_result, incap_effect, recovery, incap_time
     
     @staticmethod
+    def _redistribute_hits_by_eal(
+        shooter: Character,
+        weapon: Weapon,
+        target_hits: List[tuple[int, int, Character, int, TargetExposure, ShotParameters, bool]],
+        sab_penalty: int
+    ) -> List[tuple[int, int, Character, int, TargetExposure, ShotParameters, bool]]:
+        """Redistribute hits proportionally by EAL if total exceeds weapon ROF."""
+        total_hits = sum(h[1] for h in target_hits)
+        if total_hits <= weapon.full_auto_rof:
+            return target_hits
+        
+        # Calculate EAL for each target
+        target_eals = []
+        for idx, hits, target, rng, exposure, shot_params, front in target_hits:
+            eal = CombatSimulator._calculate_eal(
+                shooter, target, weapon, rng, exposure, shot_params,
+                AccuracyModifiers.AUTO_ELEV
+            ) - sab_penalty
+            target_eals.append(eal)
+        
+        # Redistribute hits proportionally to EAL
+        total_eal = sum(target_eals)
+        redistributed_hits = []
+        remaining_rof = weapon.full_auto_rof
+        
+        for i, (eal, (idx, hits, target, rng, exposure, shot_params, front)) in enumerate(zip(target_eals, target_hits)):
+            if i == len(target_eals) - 1:
+                new_hits = remaining_rof
+            else:
+                proportion = eal / total_eal if total_eal > 0 else 1.0 / len(target_eals)
+                new_hits = max(1, int(weapon.full_auto_rof * proportion))
+                remaining_rof -= new_hits
+            
+            redistributed_hits.append((idx, new_hits, target, rng, exposure, shot_params, front))
+        
+        return redistributed_hits
+    
+    @staticmethod
+    def _process_target_hits(
+        target: Character,
+        ammo: AmmoType,
+        range_hexes: int,
+        exposure: TargetExposure,
+        shot_params: ShotParameters,
+        is_front_shot: bool,
+        hits: int
+    ) -> List[ShotResult]:
+        """Process multiple hits on a single target."""
+        target_results = []
+        for _ in range(hits):
+            dmg, effect, recovery, time = CombatSimulator._process_hit(
+                target, ammo, range_hexes, exposure, shot_params, is_front_shot
+            )
+            target_results.append(ShotResult(
+                hit=True,
+                eal=0,
+                odds=100,
+                roll=0,
+                damage_result=dmg,
+                incapacitation_effect=effect,
+                recovery=recovery,
+                incapacitation_time_phases=time,
+            ))
+        return target_results
+    
+    @staticmethod
+    def _validate_burst_fire_inputs(
+        weapon: Weapon,
+        targets: List[Character],
+        ranges: List[int],
+        exposures: List[TargetExposure],
+        shot_params_list: List[ShotParameters],
+        is_front_shots: List[bool],
+        continuous_burst_impulses: int
+    ) -> tuple[int, float]:
+        """Validate burst fire inputs and return SAB penalty and arc of fire."""
+        if not weapon.full_auto or not weapon.full_auto_rof:
+            raise ValueError("Weapon must be full auto capable")
+        
+        if not weapon.ballistic_data:
+            raise ValueError("Weapon must have ballistic_data for burst fire")
+        
+        if not (len(targets) == len(ranges) == len(exposures) == len(shot_params_list) == len(is_front_shots)):
+            raise ValueError("Input lists must have same length")
+        
+        sab_penalty = 0
+        if continuous_burst_impulses > 0:
+            if not weapon.sustained_auto_burst:
+                raise ValueError("Weapon must have sustained_auto_burst for continuous fire")
+            sab_penalty = continuous_burst_impulses * weapon.sustained_auto_burst
+        
+        min_arc = weapon.ballistic_data.get_minimum_arc(ranges[0])
+        if min_arc is None:
+            raise ValueError("Weapon ballistic_data must have minimum_arc")
+        
+        return sab_penalty, min_arc
+    
+    @staticmethod
     def single_shot(
         shooter: Character,
         target: Character,
@@ -190,30 +288,21 @@ class CombatSimulator:
             continuous_burst_impulses: int = 0,
     ) -> List[List[ShotResult]]:
 
-        if not weapon.full_auto or not weapon.full_auto_rof:
-            raise ValueError("Weapon must be full auto capable")
-
-        if not (len(targets) == len(ranges) == len(exposures) == len(shot_params_list) == len(is_front_shots)):
-            raise ValueError("Input lists must have same length")
-
-        sab_penalty = (
-            continuous_burst_impulses * weapon.sustained_auto_burst
-            if continuous_burst_impulses > 0 and weapon.sustained_auto_burst
-            else 0
+        sab_penalty, min_arc = CombatSimulator._validate_burst_fire_inputs(
+            weapon, targets, ranges, exposures, shot_params_list, is_front_shots, continuous_burst_impulses
         )
-
+        
         if arc_of_fire is None:
-            arc_of_fire = (
-                weapon.ballistic_data.get_minimum_arc(ranges[0])
-                if weapon.ballistic_data
-                else 0.4
-            )
+            arc_of_fire = min_arc
 
         results: List[List[ShotResult]] = []
+        
+        # Collect hits per target with their EAL for proportional distribution
+        target_hits: List[tuple[int, int, Character, int, TargetExposure, ShotParameters, bool]] = []  # (index, hits, target, range, exposure, params, is_front)
 
-        for target, rng, exposure, shot_params, front in zip(
+        for idx, (target, rng, exposure, shot_params, front) in enumerate(zip(
                 targets, ranges, exposures, shot_params_list, is_front_shots
-        ):
+        )):
             eal = CombatSimulator._calculate_eal(
                 shooter, target, weapon, rng, exposure, shot_params,
                 AccuracyModifiers.AUTO_ELEV
@@ -225,31 +314,38 @@ class CombatSimulator:
             if roll > odds:
                 results.append([ShotResult(hit=False, eal=eal, odds=odds, roll=roll)])
                 continue
-
+            
+            auto_width_modifier = Table4AdvancedOddsOfHitting.get_standard_target_size_modifier_4e(
+                exposure, AccuracyModifiers.AUTO_WIDTH
+            )
+            
             hits = Table5AutoPelletShrapnel.get_fire_table_value5a(
-                arc_of_fire, weapon.full_auto_rof, 0
+                arc_of_fire, weapon.full_auto_rof, auto_width_modifier
             )
 
             if hits <= 0:
                 results.append([ShotResult(hit=False, eal=eal, odds=0, roll=0)])
-                continue
-
-            target_results = []
-            for _ in range(hits):
-                dmg, effect, recovery, time = CombatSimulator._process_hit(
-                    target, ammo, rng, exposure, shot_params, front
-                )
-                target_results.append(ShotResult(
-                    hit=True,
-                    eal=eal,
-                    odds=100,
-                    roll=0,
-                    damage_result=dmg,
-                    incapacitation_effect=effect,
-                    recovery=recovery,
-                    incapacitation_time_phases=time,
-                ))
-
-            results.append(target_results)
-
-        return results
+            else:
+                target_hits.append((idx, hits, target, rng, exposure, shot_params, front))
+        
+        # Redistribute hits if total exceeds ROF
+        target_hits = CombatSimulator._redistribute_hits_by_eal(
+            shooter, weapon, target_hits, sab_penalty
+        )
+        
+        # Process hits for each target
+        results_dict = {}
+        for idx, hits, target, rng, exposure, shot_params, front in target_hits:
+            results_dict[idx] = CombatSimulator._process_target_hits(
+                target, ammo, rng, exposure, shot_params, front, hits
+            )
+        
+        # Build final results list in original order
+        final_results = []
+        for idx in range(len(targets)):
+            if idx in results_dict:
+                final_results.append(results_dict[idx])
+            elif idx < len(results):
+                final_results.append(results[idx])
+        
+        return final_results
