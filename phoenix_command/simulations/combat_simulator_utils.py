@@ -251,9 +251,10 @@ class CombatSimulatorUtils:
         epen = pen
         penetrated = True
         blunt_pf = 0
-        
+        total_protection = 0
         for item in target.equipment:
             if isinstance(item, Armor):
+                total_protection += item.get_protection(location, is_front_shot).get_total_protection()
                 protection_data = item.get_protection(location, is_front_shot)
                 if protection_data.get_total_protection() > 0:
                     penetrated, remaining_pen = item.process_hit(location, is_front_shot, pen)
@@ -271,6 +272,8 @@ class CombatSimulatorUtils:
             damage_result.damage = blunt_damage
         else:
             epen = max(0.0, epen)
+            if total_protection > epen:
+                dc = 1
             damage_result = AdvancedDamageCalculator.calculate_damage(
                 location=location, dc=dc, epen=epen, is_front=is_front_shot
             )

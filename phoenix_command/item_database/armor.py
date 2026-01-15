@@ -45,6 +45,7 @@ iotv_back_soft = [
     AdvancedHitLocation.INTESTINES_SPINE_SIDE,
     AdvancedHitLocation.INTESTINES_SIDE,
 ]
+
 side_plate_locs = [
     AdvancedHitLocation.LUNG_SIDE,
     AdvancedHitLocation.LUNG_RIB_SIDE,
@@ -103,9 +104,9 @@ leba_locs = [
 
 
 iotv = Armor(
-    name="IOTV Gen IV (w/ ESAPI)",
+    name="IOTV Gen I (w/ ESAPI)",
     weight=30.0,
-    description="Базовый жилет IOTV с передней и задней плитами ESAPI. NIJ IV / ГОСТ 6.",
+    description="Base IOTV vest with front and back ESAPI plates. NIJ IV / GOST 6.",
     protection={
         **{(loc, True): ArmorProtectionData(layers=[
             ArmorLayer(ArmorMaterial.KEVLAR, protection_factor=4, blunt_protection_factor=1),
@@ -129,11 +130,67 @@ iotv = Armor(
 collar = Armor(
     name="IOTV Collar & Throat",
     weight=1.5,
-    description="Защита шеи и горла. NIJ IIIA / ГОСТ 2.",
+    description="Neck and throat protection. NIJ IIIA / GOST 2.",
     protection={
-        # Защищает и спереди и сзади одинаково
         **{(loc, is_front): ArmorProtectionData(layers=[
-            ArmorLayer(ArmorMaterial.KEVLAR, protection_factor=6, blunt_protection_factor=4)
+            ArmorLayer(ArmorMaterial.KEVLAR, protection_factor=4, blunt_protection_factor=1)
+        ]) for loc in collar_locs for is_front in [True, False]}
+    }
+)
+
+side_plates = Armor(
+    name="IOTV Side Plate Carriers",
+    weight=6.0,
+    description="Side ballistic plates for torso protection. NIJ IIIa / GOST 2.",
+    protection={
+        **{(loc, is_front): ArmorProtectionData(layers=[
+            ArmorLayer(ArmorMaterial.KEVLAR, protection_factor=4, blunt_protection_factor=1),
+            ArmorLayer(ArmorMaterial.UHMWPE, protection_factor=6, blunt_protection_factor=5)
+        ]) for loc in side_plate_locs for is_front in [True, False]}
+    }
+)
+
+groin_protector = Armor(
+    name="Groin Protector",
+    weight=2.0,
+    description="Pelvic and groin area protection. NIJ IIIA / GOST 2.",
+    protection={
+        **{(loc, is_front): ArmorProtectionData(layers=[
+            ArmorLayer(ArmorMaterial.KEVLAR, protection_factor=4, blunt_protection_factor=1),
+            ArmorLayer(ArmorMaterial.UHMWPE, protection_factor=6, blunt_protection_factor=5)
+        ]) for loc in groin_locs for is_front in [True, False]}
+    }
+)
+
+daps = Armor(
+    name="DAPS (Deltoid and Axillary Protection System)",
+    weight=3.0,
+    description="Shoulder and upper arm protection (pauldrons). NIJ IIIA / GOST 2.",
+    protection={
+        **{(loc, is_front): ArmorProtectionData(layers=[
+            ArmorLayer(ArmorMaterial.KEVLAR, protection_factor=4, blunt_protection_factor=1),
+        ]) for loc in daps_locs for is_front in [True, False]}
+    }
+)
+
+upper_legs_protector = Armor(
+    name="Upper Legs Protector",
+    weight=4.0,
+    description="Thigh protection (kevlar shorts). NIJ IIIA / GOST 2.",
+    protection={
+        **{(loc, is_front): ArmorProtectionData(layers=[
+            ArmorLayer(ArmorMaterial.KEVLAR, protection_factor=4, blunt_protection_factor=1),
+        ]) for loc in upper_legs_locs for is_front in [True, False]}
+    }
+)
+
+leba = Armor(
+    name="LEBA (Lower Extremity Body Armor)",
+    weight=5.0,
+    description="Lower leg and shin protection. NIJ IIIA / GOST 2.",
+    protection={
+        **{(loc, is_front): ArmorProtectionData(layers=[
+            ArmorLayer(ArmorMaterial.KEVLAR, protection_factor=4, blunt_protection_factor=1),
         ]) for loc in leba_locs for is_front in [True, False]}
     }
 )
@@ -141,4 +198,9 @@ collar = Armor(
 armor = [
     iotv,
     collar,
+    side_plates,
+    groin_protector,
+    daps,
+    upper_legs_protector,
+    leba,
 ]

@@ -5,11 +5,6 @@ class Table9ABluntDamage:
 
     @classmethod
     def get_blunt_damage(cls, location: AdvancedHitLocation, bpf: int, pen: float) -> int:
-        """
-        Возвращает числовой blunt damage на основе таблицы 9A.
-        1H = 100, 2H = 200 ...
-        1K = 1000, 2K = 2000 ...
-        """
         if bpf > 10:
             return 0
         bpf = max(1, bpf)
