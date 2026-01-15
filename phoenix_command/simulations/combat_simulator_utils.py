@@ -5,10 +5,11 @@ from typing import Optional, List
 
 from phoenix_command.models.character import Character
 from phoenix_command.models.enums import ShotType, TargetExposure, AccuracyModifiers, IncapacitationEffect
-from phoenix_command.models.gear import Weapon, AmmoType, BallisticData
+from phoenix_command.models.gear import Weapon, AmmoType, BallisticData, Armor
 from phoenix_command.models.hit_result_advanced import ShotParameters, ShotResult, TargetGroup, BurstElevationResult
 from phoenix_command.tables.advanced_damage_tables.advanced_damage_calculator import AdvancedDamageCalculator
 from phoenix_command.tables.advanced_damage_tables.table_1_get_hit_location import Table1AdvancedDamageHitLocation
+from phoenix_command.tables.advanced_rules.blunt_damage import Table9ABluntDamage
 from phoenix_command.tables.core.table4_advanced_odds_of_hitting import Table4AdvancedOddsOfHitting
 from phoenix_command.tables.core.table5_auto_pellet_shrapnel import Table5AutoPelletShrapnel
 from phoenix_command.tables.core.table8_healing_and_recovery import Table8HealingAndRecovery
@@ -244,20 +245,36 @@ class CombatSimulatorUtils:
             target_exposure, shot_params.target_orientation
         )
         
-        armor_key = (location, is_front_shot)
-        armor_pf = 0
-        if armor_key in target.armor_protection:
-            armor_pf, _ = target.armor_protection[armor_key]
-        
         pen = ammo.get_pen(range_hexes)
         dc = ammo.get_dc(range_hexes)
-        epen = max(0.0, pen - armor_pf)
         
-        damage_result = AdvancedDamageCalculator.calculate_damage(
-            location=location, dc=dc, epen=epen, is_front=is_front_shot
-        )
+        epen = pen
+        penetrated = True
+        blunt_pf = 0
         
-        target.apply_damage(damage_result.damage)
+        for item in target.equipment:
+            if isinstance(item, Armor):
+                protection_data = item.get_protection(location, is_front_shot)
+                if protection_data.get_total_protection() > 0:
+                    penetrated, remaining_pen = item.process_hit(location, is_front_shot, pen)
+                    epen = remaining_pen
+                    if not penetrated:
+                        blunt_pf = protection_data.get_total_blunt_protection()
+                    break
+        
+        if not penetrated:
+            blunt_damage = Table9ABluntDamage.get_blunt_damage(location, blunt_pf, pen)
+            target.apply_damage(blunt_damage)
+            damage_result = AdvancedDamageCalculator.calculate_damage(
+                location=location, dc=0, epen=0.0, is_front=is_front_shot
+            )
+            damage_result.damage = blunt_damage
+        else:
+            epen = max(0.0, epen)
+            damage_result = AdvancedDamageCalculator.calculate_damage(
+                location=location, dc=dc, epen=epen, is_front=is_front_shot
+            )
+            target.apply_damage(damage_result.damage)
         
         incap_effect = CombatSimulatorUtils.determine_incapacitation(
             target, target.physical_damage_total, damage_result.shock

@@ -309,3 +309,41 @@ class Table3HitLocationAndDamage:
             wound_type=wound_type,
             hit_location=location,
         )
+
+    @classmethod
+    def get_effective_pf(cls, armor_pf: int, roll: int) -> int:
+        table_data = {
+            2: [2, 2, 3, 3, 3, 3, 4, 4, 4, 5],
+            4: [4, 5, 5, 6, 6, 7, 7, 8, 9, 10],
+            6: [7, 7, 8, 9, 9, 10, 11, 12, 13, 15],
+            10: [11, 12, 13, 14, 16, 17, 19, 20, 22, 24],
+            16: [17, 19, 21, 23, 25, 27, 30, 32, 35, 39],
+            20: [22, 24, 26, 28, 31, 34, 37, 41, 44, 48],
+            30: [33, 36, 39, 43, 47, 51, 56, 61, 66, 73],
+            40: [44, 48, 52, 57, 62, 68, 74, 81, 89, 97],
+            50: [55, 60, 65, 71, 78, 85, 93, 101, 111, 121],
+            60: [66, 72, 78, 85, 93, 102, 111, 122, 133, 145],
+            70: [76, 84, 91, 100, 109, 119, 130, 142, 155, 169],
+            80: [87, 95, 104, 114, 124, 136, 148, 162, 177, 194],
+            90: [98, 107, 117, 128, 140, 153, 167, 182, 199, 218],
+            100: [109, 119, 130, 142, 156, 170, 186, 203, 221, 242],
+            120: [131, 143, 156, 171, 187, 204, 223, 243, 266, 290],
+            140: [153, 167, 182, 199, 218, 238, 260, 284, 310, 339],
+            180: [197, 215, 235, 256, 280, 306, 334, 365, 399, 435],
+            200: [218, 239, 261, 285, 311, 340, 371, 405, 443, 484]
+        }
+        sorted_keys = sorted(table_data.keys())
+        max_pf = sorted_keys[-1]
+        min_pf = sorted_keys[0]
+        if armor_pf >= max_pf:
+            return table_data[max_pf][roll]
+        if armor_pf <= min_pf:
+            return armor_pf
+        if armor_pf in table_data:
+            return table_data[armor_pf][roll]
+        x0 = max([k for k in sorted_keys if k < armor_pf])
+        x1 = min([k for k in sorted_keys if k > armor_pf])
+        y0 = table_data[x0][roll]
+        y1 = table_data[x1][roll]
+        effective_pf = y0 + (armor_pf - x0) * (y1 - y0) / (x1 - x0)
+        return round(effective_pf)

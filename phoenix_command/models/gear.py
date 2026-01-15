@@ -1,8 +1,10 @@
+import random
 from dataclasses import dataclass, field
 from typing import Optional
 
 from phoenix_command.models.enums import AmmoFeedDevice, AdvancedHitLocation, ArmorMaterial, Caliber, WeaponType, \
     Country, GrenadeType
+from phoenix_command.tables.core.table3_hit_location_and_damage import Table3HitLocationAndDamage
 
 
 @dataclass
@@ -165,15 +167,19 @@ class ArmorProtectionData:
         return sum(layer.effective_blunt_protection for layer in self.layers)
 
     def process_hit(self, penetration: float) -> tuple[bool, int]:
+        roll = random.randint(0, 9)
         remaining_pen = penetration
+        
         for layer in self.layers:
             if remaining_pen <= 0:
                 break
-            layer_protection = layer.effective_protection
-
-            if remaining_pen > layer_protection:
+            
+            base_protection = layer.effective_protection
+            effective_protection = Table3HitLocationAndDamage.get_effective_pf(base_protection, roll)
+            
+            if remaining_pen > effective_protection:
                 layer.apply_penetration_damage()
-                remaining_pen -= layer_protection
+                remaining_pen -= effective_protection
             else:
                 layer.apply_hit_damage()
                 remaining_pen = 0
@@ -202,6 +208,30 @@ class Armor(Gear):
     """Armor protection gear with location-specific protection factors."""
     protection: dict[tuple[AdvancedHitLocation, bool], ArmorProtectionData] = field(default_factory=dict)  # (HitLocation, is_front) -> protection data
 
+    @property
+    def gost_class(self) -> Optional[int]:
+        """Get GOST armor class based on maximum protection."""
+        max_pf = max((data.get_total_protection() for data in self.protection.values()), default=0)
+        if max_pf >= 29: return 6
+        if max_pf >= 19: return 5
+        if max_pf >= 17: return 4
+        if max_pf >= 12: return 3
+        if max_pf >= 2.5: return 2
+        if max_pf >= 1.1: return 1
+        return None
+
+    @property
+    def nij_class(self) -> Optional[str]:
+        """Get NIJ armor class based on maximum protection."""
+        max_pf = max((data.get_total_protection() for data in self.protection.values()), default=0)
+        if max_pf >= 27: return "4"
+        if max_pf >= 17: return "3"
+        if max_pf >= 4.4: return "3a"
+        if max_pf >= 2.9: return "2"
+        if max_pf >= 1.5: return "2a"
+        if max_pf >= 0.9: return "1"
+        return None
+
     def add_protection(
         self,
         location: AdvancedHitLocation,
@@ -210,16 +240,7 @@ class Armor(Gear):
         protection_factor: int,
         blunt_protection_factor: int
     ) -> None:
-        """
-        Add armor protection layer to a specific location.
-
-        Args:
-            location: Hit location to protect
-            is_front: True for front protection, False for rear
-            material: Armor material
-            protection_factor: Ballistic protection value
-            blunt_protection_factor: Blunt trauma protection value
-        """
+        """Add armor protection layer to a specific location."""
         key = (location, is_front)
         self.protection.setdefault(key, ArmorProtectionData()) \
             .add_layer(material, protection_factor, blunt_protection_factor)
@@ -245,31 +266,17 @@ class Armor(Gear):
         is_front: bool,
         penetration: float
     ) -> tuple[bool, int]:
-        """
-        Process a hit against this armor at a specific location.
-
-        Args:
-            location: Hit location
-            is_front: True for front hit, False for rear
-            penetration: Penetration value of the projectile
-
-        Returns:
-            tuple: (penetrated: bool, remaining_penetration: int)
-        """
+        """Process a hit against this armor at a specific location."""
         protection_data = self.get_protection(location, is_front)
         if protection_data is None:
-            # No armor at this location
             return True, int(penetration)
 
-        # Process hit normally
         penetrated, remaining_pen = protection_data.process_hit(penetration)
 
-        # Check if any layer has global degradation material
         for layer in protection_data.layers:
             if layer.material.global_degradation:
-                # Apply degradation to all armor pieces with this material
                 self.apply_global_degradation(layer.material, penetrated)
-                break  # Only apply once per hit
+                break
 
         return penetrated, remaining_pen
 
