@@ -1,6 +1,7 @@
 """Combat simulation for Phoenix Command."""
 
 import random
+from collections import defaultdict
 from typing import Optional, List
 
 from phoenix_command.models.character import Character
@@ -8,6 +9,7 @@ from phoenix_command.models.enums import ShotType, TargetExposure
 from phoenix_command.models.gear import Weapon, AmmoType
 from phoenix_command.models.hit_result_advanced import ShotParameters, ShotResult, TargetGroup
 from phoenix_command.simulations.combat_simulator_utils import CombatSimulatorUtils
+from phoenix_command.tables.advanced_rules.three_round_burst import ThreeRoundBurstTable
 from phoenix_command.tables.core.table4_advanced_odds_of_hitting import Table4AdvancedOddsOfHitting
 
 
@@ -116,10 +118,8 @@ class CombatSimulator:
         continuous_burst_impulses: int = 0
     ) -> dict[Character, list[ShotResult]]:
         """Simulate automatic burst fire."""
-        from collections import defaultdict
-        
         sab_penalty, arc_of_fire = CombatSimulatorUtils.setup_burst_fire(
-            weapon, target_group, continuous_burst_impulses, arc_of_fire
+            weapon, target_group, continuous_burst_impulses, arc_of_fire, shooter
         )
 
         target_hits: List[tuple[int, int, Character, int, TargetExposure, ShotParameters, bool]] = []
@@ -149,6 +149,46 @@ class CombatSimulator:
         return dict(character_results)
 
     @staticmethod
+    def three_round_burst(
+        shooter: Character,
+        target: Character,
+        weapon: Weapon,
+        ammo: AmmoType,
+        range_hexes: int,
+        target_exposure: TargetExposure,
+        shot_params: ShotParameters,
+        is_front_shot: bool
+    ) -> List[ShotResult]:
+        """Simulate a three round burst from shooter to target."""
+        if not weapon.ballistic_data:
+            raise ValueError("Weapon must have ballistic_data for three round burst")
+        rb3_value = weapon.ballistic_data.get_three_round_burst(range_hexes)
+        if rb3_value is None:
+            raise ValueError("Weapon must have three_round_burst data")
+        eal = CombatSimulatorUtils.calculate_eal(
+            shooter, target, weapon, range_hexes, target_exposure, shot_params
+        )
+        hits = ThreeRoundBurstTable.calculate_3rb_hits(eal, rb3_value)
+        if hits == 0:
+            return [ShotResult(hit=False, eal=eal, odds=0, roll=0)]
+        results = []
+        for _ in range(hits):
+            damage_result, incap_effect, recovery, incap_time = CombatSimulatorUtils.process_hit(
+                target, ammo, range_hexes, target_exposure, shot_params, is_front_shot
+            )
+            results.append(ShotResult(
+                hit=True,
+                eal=eal,
+                odds=100,
+                roll=0,
+                damage_result=damage_result,
+                incapacitation_effect=incap_effect,
+                recovery=recovery,
+                incapacitation_time_phases=incap_time
+            ))
+        return results
+
+    @staticmethod
     def shotgun_burst_fire(
             shooter: Character,
             weapon: Weapon,
@@ -159,10 +199,8 @@ class CombatSimulator:
             continuous_burst_impulses: int = 0,
     ) -> dict[Character, list[ShotResult]]:
         """Simulate fully automatic shotgun burst with patterns hitting multiple targets."""
-        from collections import defaultdict
-        
         sab_penalty, arc_of_fire = CombatSimulatorUtils.setup_burst_fire(
-            weapon, primary_target_group, continuous_burst_impulses, arc_of_fire
+            weapon, primary_target_group, continuous_burst_impulses, arc_of_fire, shooter
         )
 
         pattern_hits: list[

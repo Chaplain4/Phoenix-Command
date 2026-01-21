@@ -77,12 +77,12 @@ class WeaponBallisticData:
             None,
         )
 
-    def get_ballistic_accuracy(self, range_hexes: int) -> float:
+    def get_ballistic_accuracy(self, range_hexes: int) -> int:
         return self._get_value_by_range(
             self.ballistic_accuracy,
             range_hexes,
-            0.0,
-        ) or 0.0
+            0,
+        ) or 0
 
     def get_time_of_flight(self, range_hexes: int) -> float:
         return self._get_value_by_range(

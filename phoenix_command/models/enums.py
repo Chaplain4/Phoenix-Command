@@ -16,6 +16,12 @@ class IncapacitationEffect(Enum):
     STUNNED = "Stunned"
     KNOCKED_OUT = "Knocked Out"
 
+class ShooterStance(Enum):
+    STANDING = 0
+    KNEELING = 3
+    PRONE = 6
+    HIP_FIRING = -6
+
 class TargetExposure(Enum):
     """
     Enum for Target Exposure types (Table 4E rows).

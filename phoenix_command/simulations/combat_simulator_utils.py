@@ -4,7 +4,7 @@ import random
 from typing import Optional, List
 
 from phoenix_command.models.character import Character
-from phoenix_command.models.enums import ShotType, TargetExposure, AccuracyModifiers, IncapacitationEffect
+from phoenix_command.models.enums import ShotType, TargetExposure, AccuracyModifiers, IncapacitationEffect, SituationStanceModifier4B
 from phoenix_command.models.gear import Weapon, AmmoType, BallisticData, Armor
 from phoenix_command.models.hit_result_advanced import ShotParameters, ShotResult, TargetGroup, BurstElevationResult
 from phoenix_command.tables.advanced_damage_tables.advanced_damage_calculator import AdvancedDamageCalculator
@@ -148,14 +148,35 @@ class CombatSimulatorUtils:
             weapon: Weapon,
             target_group: TargetGroup,
             continuous_burst_impulses: int,
-            arc_of_fire: Optional[float]
+            arc_of_fire: Optional[float],
+            shooter: Character
     ) -> tuple[int, float]:
         """Setup burst fire parameters and return SAB penalty and arc of fire."""
+        from phoenix_command.tables.advanced_rules.effective_min_arc import EffectiveMinimumArc
+        
         sab_penalty, min_arc = CombatSimulatorUtils.validate_burst_fire_inputs(
             weapon, target_group.targets, target_group.ranges, target_group.exposures,
             target_group.shot_params_list, target_group.is_front_shots, continuous_burst_impulses
         )
-        return sab_penalty, arc_of_fire if arc_of_fire is not None else min_arc
+        
+        shot_params = target_group.shot_params_list[0]
+
+        stance = None
+        for mod in shot_params.situation_stance_modifiers:
+            if mod in (SituationStanceModifier4B.STANDING, SituationStanceModifier4B.STANDING_AND_BRACED,
+                      SituationStanceModifier4B.KNEELING, SituationStanceModifier4B.KNEELING_AND_BRACED,
+                      SituationStanceModifier4B.PRONE, SituationStanceModifier4B.PRONE_AND_BRACED,
+                      SituationStanceModifier4B.FIRING_FROM_THE_HIP):
+                stance = mod
+                break
+        
+        is_moving = shot_params.shooter_speed_hex_per_impulse > 0
+        
+        effective_ma = EffectiveMinimumArc().get_effective_ma(
+            min_arc, weapon.weapon_type, stance, shooter.strength, False, is_moving
+        )
+        
+        return sab_penalty, max(arc_of_fire, effective_ma) if arc_of_fire is not None else effective_ma
     
     @staticmethod
     def calculate_eal(
@@ -197,10 +218,6 @@ class CombatSimulatorUtils:
         situation_stance_alm = sum(mod.value for mod in shot_params.situation_stance_modifiers)
         visibility_alm = sum(mod.value for mod in shot_params.visibility_modifiers)
         
-        target_size_alm = Table4AdvancedOddsOfHitting.get_standard_target_size_modifier_4e(
-            target_exposure, target_size_modifier_type
-        )
-        
         duck_alm = 0
         if shot_params.reflexive_duck_shooter:
             duck_alm -= 10
@@ -208,8 +225,18 @@ class CombatSimulatorUtils:
             duck_alm -= 5
         
         defensive_alm = target.defensive_alm
+
+        alm_sum = aim_time_alm + range_alm + situation_stance_alm + visibility_alm + movement_alm + duck_alm + defensive_alm
+
+        ba = weapon.ballistic_data.get_ballistic_accuracy(range_hexes) if weapon.ballistic_data else float('inf')
+
+        effective_alm = min(ba, alm_sum)
+
+        target_size_alm = Table4AdvancedOddsOfHitting.get_standard_target_size_modifier_4e(
+            target_exposure, target_size_modifier_type
+        )
         
-        return aim_time_alm + range_alm + situation_stance_alm + visibility_alm + movement_alm + target_size_alm + duck_alm + defensive_alm
+        return effective_alm + target_size_alm
     
     @staticmethod
     def determine_incapacitation(
