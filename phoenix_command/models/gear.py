@@ -126,32 +126,64 @@ class AmmoType(Gear):
                     return data.damage_class
         return self.ballistic_data[-1].damage_class if self.ballistic_data else 0
 
-    def get_base_shrapnel_hit_chance(self, range_hexes: int) -> Optional[str]:
+    def get_base_shrapnel_hit_chance(self, range_hexes: int | None) -> Optional[str]:
         """Get base shrapnel hit chance for a given range from burst."""
-        for data in self.explosive_data:
-            if data.range_hexes is None or range_hexes <= data.range_hexes:
+        if range_hexes is None:
+            return self.explosive_data[0].base_shrapnel_hit_chance if self.explosive_data else None
+
+        for i, data in enumerate(self.explosive_data):
+            if data.range_hexes is None:
+                continue
+            if range_hexes <= data.range_hexes:
                 return data.base_shrapnel_hit_chance
+            if i < len(self.explosive_data) - 1:
+                if range_hexes < self.explosive_data[i + 1].range_hexes:
+                    return data.base_shrapnel_hit_chance
         return self.explosive_data[-1].base_shrapnel_hit_chance if self.explosive_data else None
 
-    def get_explosion_pen(self, range_hexes: int) -> float:
+    def get_explosion_pen(self, range_hexes: int | None) -> float:
         """Get shrapnel penetration for a given range from burst."""
-        for data in self.explosive_data:
-            if data.range_hexes is None or range_hexes <= data.range_hexes:
+        if range_hexes is None:
+            return self.explosive_data[0].shrapnel_penetration if self.explosive_data else 0.0
+
+        for i, data in enumerate(self.explosive_data):
+            if data.range_hexes is None:
+                continue
+            if range_hexes <= data.range_hexes:
                 return data.shrapnel_penetration
+            if i < len(self.explosive_data) - 1:
+                if range_hexes < self.explosive_data[i + 1].range_hexes:
+                    return data.shrapnel_penetration
         return self.explosive_data[-1].shrapnel_penetration if self.explosive_data else 0.0
 
-    def get_explosion_dc(self, range_hexes: int) -> int:
+    def get_explosion_dc(self, range_hexes: int | None) -> int:
         """Get shrapnel damage class for a given range from burst."""
-        for data in self.explosive_data:
-            if data.range_hexes is None or range_hexes <= data.range_hexes:
+        if range_hexes is None:
+            return self.explosive_data[0].shrapnel_damage_class if self.explosive_data else 0
+
+        for i, data in enumerate(self.explosive_data):
+            if data.range_hexes is None:
+                continue
+            if range_hexes <= data.range_hexes:
                 return data.shrapnel_damage_class
+            if i < len(self.explosive_data) - 1:
+                if range_hexes < self.explosive_data[i + 1].range_hexes:
+                    return data.shrapnel_damage_class
         return self.explosive_data[-1].shrapnel_damage_class if self.explosive_data else 0
 
-    def get_base_concussion(self, range_hexes: int) -> Optional[int]:
+    def get_base_concussion(self, range_hexes: int | None) -> Optional[int]:
         """Get base concussion damage for a given range from burst."""
-        for data in self.explosive_data:
-            if data.range_hexes is None or range_hexes <= data.range_hexes:
+        if range_hexes is None:
+            return self.explosive_data[0].base_concussion if self.explosive_data else None
+
+        for i, data in enumerate(self.explosive_data):
+            if data.range_hexes is None:
+                continue
+            if range_hexes <= data.range_hexes:
                 return data.base_concussion
+            if i < len(self.explosive_data) - 1:
+                if range_hexes < self.explosive_data[i + 1].range_hexes:
+                    return data.base_concussion
         return self.explosive_data[-1].base_concussion if self.explosive_data else None
 
 @dataclass

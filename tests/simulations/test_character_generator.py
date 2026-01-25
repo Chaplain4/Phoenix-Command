@@ -1,10 +1,8 @@
 """Tests for character generation."""
 
-import pytest
-
-from phoenix_command.item_database.weapons import WEAPONS_LIST, uzi, ammo_9mm_uzi_fmj
-from phoenix_command.simulations.character_generator import CharacterGenerator
+from phoenix_command.item_database.weapons import uzi, ammo_9mm_uzi_fmj
 from phoenix_command.models.gear import Gear
+from phoenix_command.simulations.character_generator import CharacterGenerator
 
 
 def test_generate_character_with_fixed_characteristics():
