@@ -334,3 +334,29 @@ class Table4AdvancedOddsOfHitting:
             if alm >= table_alm:
                 return table_4f_data[table_alm]
         return 0.1
+
+    @classmethod
+    def get_thrown_grenade_aim_alm_4h(cls, aim_time_ac: int) -> int:
+        """
+        Returns aim time ALM for thrown grenades.
+
+        Args:
+            aim_time_ac: Aim time in action counts
+
+        Returns:
+            Aim time ALM modifier
+        """
+        table = [
+            (1, -26),
+            (2, -18),
+            (3, -14),
+            (4, -12),
+            (6, -11),
+            (8, -10),
+        ]
+
+        for max_ac, alm in table:
+            if aim_time_ac <= max_ac:
+                return alm
+
+        return -10

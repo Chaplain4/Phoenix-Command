@@ -428,6 +428,17 @@ class GrenadeType(Enum):
     ANTI_TANK = "Anti-tank Grenade"
     DEMO_SATCHEL = "Demo Satchel"
 
+class BlastModifier(Enum):
+    """Blast modifier for target environment."""
+    UNDERWATER = 10.0
+    IN_SMALL_ROOM = 5.0
+    IN_OPEN_TRENCH = 3.0
+    IN_THE_OPEN = 1.0
+    PRONE = 0.75
+    UNDER_PARTIAL_COVER = 0.5
+    IN_COMBAT_SUIT = 0.25
+    BEHIND_SOLID_COVER = 0.0
+
 class Country(Enum):
     """Countries of weapon origin."""
     HUNGARY = "Hungary"

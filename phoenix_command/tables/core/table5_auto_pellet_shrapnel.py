@@ -145,3 +145,37 @@ class Table5AutoPelletShrapnel:
         else:
             rand = random.randint(0, 99)
             return 1 if rand < final_value else 0
+
+    @classmethod
+    def get_scatter_distance_5c(cls, sa_difference: int) -> int:
+        """
+        Returns scatter distance in hexes based on difference in SA (Skill Accuracy).
+        
+        Args:
+            sa_difference: Difference in SA (1-28)
+            
+        Returns:
+            Scatter distance in hexes
+        """
+        table = [
+            (7, 1),
+            (11, 2),
+            (13, 3),
+            (15, 4),
+            (17, 5),
+            (19, 6),
+            (21, 8),
+            (22, 10),
+            (23, 12),
+            (24, 14),
+            (25, 16),
+            (26, 19),
+            (27, 21),
+            (28, 25),
+        ]
+        
+        for max_sa, scatter in table:
+            if sa_difference <= max_sa:
+                return scatter
+        
+        return 25

@@ -63,3 +63,28 @@ class TargetGroup:
     exposures: List[TargetExposure]
     shot_params_list: List[ShotParameters]
     is_front_shots: List[bool]
+
+
+@dataclass
+class ExplosiveShotResult:
+    """Result of explosive weapon or grenade shot."""
+    hit: bool
+    eal: int
+    odds: int
+    roll: int
+    scatter_hexes: int = 0
+    is_long: bool = True
+
+
+@dataclass
+class ExplosiveDamageResult:
+    """Result of explosive damage to a single target."""
+    target: 'Character'
+    shrapnel_hits: int
+    shrapnel_damage: int
+    concussion_damage: int
+    total_damage: int
+    damage_results: List[DamageResult] = field(default_factory=list)
+    incapacitation_effect: Optional[IncapacitationEffect] = None
+    recovery: Optional[Recovery] = None
+    incapacitation_time_phases: Optional[int] = None

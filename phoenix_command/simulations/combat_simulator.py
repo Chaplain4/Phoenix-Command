@@ -5,12 +5,14 @@ from collections import defaultdict
 from typing import Optional, List
 
 from phoenix_command.models.character import Character
-from phoenix_command.models.enums import ShotType, TargetExposure
+from phoenix_command.models.enums import ShotType, TargetExposure, ExplosiveTarget, SituationStanceModifier4B
 from phoenix_command.models.gear import Weapon, AmmoType
-from phoenix_command.models.hit_result_advanced import ShotParameters, ShotResult, TargetGroup
+from phoenix_command.models.hit_result_advanced import ShotParameters, ShotResult, TargetGroup, ExplosiveShotResult
 from phoenix_command.simulations.combat_simulator_utils import CombatSimulatorUtils
+from phoenix_command.tables.advanced_rules.effective_min_arc import EffectiveMinimumArc
 from phoenix_command.tables.advanced_rules.three_round_burst import ThreeRoundBurstTable
 from phoenix_command.tables.core.table4_advanced_odds_of_hitting import Table4AdvancedOddsOfHitting
+from phoenix_command.tables.core.table5_auto_pellet_shrapnel import Table5AutoPelletShrapnel
 
 
 class CombatSimulator:
@@ -252,3 +254,164 @@ class CombatSimulator:
                     character_results[char].extend(results)
 
         return dict(character_results)
+
+    @staticmethod
+    def explosive_weapon_shot(
+        shooter: Character,
+        weapon: Weapon,
+        ammo: AmmoType,
+        range_hexes: int,
+        target: ExplosiveTarget,
+        shot_params: ShotParameters
+    ) -> ExplosiveShotResult:
+        """Simulate explosive weapon shot at hex, window, or door."""
+        target_size_alm = target.value
+        
+        eal = CombatSimulatorUtils.calculate_explosive_eal(
+            shooter, weapon, range_hexes, target_size_alm, shot_params
+        )
+        
+        odds = Table4AdvancedOddsOfHitting.get_odds_of_hitting_4g(eal, ShotType.SINGLE)
+        roll = random.randint(0, 99)
+        
+        if roll <= odds:
+            return ExplosiveShotResult(hit=True, eal=eal, odds=odds, roll=roll, scatter_hexes=0)
+        
+        eal_diff = 0
+        for test_eal in range(eal + 1, 29):
+            test_odds = Table4AdvancedOddsOfHitting.get_odds_of_hitting_4g(test_eal, ShotType.SINGLE)
+            if test_odds > roll:
+                eal_diff = test_eal - eal
+                break
+        
+        scatter_hexes = Table5AutoPelletShrapnel.get_scatter_distance_5c(eal_diff)
+        
+        if scatter_hexes == 1:
+            is_long = random.randint(1, 6) > 3
+        else:
+            is_long = random.randint(0, 9) >= 5
+        
+        return ExplosiveShotResult(
+            hit=False, eal=eal, odds=odds, roll=roll,
+            scatter_hexes=scatter_hexes, is_long=is_long
+        )
+
+    @staticmethod
+    def thrown_grenade(
+        shooter: Character,
+        range_hexes: int,
+        target: ExplosiveTarget,
+        aim_time_ac: int,
+        situation_stance_modifiers: List,
+        visibility_modifiers: List
+    ) -> ExplosiveShotResult:
+        """Simulate thrown grenade at hex, window, or door."""
+        target_size_alm = target.value
+        aim_alm = Table4AdvancedOddsOfHitting.get_thrown_grenade_aim_alm_4h(aim_time_ac)
+        
+        eal = CombatSimulatorUtils.calculate_grenade_eal(
+            shooter, range_hexes, target_size_alm, aim_alm,
+            situation_stance_modifiers, visibility_modifiers
+        )
+        
+        odds = Table4AdvancedOddsOfHitting.get_odds_of_hitting_4g(eal, ShotType.SINGLE)
+        roll = random.randint(0, 99)
+        
+        if roll <= odds:
+            return ExplosiveShotResult(hit=True, eal=eal, odds=odds, roll=roll, scatter_hexes=0)
+        
+        eal_diff = 0
+        for test_eal in range(eal + 1, 29):
+            test_odds = Table4AdvancedOddsOfHitting.get_odds_of_hitting_4g(test_eal, ShotType.SINGLE)
+            if test_odds > roll:
+                eal_diff = test_eal - eal
+                break
+        
+        scatter_hexes = Table5AutoPelletShrapnel.get_scatter_distance_5c(eal_diff)
+
+        is_long = random.randint(0, 9) >= 5
+        
+        return ExplosiveShotResult(
+            hit=False, eal=eal, odds=odds, roll=roll,
+            scatter_hexes=scatter_hexes, is_long=is_long
+        )
+
+    @staticmethod
+    def automatic_grenade_launcher_burst(
+        shooter: Character,
+        weapon: Weapon,
+        range_hexes: int,
+        target: ExplosiveTarget,
+        shot_params: ShotParameters,
+        arc_of_fire: Optional[float] = None,
+        continuous_burst_impulses: int = 0
+    ) -> List[ExplosiveShotResult]:
+        """Simulate automatic grenade launcher burst."""
+        
+        sab_penalty = 0
+        if continuous_burst_impulses > 0:
+            if not weapon.sustained_auto_burst:
+                raise ValueError("Weapon must have sustained_auto_burst")
+            sab_penalty = continuous_burst_impulses * weapon.sustained_auto_burst
+        
+        min_arc = weapon.ballistic_data.get_minimum_arc(range_hexes)
+        if min_arc is None:
+            raise ValueError("Weapon must have minimum_arc")
+        
+        stance = None
+        for mod in shot_params.situation_stance_modifiers:
+            if mod in (SituationStanceModifier4B.STANDING, SituationStanceModifier4B.STANDING_AND_BRACED,
+                      SituationStanceModifier4B.KNEELING, SituationStanceModifier4B.KNEELING_AND_BRACED,
+                      SituationStanceModifier4B.PRONE, SituationStanceModifier4B.PRONE_AND_BRACED,
+                      SituationStanceModifier4B.FIRING_FROM_THE_HIP):
+                stance = mod
+                break
+        
+        is_moving = shot_params.shooter_speed_hex_per_impulse > 0
+        
+        effective_ma = EffectiveMinimumArc().get_effective_ma(
+            min_arc, weapon.weapon_type, stance, shooter.strength, False, is_moving
+        )
+        
+        final_arc = max(arc_of_fire, effective_ma) if arc_of_fire is not None else effective_ma
+        
+        target_size_alm = target.value
+        eal = CombatSimulatorUtils.calculate_explosive_eal(
+            shooter, weapon, range_hexes, target_size_alm, shot_params
+        ) - sab_penalty
+        
+        odds = Table4AdvancedOddsOfHitting.get_odds_of_hitting_4g(eal, ShotType.BURST)
+        roll = random.randint(0, 99)
+        
+        if roll > odds:
+            return [ExplosiveShotResult(hit=False, eal=eal, odds=odds, roll=roll, scatter_hexes=0)]
+        
+        hits = Table5AutoPelletShrapnel.get_fire_table_value5a(
+            final_arc, weapon.full_auto_rof, 0
+        )
+        
+        results = []
+
+        is_long = random.randint(0, 9) >= 5
+
+        for _ in range(hits):
+            hit_roll = random.randint(0, 99)
+            if hit_roll <= odds:
+                results.append(ExplosiveShotResult(hit=True, eal=eal, odds=odds, roll=hit_roll, scatter_hexes=0))
+            else:
+                eal_diff = 0
+                for test_eal in range(eal + 1, 29):
+                    test_odds = Table4AdvancedOddsOfHitting.get_odds_of_hitting_4g(test_eal, ShotType.SINGLE)
+                    if test_odds > hit_roll:
+                        eal_diff = test_eal - eal
+                        break
+                
+                scatter_hexes = Table5AutoPelletShrapnel.get_scatter_distance_5c(eal_diff)
+                
+
+                results.append(ExplosiveShotResult(
+                    hit=False, eal=eal, odds=odds, roll=hit_roll,
+                    scatter_hexes=scatter_hexes, is_long=is_long
+                ))
+        
+        return results

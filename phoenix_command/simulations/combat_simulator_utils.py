@@ -493,3 +493,63 @@ class CombatSimulatorUtils:
             redistributed.append((idx, new_hits, target, rng, exposure, params, front, pellet_roll))
         return redistributed
 
+    @staticmethod
+    def calculate_explosive_eal(
+        shooter: Character,
+        weapon: Weapon,
+        range_hexes: int,
+        target_size_alm: int,
+        shot_params: ShotParameters
+    ) -> int:
+        """Calculate EAL for explosive weapon."""
+        max_aim_time_impulses = float('inf')
+        movement_alm = 0
+        
+        if shot_params.shooter_speed_hex_per_impulse > 0:
+            shooter_movement_alm, max_aim_time_impulses = Table4AdvancedOddsOfHitting.get_movement_alm_and_max_aim_time_4d(
+                shot_params.shooter_speed_hex_per_impulse, range_hexes
+            )
+            movement_alm += shooter_movement_alm
+            max_aim_time_impulses = min(max_aim_time_impulses, 1.0)
+        
+        effective_aim_time_ac = shot_params.aim_time_ac
+        if max_aim_time_impulses < float('inf'):
+            max_ac_per_impulse = max(shooter.impulses)
+            max_aim_time_ac = int(max_aim_time_impulses * max_ac_per_impulse)
+            effective_aim_time_ac = min(shot_params.aim_time_ac, max_aim_time_ac)
+        
+        aim_time_alm = weapon.aim_time_modifiers.get(effective_aim_time_ac, 0) + shooter.skill_accuracy_level
+        range_alm = Table4AdvancedOddsOfHitting.get_accuracy_level_modifier_by_range_4a(range_hexes)
+        
+        situation_stance_alm = sum(mod.value for mod in shot_params.situation_stance_modifiers)
+        visibility_alm = sum(mod.value for mod in shot_params.visibility_modifiers)
+        
+        duck_alm = 0
+        if shot_params.reflexive_duck_shooter:
+            duck_alm -= 10
+        
+        alm_sum = aim_time_alm + range_alm + situation_stance_alm + visibility_alm + movement_alm + duck_alm
+        
+        ba = weapon.ballistic_data.get_ballistic_accuracy(range_hexes) if weapon.ballistic_data else float('inf')
+        effective_alm = min(ba, alm_sum)
+        
+        return effective_alm + target_size_alm
+
+    @staticmethod
+    def calculate_grenade_eal(
+        shooter: Character,
+        range_hexes: int,
+        target_size_alm: int,
+        aim_alm: int,
+        situation_stance_modifiers: List,
+        visibility_modifiers: List
+    ) -> int:
+        """Calculate EAL for thrown grenade."""
+        range_alm = Table4AdvancedOddsOfHitting.get_accuracy_level_modifier_by_range_4a(range_hexes)
+        situation_stance_alm = sum(mod.value for mod in situation_stance_modifiers)
+        visibility_alm = sum(mod.value for mod in visibility_modifiers)
+        
+        alm_sum = aim_alm + shooter.skill_accuracy_level + range_alm + situation_stance_alm + visibility_alm
+        
+        return alm_sum + target_size_alm
+

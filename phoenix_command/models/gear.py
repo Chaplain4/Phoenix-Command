@@ -126,6 +126,34 @@ class AmmoType(Gear):
                     return data.damage_class
         return self.ballistic_data[-1].damage_class if self.ballistic_data else 0
 
+    def get_base_shrapnel_hit_chance(self, range_hexes: int) -> Optional[str]:
+        """Get base shrapnel hit chance for a given range from burst."""
+        for data in self.explosive_data:
+            if data.range_hexes is None or range_hexes <= data.range_hexes:
+                return data.base_shrapnel_hit_chance
+        return self.explosive_data[-1].base_shrapnel_hit_chance if self.explosive_data else None
+
+    def get_explosion_pen(self, range_hexes: int) -> float:
+        """Get shrapnel penetration for a given range from burst."""
+        for data in self.explosive_data:
+            if data.range_hexes is None or range_hexes <= data.range_hexes:
+                return data.shrapnel_penetration
+        return self.explosive_data[-1].shrapnel_penetration if self.explosive_data else 0.0
+
+    def get_explosion_dc(self, range_hexes: int) -> int:
+        """Get shrapnel damage class for a given range from burst."""
+        for data in self.explosive_data:
+            if data.range_hexes is None or range_hexes <= data.range_hexes:
+                return data.shrapnel_damage_class
+        return self.explosive_data[-1].shrapnel_damage_class if self.explosive_data else 0
+
+    def get_base_concussion(self, range_hexes: int) -> Optional[int]:
+        """Get base concussion damage for a given range from burst."""
+        for data in self.explosive_data:
+            if data.range_hexes is None or range_hexes <= data.range_hexes:
+                return data.base_concussion
+        return self.explosive_data[-1].base_concussion if self.explosive_data else None
+
 @dataclass
 class ArmorLayer:
     """Single layer of armor protection."""
