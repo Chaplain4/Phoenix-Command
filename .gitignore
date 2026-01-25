@@ -1,6 +1,9 @@
 # Amazon Q
 .amazonq/
 
+# Project rules (AI context)
+.project_rules.md
+
 # Virtual environment
 .venv/
 venv/

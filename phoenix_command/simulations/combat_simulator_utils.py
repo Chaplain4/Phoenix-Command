@@ -4,9 +4,9 @@ import random
 from typing import Optional, List
 
 from phoenix_command.models.character import Character
-from phoenix_command.models.enums import ShotType, TargetExposure, AccuracyModifiers, IncapacitationEffect, SituationStanceModifier4B
+from phoenix_command.models.enums import ShotType, TargetExposure, AccuracyModifiers, IncapacitationEffect, SituationStanceModifier4B, BlastModifier, AdvancedHitLocation
 from phoenix_command.models.gear import Weapon, AmmoType, BallisticData, Armor
-from phoenix_command.models.hit_result_advanced import ShotParameters, ShotResult, TargetGroup, BurstElevationResult
+from phoenix_command.models.hit_result_advanced import ShotParameters, ShotResult, TargetGroup, BurstElevationResult, DamageResult
 from phoenix_command.tables.advanced_damage_tables.advanced_damage_calculator import AdvancedDamageCalculator
 from phoenix_command.tables.advanced_damage_tables.table_1_get_hit_location import Table1AdvancedDamageHitLocation
 from phoenix_command.tables.advanced_rules.blunt_damage import Table9ABluntDamage
@@ -553,3 +553,171 @@ class CombatSimulatorUtils:
         
         return alm_sum + target_size_alm
 
+    @staticmethod
+    def process_shrapnel_hits(
+        target: Character,
+        ammo: AmmoType,
+        range_from_burst: int,
+        exposure: TargetExposure,
+        shot_params: ShotParameters,
+        is_front_shot: bool,
+        bshc: str
+    ) -> List[ShotResult]:
+        """
+        Process shrapnel hits from explosion.
+        """
+        target_size_modifier = Table4AdvancedOddsOfHitting.get_standard_target_size_modifier_4e(
+            exposure, AccuracyModifiers.AUTO_WIDTH
+        )
+        if bshc.startswith('*'):
+            base_hits = int(bshc[1:])
+            is_guaranteed = True
+        else:
+            base_hits = int(bshc)
+            is_guaranteed = False
+
+        # Calculate shrapnel hits using Table 5A
+        shrapnel_hits = Table5AutoPelletShrapnel.get_shrapnel_pellet_hits_5a(
+            base_hits, is_guaranteed, target_size_modifier
+        )
+
+        if shrapnel_hits == 0:
+            return []
+
+        # Get shrapnel PEN and DC from explosive_data
+        pen = ammo.get_explosion_pen(range_from_burst)
+        dc = ammo.get_explosion_dc(range_from_burst)
+
+        results = []
+        for _ in range(shrapnel_hits):
+            # Get hit location
+            location = Table1AdvancedDamageHitLocation.get_hit_location(
+                exposure, shot_params.target_orientation
+            )
+
+            # Process armor
+            epen = pen
+            penetrated = True
+            blunt_pf = 0
+            total_protection = 0
+
+            for item in target.equipment:
+                if isinstance(item, Armor):
+                    protection_data = item.get_protection(location, is_front_shot)
+                    if protection_data and protection_data.get_total_protection() > 0:
+                        total_protection += protection_data.get_total_protection()
+                        penetrated, remaining_pen = item.process_hit(location, is_front_shot, pen)
+                        epen = remaining_pen
+                        if not penetrated:
+                            blunt_pf = protection_data.get_total_blunt_protection()
+                        break
+
+            # Calculate damage
+            if not penetrated:
+                blunt_damage = Table9ABluntDamage.get_blunt_damage(location, blunt_pf, pen)
+                target.apply_damage(blunt_damage)
+                damage_result = DamageResult(location=location, damage=blunt_damage)
+            else:
+                epen = max(0.0, epen)
+                effective_dc = 1 if total_protection > epen else dc
+                damage_result = AdvancedDamageCalculator.calculate_damage(
+                    location=location, dc=effective_dc, epen=epen, is_front=is_front_shot
+                )
+                target.apply_damage(damage_result.damage)
+
+            # Determine incapacitation
+            incap_effect = CombatSimulatorUtils.determine_incapacitation(
+                target, target.physical_damage_total, damage_result.shock
+            )
+
+            recovery = Table8HealingAndRecovery.get_critical_time_period_and_recovery_chance_8a(
+                target.physical_damage_total, target.health
+            )
+
+            incap_time = None
+            if incap_effect:
+                modifier = 0
+                if incap_effect == IncapacitationEffect.DAZED:
+                    modifier = -1
+                elif incap_effect == IncapacitationEffect.DISORIENTED:
+                    modifier = -2
+                incap_time = Table8HealingAndRecovery.get_incapacitation_time_8b(
+                    target.physical_damage_total, modifier
+                )
+
+            results.append(ShotResult(
+                hit=True,
+                eal=0,
+                odds=base_hits if not is_guaranteed else 100,
+                roll=0,
+                damage_result=damage_result,
+                incapacitation_effect=incap_effect,
+                recovery=recovery,
+                incapacitation_time_phases=incap_time
+            ))
+
+        return results
+
+    @staticmethod
+    def process_concussion_damage(
+        target: Character,
+        base_concussion: int,
+        blast_modifiers: List[BlastModifier]
+    ) -> Optional[ShotResult]:
+        """
+        Process concussion damage from explosion.
+        """
+        if base_concussion <= 0:
+            return None
+
+        # Calculate total blast modifier (multiply all modifiers together)
+        total_modifier = 1.0
+        for modifier in blast_modifiers:
+            total_modifier *= modifier.value
+
+        # Calculate concussion damage
+        concussion_damage = int(base_concussion * total_modifier)
+
+        if concussion_damage <= 0:
+            return None
+
+        # Apply damage to target
+        target.apply_damage(concussion_damage)
+
+        # Create damage result with MISS location (concussion has no specific hit location)
+        damage_result = DamageResult(
+            location=AdvancedHitLocation.MISS,
+            damage=concussion_damage,
+            shock=0
+        )
+
+        # Determine incapacitation from concussion
+        incap_effect = CombatSimulatorUtils.determine_incapacitation(
+            target, target.physical_damage_total, 0
+        )
+
+        recovery = Table8HealingAndRecovery.get_critical_time_period_and_recovery_chance_8a(
+            target.physical_damage_total, target.health
+        )
+
+        incap_time = None
+        if incap_effect:
+            modifier = 0
+            if incap_effect == IncapacitationEffect.DAZED:
+                modifier = -1
+            elif incap_effect == IncapacitationEffect.DISORIENTED:
+                modifier = -2
+            incap_time = Table8HealingAndRecovery.get_incapacitation_time_8b(
+                target.physical_damage_total, modifier
+            )
+
+        return ShotResult(
+            hit=True,
+            eal=0,
+            odds=100,
+            roll=0,
+            damage_result=damage_result,
+            incapacitation_effect=incap_effect,
+            recovery=recovery,
+            incapacitation_time_phases=incap_time
+        )

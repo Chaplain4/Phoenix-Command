@@ -5,7 +5,7 @@ from collections import defaultdict
 from typing import Optional, List
 
 from phoenix_command.models.character import Character
-from phoenix_command.models.enums import ShotType, TargetExposure, ExplosiveTarget, SituationStanceModifier4B
+from phoenix_command.models.enums import ShotType, TargetExposure, ExplosiveTarget, SituationStanceModifier4B, BlastModifier
 from phoenix_command.models.gear import Weapon, AmmoType
 from phoenix_command.models.hit_result_advanced import ShotParameters, ShotResult, TargetGroup, ExplosiveShotResult
 from phoenix_command.simulations.combat_simulator_utils import CombatSimulatorUtils
@@ -259,7 +259,6 @@ class CombatSimulator:
     def explosive_weapon_shot(
         shooter: Character,
         weapon: Weapon,
-        ammo: AmmoType,
         range_hexes: int,
         target: ExplosiveTarget,
         shot_params: ShotParameters
@@ -415,3 +414,49 @@ class CombatSimulator:
                 ))
         
         return results
+
+    @staticmethod
+    def explosion_damage(
+        ammo: AmmoType,
+        targets: List[Character],
+        ranges_from_burst: List[int],
+        exposures: List[TargetExposure],
+        shot_params_list: List[ShotParameters],
+        is_front_shots: List[bool],
+        blast_modifiers: List[List[BlastModifier]]
+    ) -> dict[Character, list[ShotResult]]:
+        """
+        Calculate explosive damage (shrapnel + concussion) for multiple targets.
+        """
+        if not (len(targets) == len(ranges_from_burst) == len(exposures) ==
+                len(shot_params_list) == len(is_front_shots) == len(blast_modifiers)):
+            raise ValueError("All input lists must have the same length")
+
+        if not ammo.explosive_data:
+            raise ValueError("Ammo must have explosive_data for explosion damage")
+
+        character_results: dict[Character, list[ShotResult]] = defaultdict(list)
+
+        for target, range_hex, exposure, params, front, modifiers in zip(
+            targets, ranges_from_burst, exposures, shot_params_list, is_front_shots, blast_modifiers
+        ):
+            # Get explosive data for this range
+            bshc = ammo.get_base_shrapnel_hit_chance(range_hex)
+            base_concussion = ammo.get_base_concussion(range_hex)
+
+            # Process shrapnel hits
+            if bshc is not None:
+                shrapnel_results = CombatSimulatorUtils.process_shrapnel_hits(
+                    target, ammo, range_hex, exposure, params, front, bshc
+                )
+                character_results[target].extend(shrapnel_results)
+
+            # Process concussion damage
+            if base_concussion is not None and base_concussion > 0:
+                concussion_result = CombatSimulatorUtils.process_concussion_damage(
+                    target, base_concussion, modifiers
+                )
+                if concussion_result is not None:
+                    character_results[target].append(concussion_result)
+
+        return dict(character_results)

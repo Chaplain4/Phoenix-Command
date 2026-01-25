@@ -6,7 +6,7 @@ from phoenix_command.models.enums import AdvancedHitLocation
 from phoenix_command.tables.core.table1_character_generation import Table1CharacterGeneration
 
 
-@dataclass
+@dataclass(eq=False)
 class Character:
     """Represents a Phoenix Command character with all attributes and derived values."""
 
