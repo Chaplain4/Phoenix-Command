@@ -9,7 +9,6 @@ from phoenix_command.tables.core.table1_character_generation import Table1Charac
 @dataclass(eq=False)
 class Character:
     """Represents a Phoenix Command character with all attributes and derived values."""
-
     strength: int
     intelligence: int
     will: int
@@ -20,7 +19,7 @@ class Character:
 
     physical_damage_total: int = 0
     equipment: list[Gear] = field(default_factory=list)
-    
+    name: str = "Unnamed"
     @property
     def encumbrance(self) -> float:
         """Total weight of all carried equipment."""

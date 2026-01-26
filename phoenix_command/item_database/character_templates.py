@@ -53,12 +53,12 @@ rpg_fighter = Character(
     gun_combat_skill_level=4
 )
 rpg_fighter.add_gear(rpg_7v)
-rpk_74_fighter.add_gear(Gear(name="Clothing", weight=5.0, description="Standard field clothing")),
-rpk_74_fighter.add_gear(ammo_85mm_he_rpg7)
+rpg_fighter.add_gear(Gear(name="Clothing", weight=5.0, description="Standard field clothing")),
+rpg_fighter.add_gear(ammo_85mm_he_rpg7)
 
 character_templates = [
     ak74_fighter,
     dragunov_fighter,
     rpk_74_fighter,
-    rpg_7v
+    rpg_fighter
 ]
