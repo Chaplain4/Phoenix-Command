@@ -45,7 +45,6 @@ iotv_back_soft = [
     AdvancedHitLocation.INTESTINES_SPINE_SIDE,
     AdvancedHitLocation.INTESTINES_SIDE,
 ]
-
 side_plate_locs = [
     AdvancedHitLocation.LUNG_SIDE,
     AdvancedHitLocation.LUNG_RIB_SIDE,
@@ -55,7 +54,6 @@ side_plate_locs = [
     AdvancedHitLocation.STOMACH_LIVER_SIDE,
     AdvancedHitLocation.HEART_SIDE,
 ]
-
 collar_locs = [
     AdvancedHitLocation.NECK_FLESH,
     AdvancedHitLocation.NECK_THROAT,
@@ -64,13 +62,11 @@ collar_locs = [
     AdvancedHitLocation.BASE_OF_NECK,
     AdvancedHitLocation.NECK_SPINE_SIDE,
 ]
-
 groin_locs = [
     AdvancedHitLocation.PELVIS,
     AdvancedHitLocation.HIP_SOCKET_LEFT,
     AdvancedHitLocation.HIP_SOCKET_RIGHT
 ]
-
 daps_locs = [
     AdvancedHitLocation.SHOULDER_LEFT,
     AdvancedHitLocation.SHOULDER_RIGHT,
@@ -82,7 +78,6 @@ daps_locs = [
     AdvancedHitLocation.ARM_BONE_SHOULDER_RIGHT,
     AdvancedHitLocation.SHOULDER_SOCKET_LUNG_SIDE,
 ]
-
 upper_legs_locs = [
     AdvancedHitLocation.THIGH_FLESH_LEFT,
     AdvancedHitLocation.THIGH_FLESH_RIGHT,
@@ -90,7 +85,6 @@ upper_legs_locs = [
     AdvancedHitLocation.THIGH_BONE_RIGHT,
     AdvancedHitLocation.HIP_SOCKET_SIDE
 ]
-
 leba_locs = [
     AdvancedHitLocation.SHIN_FLESH_LEFT,
     AdvancedHitLocation.SHIN_FLESH_RIGHT,
@@ -100,6 +94,12 @@ leba_locs = [
     AdvancedHitLocation.KNEE_RIGHT,
     AdvancedHitLocation.SHIN_FLESH_SIDE_LEFT,
     AdvancedHitLocation.SHIN_FLESH_SIDE_RIGHT
+]
+helmet_locs = [
+    AdvancedHitLocation.HEAD_GLANCE,
+    AdvancedHitLocation.SKULL_SIDE,
+    AdvancedHitLocation.FOREHEAD,
+    AdvancedHitLocation.FOREHEAD_SIDE,
 ]
 
 
@@ -195,6 +195,28 @@ leba = Armor(
     }
 )
 
+msa_tc2002 = Armor(
+    name="MSA TC-2002 Combat Helmet",
+    weight=4.5,
+    description="Ballistic combat helmet used by JSOC. Has additional side accessory rails and headphones. NIJ III / GOST 3.",
+    protection={
+        **{(loc, is_front): ArmorProtectionData(layers=[
+            ArmorLayer(ArmorMaterial.UHMWPE, protection_factor=4, blunt_protection_factor=3),
+        ]) for loc in helmet_locs for is_front in [True, False]}
+    }
+)
+
+mich_tc2000 = Armor(
+    name="MICH TC-2000 Combat Helmet",
+    weight=4.5,
+    description="Ballistic combat helmet widely used across armed force branches. NIJ III / GOST 3.",
+    protection={
+        **{(loc, is_front): ArmorProtectionData(layers=[
+            ArmorLayer(ArmorMaterial.UHMWPE, protection_factor=4, blunt_protection_factor=3),
+        ]) for loc in helmet_locs for is_front in [True, False]}
+    }
+)
+
 armor = [
     iotv,
     collar,
@@ -203,4 +225,6 @@ armor = [
     daps,
     upper_legs_protector,
     leba,
+    msa_tc2002,
+    mich_tc2000
 ]
