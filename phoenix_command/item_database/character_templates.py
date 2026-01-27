@@ -11,7 +11,8 @@ ak74_fighter = Character(
     will=10,
     health=10,
     agility=10,
-    gun_combat_skill_level=3
+    gun_combat_skill_level=3,
+    name="AK-74 Fighter"
 )
 ak74_fighter.add_gear(ak_74)
 ak74_fighter.add_gear(Gear(name="Clothing", weight=5.0, description="Standard field clothing"),
@@ -25,7 +26,8 @@ dragunov_fighter = Character(
     will=10,
     health=10,
     agility=10,
-    gun_combat_skill_level=4
+    gun_combat_skill_level=4,
+    name="Dragunov Fighter"
 )
 dragunov_fighter.add_gear(dragunov_svd)
 dragunov_fighter.add_gear(Gear(name="Clothing", weight=5.0, description="Standard field clothing")),
@@ -38,7 +40,8 @@ rpk_74_fighter = Character(
     will=10,
     health=10,
     agility=10,
-    gun_combat_skill_level=3
+    gun_combat_skill_level=3,
+    name="RPK-74 Fighter"
 )
 rpk_74_fighter.add_gear(rpk_74)
 rpk_74_fighter.add_gear(Gear(name="Clothing", weight=5.0, description="Standard field clothing")),
@@ -50,7 +53,8 @@ rpg_fighter = Character(
     will=10,
     health=10,
     agility=10,
-    gun_combat_skill_level=4
+    gun_combat_skill_level=4,
+    name="RPG Fighter"
 )
 rpg_fighter.add_gear(rpg_7v)
 rpg_fighter.add_gear(Gear(name="Clothing", weight=5.0, description="Standard field clothing")),

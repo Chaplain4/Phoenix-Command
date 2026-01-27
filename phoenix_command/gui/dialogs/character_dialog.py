@@ -15,10 +15,13 @@ class CharacterDialog(QDialog):
     def __init__(self, character: Character = None, parent=None):
         super().__init__(parent)
         self.character = character
-        self.setWindowTitle("Character" if character else "New Character")
+        self.setWindowTitle("Edit Character" if character else "New Character")
         self.setMinimumSize(500, 400)
         
         self._setup_ui()
+        
+        if character:
+            self._load_character_data()
     
     def _setup_ui(self):
         """Setup UI components."""
@@ -116,7 +119,7 @@ class CharacterDialog(QDialog):
         
         self.template_combo = QComboBox()
         for i, template in enumerate(character_templates):
-            self.template_combo.addItem(f"Template {i+1}", template)
+            self.template_combo.addItem(template.name, template)
         layout.addWidget(QLabel("Select Template:"))
         layout.addWidget(self.template_combo)
         
@@ -201,3 +204,14 @@ class CharacterDialog(QDialog):
                 return copy.deepcopy(template)
         
         return None
+    
+    def _load_character_data(self):
+        """Load existing character data into manual tab."""
+        if self.character:
+            self.name_input.setText(self.character.name or "")
+            self.str_spin.setValue(self.character.strength)
+            self.int_spin.setValue(self.character.intelligence)
+            self.wil_spin.setValue(self.character.will)
+            self.hlt_spin.setValue(self.character.health)
+            self.agl_spin.setValue(self.character.agility)
+            self.skl_spin.setValue(self.character.gun_combat_skill_level)

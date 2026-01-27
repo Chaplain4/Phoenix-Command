@@ -33,8 +33,12 @@ class MainWindow(QMainWindow):
         char_menu = menubar.addMenu("&Characters")
         add_char_action = char_menu.addAction("&Add Character")
         add_char_action.triggered.connect(self._add_character)
+        edit_char_action = char_menu.addAction("&Edit Character")
+        edit_char_action.triggered.connect(self._edit_character)
+        equip_action = char_menu.addAction("Manage &Equipment")
+        equip_action.triggered.connect(self._manage_equipment)
+        char_menu.addSeparator()
         char_menu.addAction("&Import Template")
-        char_menu.addAction("&Manage Characters")
         
         combat_menu = menubar.addMenu("C&ombat")
         combat_menu.addAction("&New Combat")
@@ -120,3 +124,34 @@ class MainWindow(QMainWindow):
                 details += f"- {item.name} ({item.weight} lbs)<br>"
             details += f"<br>Total Weight: {char.encumbrance:.1f} lbs"
             self.details_label.setText(details)
+    
+    def _edit_character(self):
+        """Edit selected character stats."""
+        current_row = self.character_list.currentRow()
+        if current_row < 0:
+            self.statusBar().showMessage("No character selected")
+            return
+        
+        from phoenix_command.gui.dialogs.character_dialog import CharacterDialog
+        char = self.characters[current_row]
+        dialog = CharacterDialog(character=char, parent=self)
+        if dialog.exec():
+            edited_char = dialog.get_character()
+            if edited_char:
+                self.characters[current_row] = edited_char
+                self._refresh_character_list()
+                self.statusBar().showMessage(f"Updated character: {edited_char.name}")
+    
+    def _manage_equipment(self):
+        """Open equipment management dialog."""
+        current_row = self.character_list.currentRow()
+        if current_row < 0:
+            self.statusBar().showMessage("No character selected")
+            return
+        
+        from phoenix_command.gui.dialogs.equipment_dialog import EquipmentDialog
+        char = self.characters[current_row]
+        dialog = EquipmentDialog(character=char, parent=self)
+        dialog.exec()
+        self._on_character_selected(current_row)
+        self.statusBar().showMessage(f"Equipment updated for {char.name}")
