@@ -30,8 +30,10 @@ class CharacterDialog(QDialog):
         self.tabs = QTabWidget()
         
         self.tabs.addTab(self._create_manual_tab(), "Manual")
-        self.tabs.addTab(self._create_random_tab(), "Random")
-        self.tabs.addTab(self._create_template_tab(), "Template")
+        
+        if not self.character:
+            self.tabs.addTab(self._create_random_tab(), "Random")
+            self.tabs.addTab(self._create_template_tab(), "Template")
         
         layout.addWidget(self.tabs)
         
@@ -177,6 +179,16 @@ class CharacterDialog(QDialog):
     
     def get_character(self) -> Character:
         """Get the created/edited character."""
+        if self.character:
+            self.character.name = self.name_input.text() or self.character.name
+            self.character.strength = self.str_spin.value()
+            self.character.intelligence = self.int_spin.value()
+            self.character.will = self.wil_spin.value()
+            self.character.health = self.hlt_spin.value()
+            self.character.agility = self.agl_spin.value()
+            self.character.gun_combat_skill_level = self.skl_spin.value()
+            return self.character
+        
         current_tab = self.tabs.currentIndex()
         
         if current_tab == 0:
@@ -188,7 +200,7 @@ class CharacterDialog(QDialog):
                 agility=self.agl_spin.value(),
                 gun_combat_skill_level=self.skl_spin.value()
             )
-            char.name = self.name_input.text() or None
+            char.name = self.name_input.text() or "Unnamed"
             return char
         
         elif current_tab == 1:

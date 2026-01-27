@@ -136,11 +136,10 @@ class MainWindow(QMainWindow):
         char = self.characters[current_row]
         dialog = CharacterDialog(character=char, parent=self)
         if dialog.exec():
-            edited_char = dialog.get_character()
-            if edited_char:
-                self.characters[current_row] = edited_char
-                self._refresh_character_list()
-                self.statusBar().showMessage(f"Updated character: {edited_char.name}")
+            dialog.get_character()
+            self._refresh_character_list()
+            self._on_character_selected(current_row)
+            self.statusBar().showMessage(f"Updated character: {char.name}")
     
     def _manage_equipment(self):
         """Open equipment management dialog."""
