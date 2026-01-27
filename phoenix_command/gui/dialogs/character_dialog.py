@@ -147,17 +147,17 @@ class CharacterDialog(QDialog):
     
     def _roll_random(self):
         """Roll random character."""
-        result = CharacterGenerator.generate_character(5)
+        char = CharacterGenerator.generate_character(gun_combat_skill_level=5)
         
-        text = (f"Strength: {result['strength']}\n"
-                f"Intelligence: {result['intelligence']}\n"
-                f"Will: {result['will']}\n"
-                f"Health: {result['health']}\n"
-                f"Agility: {result['agility']}\n"
-                f"Gun Combat Skill: {result['gun_combat_skill_level']}")
+        text = (f"Strength: {char.strength}\n"
+                f"Intelligence: {char.intelligence}\n"
+                f"Will: {char.will}\n"
+                f"Health: {char.health}\n"
+                f"Agility: {char.agility}\n"
+                f"Gun Combat Skill: {char.gun_combat_skill_level}")
         
         self.random_display.setText(text)
-        self.random_result = result
+        self.random_result = char
     
     def _update_template_preview(self):
         """Update template preview."""
@@ -190,8 +190,8 @@ class CharacterDialog(QDialog):
         
         elif current_tab == 1:
             if hasattr(self, 'random_result'):
-                char = Character(**self.random_result)
-                char.name = self.random_name.text() or None
+                char = self.random_result
+                char.name = self.random_name.text() or "Unnamed"
                 return char
         
         elif current_tab == 2:

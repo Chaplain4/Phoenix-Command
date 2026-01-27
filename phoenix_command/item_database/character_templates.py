@@ -30,7 +30,7 @@ dragunov_fighter = Character(
 dragunov_fighter.add_gear(dragunov_svd)
 dragunov_fighter.add_gear(Gear(name="Clothing", weight=5.0, description="Standard field clothing")),
 for i in range(3):
-    ak74_fighter.add_gear(ammo_762x54_svd_fmj)
+    dragunov_fighter.add_gear(ammo_762x54_svd_fmj)
 
 rpk_74_fighter = Character(
     strength=10,
