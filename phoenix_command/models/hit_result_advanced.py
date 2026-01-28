@@ -39,10 +39,12 @@ class ShotResult:
     eal: int
     odds: int
     roll: int
+    target: Character
     damage_result: Optional[DamageResult] = None
     incapacitation_effect: Optional[IncapacitationEffect] = None
     recovery: Optional[Recovery] = None
     incapacitation_time_phases: Optional[int] = None
+    log: Optional[str] = None
 
 
 @dataclass
