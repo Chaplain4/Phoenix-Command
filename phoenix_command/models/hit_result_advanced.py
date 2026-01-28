@@ -39,7 +39,7 @@ class ShotResult:
     eal: int
     odds: int
     roll: int
-    target: Character
+    target: 'Character'
     damage_result: Optional[DamageResult] = None
     incapacitation_effect: Optional[IncapacitationEffect] = None
     recovery: Optional[Recovery] = None
