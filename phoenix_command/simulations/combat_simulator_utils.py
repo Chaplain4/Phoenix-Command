@@ -358,20 +358,29 @@ class CombatSimulatorUtils:
         penetrated = True
         blunt_pf = 0
         total_protection = 0
+        
+        # Collect all armor protection for this location
+        armor_pieces = []
         for item in target.equipment:
             if isinstance(item, Armor):
-                total_protection += item.get_protection(location, is_front_shot).get_total_protection()
                 protection_data = item.get_protection(location, is_front_shot)
-                if protection_data.get_total_protection() > 0:
-                    log.append(f"  Armor: {item.name}, Protection: {protection_data.get_total_protection()}")
-                    penetrated, remaining_pen = item.process_hit(location, is_front_shot, pen)
-                    epen = remaining_pen
-                    if not penetrated:
-                        blunt_pf = protection_data.get_total_blunt_protection()
-                        log.append(f"  Armor NOT penetrated, Blunt PF: {blunt_pf}")
-                    else:
-                        log.append(f"  Armor penetrated, Remaining PEN: {epen}")
+                if protection_data and protection_data.get_total_protection() > 0:
+                    armor_pieces.append((item, protection_data))
+                    total_protection += protection_data.get_total_protection()
+        
+        # Process armor if present
+        if armor_pieces:
+            log.append(f"  Total armor protection: {total_protection}")
+            for armor_item, protection_data in armor_pieces:
+                log.append(f"  Armor: {armor_item.name}, Protection: {protection_data.get_total_protection()}")
+                penetrated, remaining_pen = armor_item.process_hit(location, is_front_shot, epen)
+                epen = remaining_pen
+                if not penetrated:
+                    blunt_pf += protection_data.get_total_blunt_protection()
+                    log.append(f"  Armor NOT penetrated, Blunt PF: {blunt_pf}")
                     break
+                else:
+                    log.append(f"  Armor penetrated, Remaining PEN: {epen}")
         
         if not penetrated:
             blunt_damage = Table9ABluntDamage.get_blunt_damage(location, blunt_pf, pen)
