@@ -259,10 +259,11 @@ class CombatSimulatorUtils:
             effective_aim_time_ac = min(shot_params.aim_time_ac, max_aim_time_ac)
             log.append(f"  Aim time limited: {shot_params.aim_time_ac} -> {effective_aim_time_ac} AC")
 
-        aim_time_alm = weapon.aim_time_modifiers.get(effective_aim_time_ac, 0) + shooter.skill_accuracy_level
+        aim_time_alm = weapon.aim_time_modifiers.get(effective_aim_time_ac, 
+                                                              weapon.aim_time_modifiers[max(weapon.aim_time_modifiers.keys())]) + shooter.skill_accuracy_level
         range_alm = Table4AdvancedOddsOfHitting.get_accuracy_level_modifier_by_range_4a(range_hexes)
         
-        log.append(f"  Aim time ALM: {weapon.aim_time_modifiers.get(effective_aim_time_ac, 0)} + SAL {shooter.skill_accuracy_level} = {aim_time_alm}")
+        log.append(f"  Aim time ALM: {weapon.aim_time_modifiers.get(effective_aim_time_ac, weapon.aim_time_modifiers[max(weapon.aim_time_modifiers.keys())])} + SAL {shooter.skill_accuracy_level} = {aim_time_alm}")
         log.append(f"  Range ALM (Table 4A): {range_alm}")
 
         situation_stance_alm = sum(mod.value for mod in shot_params.situation_stance_modifiers)

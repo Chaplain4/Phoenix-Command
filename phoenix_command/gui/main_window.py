@@ -41,7 +41,8 @@ class MainWindow(QMainWindow):
         char_menu.addAction("&Import Template")
         
         combat_menu = menubar.addMenu("C&ombat")
-        combat_menu.addAction("&New Combat")
+        shot_action = combat_menu.addAction("&Single Shot")
+        shot_action.triggered.connect(self._single_shot)
         combat_menu.addAction("Combat &History")
         
         help_menu = menubar.addMenu("&Help")
@@ -154,3 +155,13 @@ class MainWindow(QMainWindow):
         dialog.exec()
         self._on_character_selected(current_row)
         self.statusBar().showMessage(f"Equipment updated for {char.name}")
+    
+    def _single_shot(self):
+        """Open single shot dialog."""
+        if len(self.characters) < 2:
+            self.statusBar().showMessage("Need at least 2 characters for combat")
+            return
+        
+        from phoenix_command.gui.dialogs.shot_dialog import ShotDialog
+        dialog = ShotDialog(characters=self.characters, parent=self)
+        dialog.exec()

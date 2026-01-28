@@ -22,7 +22,7 @@ class Table8HealingAndRecovery:
             1000: [18000, 61200, 115200, 190800, 295200, 259200],
         }
 
-        row_key = max(k for k in INC_TABLE.keys() if k <= physical_damage_total)
+        row_key = max(k for k in INC_TABLE.keys() if k <= max(50, physical_damage_total))
 
         r = max(0, random.randint(0, 9) + modifier)
         if r == 0:
