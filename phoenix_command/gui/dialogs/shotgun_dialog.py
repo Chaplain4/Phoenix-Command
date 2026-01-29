@@ -40,7 +40,8 @@ class ShotgunDialog(QDialog):
         self.stack.addWidget(self._create_shooter_step())
         self.stack.addWidget(self._create_primary_target_step())
         self.stack.addWidget(self._create_secondary_targets_step())
-        self.stack.addWidget(self._create_params_step())
+        self.stack.addWidget(self._create_common_params_step())
+        self.stack.addWidget(self._create_target_params_step())
         self.stack.addWidget(self._create_results_step())
         
         nav_layout = QHBoxLayout()
@@ -139,13 +140,55 @@ class ShotgunDialog(QDialog):
         
         return widget
     
-    def _create_params_step(self):
-        """Step 4: Parameters for each target."""
+    def _create_common_params_step(self):
+        """Step 4: Common parameters (shooter-related)."""
         widget = QWidget()
         layout = QVBoxLayout(widget)
         
+        common_group = QGroupBox("Common Parameters (Shooter)")
+        common_layout = QFormLayout()
+        
+        self.common_aim_spin = QSpinBox()
+        self.common_aim_spin.setRange(0, 20)
+        self.common_aim_spin.setValue(2)
+        common_layout.addRow("Aim Time (AC):", self.common_aim_spin)
+        
+        self.common_stance_list = QListWidget()
+        self.common_stance_list.setSelectionMode(QListWidget.SelectionMode.MultiSelection)
+        for stance in SituationStanceModifier4B:
+            self.common_stance_list.addItem(stance.name)
+        common_layout.addRow("Stance:", self.common_stance_list)
+        
+        self.common_vis_list = QListWidget()
+        self.common_vis_list.setSelectionMode(QListWidget.SelectionMode.MultiSelection)
+        for vis in VisibilityModifier4C:
+            self.common_vis_list.addItem(vis.name)
+        common_layout.addRow("Visibility:", self.common_vis_list)
+        
+        self.common_shooter_speed_spin = QSpinBox()
+        self.common_shooter_speed_spin.setRange(0, 20)
+        self.common_shooter_speed_spin.setValue(0)
+        common_layout.addRow("Shooter Speed (hex/imp):", self.common_shooter_speed_spin)
+        
+        self.common_shooter_duck_check = QCheckBox()
+        common_layout.addRow("Shooter Reflexive Duck:", self.common_shooter_duck_check)
+        
+        common_group.setLayout(common_layout)
+        layout.addWidget(common_group)
+        layout.addStretch()
+        
+        return widget
+    
+    def _create_target_params_step(self):
+        """Step 5: Per-target parameters."""
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
+        
+        target_group = QGroupBox("Target-Specific Parameters")
+        target_layout = QVBoxLayout()
+        
         self.params_stack = QStackedWidget()
-        layout.addWidget(self.params_stack)
+        target_layout.addWidget(self.params_stack)
         
         nav = QHBoxLayout()
         self.target_prev_btn = QPushButton("Previous Target")
@@ -155,7 +198,10 @@ class ShotgunDialog(QDialog):
         nav.addWidget(self.target_prev_btn)
         nav.addStretch()
         nav.addWidget(self.target_next_btn)
-        layout.addLayout(nav)
+        target_layout.addLayout(nav)
+        
+        target_group.setLayout(target_layout)
+        layout.addWidget(target_group)
         
         return widget
     
@@ -186,8 +232,8 @@ class ShotgunDialog(QDialog):
     def _update_step_label(self):
         """Update step indicator."""
         steps = ["1. Shooter & Weapon", "2. Primary Target", "3. Secondary Targets", 
-                "4. Target Parameters", "5. Results"]
-        self.step_label.setText(f"Step {self.current_step + 1} of 5: {steps[self.current_step].split('. ')[1]}")
+                "4. Common Parameters", "5. Target Parameters", "6. Results"]
+        self.step_label.setText(f"Step {self.current_step + 1} of 6: {steps[self.current_step].split('. ')[1]}")
     
     def _previous_step(self):
         """Go to previous step."""
@@ -211,10 +257,10 @@ class ShotgunDialog(QDialog):
             
             self._populate_secondary_targets()
         
-        if self.current_step == 2:
+        if self.current_step == 3:
             self._build_params_pages()
         
-        if self.current_step < 3:
+        if self.current_step < 4:
             self.current_step += 1
             self.stack.setCurrentIndex(self.current_step)
             self._update_navigation()
@@ -222,8 +268,8 @@ class ShotgunDialog(QDialog):
     def _update_navigation(self):
         """Update navigation buttons."""
         self.prev_btn.setEnabled(self.current_step > 0)
-        self.next_btn.setVisible(self.current_step < 3)
-        self.simulate_btn.setVisible(self.current_step == 3)
+        self.next_btn.setVisible(self.current_step < 4)
+        self.simulate_btn.setVisible(self.current_step == 4)
         self._update_step_label()
     
     def _on_shooter_changed(self):
@@ -313,7 +359,7 @@ class ShotgunDialog(QDialog):
         
         layout.addWidget(QLabel(f"<b>Target: {target.name}</b>"))
         
-        params_group = QGroupBox("Parameters")
+        params_group = QGroupBox("Target Parameters")
         params_layout = QFormLayout()
         
         range_spin = QSpinBox()
@@ -326,11 +372,6 @@ class ShotgunDialog(QDialog):
             exposure_combo.addItem(exp.name, exp)
         params_layout.addRow("Exposure:", exposure_combo)
         
-        aim_spin = QSpinBox()
-        aim_spin.setRange(0, 20)
-        aim_spin.setValue(2)
-        params_layout.addRow("Aim Time (AC):", aim_spin)
-        
         front_check = QCheckBox()
         front_check.setChecked(True)
         params_layout.addRow("Front Shot:", front_check)
@@ -340,17 +381,13 @@ class ShotgunDialog(QDialog):
             orient_combo.addItem(orient.name, orient)
         params_layout.addRow("Orientation:", orient_combo)
         
-        stance_list = QListWidget()
-        stance_list.setSelectionMode(QListWidget.SelectionMode.MultiSelection)
-        for stance in SituationStanceModifier4B:
-            stance_list.addItem(stance.name)
-        params_layout.addRow("Stance:", stance_list)
+        target_speed_spin = QSpinBox()
+        target_speed_spin.setRange(0, 20)
+        target_speed_spin.setValue(0)
+        params_layout.addRow("Target Speed (hex/imp):", target_speed_spin)
         
-        vis_list = QListWidget()
-        vis_list.setSelectionMode(QListWidget.SelectionMode.MultiSelection)
-        for vis in VisibilityModifier4C:
-            vis_list.addItem(vis.name)
-        params_layout.addRow("Visibility:", vis_list)
+        target_duck_check = QCheckBox()
+        params_layout.addRow("Target Reflexive Duck:", target_duck_check)
         
         params_group.setLayout(params_layout)
         layout.addWidget(params_group)
@@ -358,11 +395,10 @@ class ShotgunDialog(QDialog):
         self.target_params[target] = {
             'range': range_spin,
             'exposure': exposure_combo,
-            'aim': aim_spin,
             'front': front_check,
             'orient': orient_combo,
-            'stance': stance_list,
-            'vis': vis_list
+            'target_speed': target_speed_spin,
+            'target_duck': target_duck_check
         }
         
         return widget
@@ -400,6 +436,21 @@ class ShotgunDialog(QDialog):
         shot_params_list = []
         is_front_shots = []
         
+        # Get common parameters
+        aim_ac = self.common_aim_spin.value()
+        
+        stance_mods = []
+        for item in self.common_stance_list.selectedItems():
+            stance_mods.append(list(SituationStanceModifier4B)[self.common_stance_list.row(item)])
+        
+        vis_mods = []
+        for item in self.common_vis_list.selectedItems():
+            vis_mods.append(list(VisibilityModifier4C)[self.common_vis_list.row(item)])
+        
+        shooter_speed = float(self.common_shooter_speed_spin.value())
+        shooter_duck = self.common_shooter_duck_check.isChecked()
+        
+        # Build parameters for each target
         for target in targets:
             params = self.target_params[target]
             
@@ -415,23 +466,15 @@ class ShotgunDialog(QDialog):
             exposures.append(params['exposure'].currentData())
             is_front_shots.append(params['front'].isChecked())
             
-            stance_mods = []
-            for item in params['stance'].selectedItems():
-                stance_mods.append(list(SituationStanceModifier4B)[params['stance'].row(item)])
-            
-            vis_mods = []
-            for item in params['vis'].selectedItems():
-                vis_mods.append(list(VisibilityModifier4C)[params['vis'].row(item)])
-            
             shot_params = ShotParameters(
-                aim_time_ac=params['aim'].value(),
+                aim_time_ac=aim_ac,
                 situation_stance_modifiers=stance_mods,
                 visibility_modifiers=vis_mods,
                 target_orientation=params['orient'].currentData(),
-                shooter_speed_hex_per_impulse=0.0,
-                target_speed_hex_per_impulse=0.0,
-                reflexive_duck_shooter=False,
-                reflexive_duck_target=False
+                shooter_speed_hex_per_impulse=shooter_speed,
+                target_speed_hex_per_impulse=float(params['target_speed'].value()),
+                reflexive_duck_shooter=shooter_duck,
+                reflexive_duck_target=params['target_duck'].isChecked()
             )
             shot_params_list.append(shot_params)
         
@@ -440,8 +483,8 @@ class ShotgunDialog(QDialog):
         )
         
         self.last_results = results
-        self.current_step = 4
-        self.stack.setCurrentIndex(4)
+        self.current_step = 5
+        self.stack.setCurrentIndex(5)
         self._update_navigation()
         self._display_results(results)
         self.show_log_btn.setEnabled(True)

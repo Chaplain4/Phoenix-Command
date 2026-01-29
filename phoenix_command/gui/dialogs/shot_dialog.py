@@ -243,14 +243,21 @@ class ShotDialog(QDialog):
             ammo = self.ammo_combo.currentData()
             if ammo and hasattr(ammo, 'pellet_count') and ammo.pellet_count:
                 from phoenix_command.gui.dialogs.shotgun_dialog import ShotgunDialog
-                shooter = self.shooter_combo.currentData()
-                weapon = self.weapon_combo.currentData()
                 self.accept()
                 dialog = ShotgunDialog(self.characters, self.parent())
                 # Set shooter, weapon, ammo and go to step 2
-                dialog.shooter_combo.setCurrentIndex(self.shooter_combo.currentIndex())
-                dialog.weapon_combo.setCurrentIndex(self.weapon_combo.currentIndex())
-                dialog.ammo_combo.setCurrentIndex(self.ammo_combo.currentIndex())
+                for i in range(dialog.shooter_combo.count()):
+                    if dialog.shooter_combo.itemData(i) == self.shooter_combo.currentData():
+                        dialog.shooter_combo.setCurrentIndex(i)
+                        break
+                for i in range(dialog.weapon_combo.count()):
+                    if dialog.weapon_combo.itemData(i) == self.weapon_combo.currentData():
+                        dialog.weapon_combo.setCurrentIndex(i)
+                        break
+                for i in range(dialog.ammo_combo.count()):
+                    if dialog.ammo_combo.itemData(i) == ammo:
+                        dialog.ammo_combo.setCurrentIndex(i)
+                        break
                 dialog.current_step = 1
                 dialog.stack.setCurrentIndex(1)
                 dialog._update_navigation()
