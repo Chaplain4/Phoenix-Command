@@ -6505,44 +6505,6 @@ atchisson_ballistic = WeaponBallisticData(
 # WEAPONS
 # ============================================================================
 
-# SIG 550 Assault Rifle
-sig_550 = Weapon(
-    name="SIG 550",
-    weight=10.1,
-    description="Swiss-made SG 550 assault rifle, featuring excellent accuracy and reliability. "
-                "Standard issue for Swiss Armed Forces. Gas-operated, selective-fire rifle with "
-                "folding stock. Chambered in 5.56mm NATO with 30-round magazine capacity.",
-    caliber=Caliber.CAL_556_NATO,
-    weapon_type=WeaponType.ASSAULT_RIFLE,
-    country=Country.SWITZERLAND,
-    length_deployed=39,
-    length_folded=30,
-    reload_time=7,
-    self_loading_action=True,
-    full_auto=True,
-    full_auto_rof=7,
-    ammo_capacity=30,
-    ammo_weight=1.1,
-    ammo_feed_device=AmmoFeedDevice.MAGAZINE,
-    knock_down=4,
-    sustained_auto_burst=3,
-    aim_time_modifiers={
-        1: -23,
-        2: -13,
-        3: -9,
-        4: -7,
-        5: -6,
-        6: -5,
-        7: -4,
-        8: -3,
-        9: -2,
-        10: -1,
-        11: 0,
-    },
-    ammunition_types=[ammo_556_fmj, ammo_556_jhp, ammo_556_ap],
-    ballistic_data=sig_550_ballistic,
-    built_in_bipod=True
-)
 
 # FN Mk 1 (Browning High-Power)
 fn_mk1 = Weapon(
@@ -7850,6 +7812,44 @@ akm = Weapon(
     aim_time_modifiers={1: -23, 2: -12, 3: -9, 4: -7, 5: -6, 6: -4, 7: -3, 8: -2, 9: -1},
     ammunition_types=[ammo_762x39_akm_fmj, ammo_762x39_akm_jhp, ammo_762x39_akm_ap],
     ballistic_data=akm_ballistic,
+)
+
+sig_550 = Weapon(
+    name="SIG 550",
+    weight=10.1,
+    description="Swiss-made SG 550 assault rifle, featuring excellent accuracy and reliability. "
+                "Standard issue for Swiss Armed Forces. Gas-operated, selective-fire rifle with "
+                "folding stock. Chambered in 5.56mm NATO with 30-round magazine capacity.",
+    caliber=Caliber.CAL_556_NATO,
+    weapon_type=WeaponType.ASSAULT_RIFLE,
+    country=Country.SWITZERLAND,
+    length_deployed=39,
+    length_folded=30,
+    reload_time=7,
+    self_loading_action=True,
+    full_auto=True,
+    full_auto_rof=7,
+    ammo_capacity=30,
+    ammo_weight=1.1,
+    ammo_feed_device=AmmoFeedDevice.MAGAZINE,
+    knock_down=4,
+    sustained_auto_burst=3,
+    aim_time_modifiers={
+        1: -23,
+        2: -13,
+        3: -9,
+        4: -7,
+        5: -6,
+        6: -5,
+        7: -4,
+        8: -3,
+        9: -2,
+        10: -1,
+        11: 0,
+    },
+    ammunition_types=[ammo_556_fmj, ammo_556_jhp, ammo_556_ap],
+    ballistic_data=sig_550_ballistic,
+    built_in_bipod=True
 )
 
 ak_74 = Weapon(

@@ -238,6 +238,39 @@ class ShotDialog(QDialog):
     
     def _next_step(self):
         """Go to next step."""
+        if self.current_step == 0:
+            # Check for pellet ammo and switch to shotgun dialog
+            ammo = self.ammo_combo.currentData()
+            if ammo and hasattr(ammo, 'pellet_count') and ammo.pellet_count:
+                from phoenix_command.gui.dialogs.shotgun_dialog import ShotgunDialog
+                shooter = self.shooter_combo.currentData()
+                weapon = self.weapon_combo.currentData()
+                self.accept()
+                dialog = ShotgunDialog(self.characters, self.parent())
+                # Set shooter, weapon, ammo and go to step 2
+                dialog.shooter_combo.setCurrentIndex(self.shooter_combo.currentIndex())
+                dialog.weapon_combo.setCurrentIndex(self.weapon_combo.currentIndex())
+                dialog.ammo_combo.setCurrentIndex(self.ammo_combo.currentIndex())
+                dialog.current_step = 1
+                dialog.stack.setCurrentIndex(1)
+                dialog._update_navigation()
+                dialog.exec()
+                return
+        
+        if self.current_step == 1:
+            # Validate range before leaving target step
+            ammo = self.ammo_combo.currentData()
+            range_hexes = self.range_spin.value()
+            
+            if ammo and ammo.ballistic_data:
+                max_range = max(bd.range_hexes for bd in ammo.ballistic_data if not bd.beyond_max_range)
+                if range_hexes > max_range:
+                    QMessageBox.warning(self, "Out of Range",
+                                       f"Target is beyond effective range for this ammunition.\n"
+                                       f"Effective range: {max_range} hexes\n"
+                                       f"Target range: {range_hexes} hexes")
+                    return
+        
         if self.current_step < 3:
             self.current_step += 1
             self.stack.setCurrentIndex(self.current_step)
@@ -287,11 +320,6 @@ class ShotDialog(QDialog):
         
         if not all([shooter, weapon, ammo, target]):
             QMessageBox.warning(self, "Error", "Please select all parameters")
-            return
-        
-        if hasattr(ammo, 'pellet_count') and ammo.pellet_count:
-            QMessageBox.information(self, "Not Implemented", 
-                                   "Shotgun ammunition will be handled in shotgun_shot (coming soon)")
             return
         
         if hasattr(ammo, 'explosive_data') and ammo.explosive_data:
