@@ -225,7 +225,7 @@ class CombatSimulator:
             shooter, target, weapon, range_hexes, target_exposure, shot_params, log=log
         )
         
-        hits = ThreeRoundBurstTable.calculate_3rb_hits(eal, rb3_value)
+        hits = ThreeRoundBurstTable.calculate_3rb_hits(eal, rb3_value, log)
         log.append(f"[3RB Result] EAL: {eal}, Hits: {hits}")
         
         if hits == 0:

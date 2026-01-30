@@ -230,16 +230,26 @@ class ThreeRoundBurstTable:
     }
 
     @classmethod
-    def calculate_3rb_hits(cls, eal, rb3_value):
+    def calculate_3rb_hits(cls, eal, rb3_value, log):
         roll = random.randint(0, 99)
         available_3rb = sorted(cls.TABLE_9B.keys())
         target_3rb = min(available_3rb, key=lambda x: abs(x - rb3_value))
         target_eal = max(3, min(28, eal))
         chances = cls.TABLE_9B[target_3rb][target_eal]
+        
+        log.append(f"[3RB Table 9B] RB3 value: {rb3_value}, Using column: {target_3rb}")
+        log.append(f"  EAL: {eal}, Using row: {target_eal}")
+        log.append(f"  Hit chances: {chances}")
+        log.append(f"  Roll: {roll}")
+        
         hits = 0
-        for chance in chances:
+        for i, chance in enumerate(chances):
             if roll <= chance:
                 hits += 1
+                log.append(f"  Round {i+1}: {roll} <= {chance}, HIT")
             else:
+                log.append(f"  Round {i+1}: {roll} > {chance}, MISS")
                 break
+        
+        log.append(f"  Total hits: {hits}")
         return hits

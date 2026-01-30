@@ -43,6 +43,8 @@ class MainWindow(QMainWindow):
         combat_menu = menubar.addMenu("C&ombat")
         shot_action = combat_menu.addAction("&Single Shot")
         shot_action.triggered.connect(self._single_shot)
+        three_rb_action = combat_menu.addAction("&Three Round Burst")
+        three_rb_action.triggered.connect(self._three_round_burst)
         combat_menu.addAction("Combat &History")
         
         help_menu = menubar.addMenu("&Help")
@@ -164,4 +166,28 @@ class MainWindow(QMainWindow):
         
         from phoenix_command.gui.dialogs.shot_dialog import ShotDialog
         dialog = ShotDialog(characters=self.characters, parent=self)
+        dialog.exec()
+    
+    def _three_round_burst(self):
+        """Open three round burst dialog."""
+        if len(self.characters) < 2:
+            self.statusBar().showMessage("Need at least 2 characters for combat")
+            return
+        
+        from phoenix_command.models.gear import Weapon
+        has_3rb_weapon = False
+        for char in self.characters:
+            for item in char.equipment:
+                if isinstance(item, Weapon) and item.ballistic_data and item.ballistic_data.three_round_burst:
+                    has_3rb_weapon = True
+                    break
+            if has_3rb_weapon:
+                break
+        
+        if not has_3rb_weapon:
+            self.statusBar().showMessage("No character has a weapon with three round burst capability")
+            return
+        
+        from phoenix_command.gui.dialogs.three_round_burst_dialog import ThreeRoundBurstDialog
+        dialog = ThreeRoundBurstDialog(characters=self.characters, parent=self)
         dialog.exec()
