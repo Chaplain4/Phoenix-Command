@@ -1,9 +1,13 @@
 """Main window for Phoenix Command GUI."""
 
 from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
-                              QSplitter, QMenuBar, QMenu, QStatusBar, QListWidget, QLabel)
+                              QSplitter, QMenuBar, QMenu, QStatusBar, QLabel)
 from PyQt6.QtCore import Qt
 from phoenix_command.models.character import Character
+from phoenix_command.gui.widgets.combat_log import CombatLogWidget
+from phoenix_command.gui.widgets.stats_display import StatsDisplayWidget
+from phoenix_command.gui.widgets.combat_zone import CombatZoneWidget
+from phoenix_command.gui.widgets.character_list import CharacterListWidget
 
 
 class MainWindow(QMainWindow):
@@ -60,28 +64,26 @@ class MainWindow(QMainWindow):
         
         main_splitter = QSplitter(Qt.Orientation.Horizontal)
         
-        self.character_list = QListWidget()
+        self.character_list = CharacterListWidget()
         self.character_list.setMaximumWidth(250)
+        self.character_list.setDragEnabled(True)
         self.character_list.currentRowChanged.connect(self._on_character_selected)
         main_splitter.addWidget(self.character_list)
         
         center_splitter = QSplitter(Qt.Orientation.Vertical)
         
-        self.work_area = QWidget()
-        center_splitter.addWidget(self.work_area)
+        self.combat_zone = CombatZoneWidget()
+        center_splitter.addWidget(self.combat_zone)
         
-        self.event_log = QListWidget()
-        self.event_log.setMaximumHeight(150)
-        center_splitter.addWidget(self.event_log)
+        self.combat_log = CombatLogWidget()
+        center_splitter.addWidget(self.combat_log)
         
         main_splitter.addWidget(center_splitter)
         
         details_widget = QWidget()
         details_layout = QVBoxLayout(details_widget)
-        self.details_label = QLabel("Select a character")
-        self.details_label.setWordWrap(True)
-        self.details_label.setAlignment(Qt.AlignmentFlag.AlignTop)
-        details_layout.addWidget(self.details_label)
+        self.stats_display = StatsDisplayWidget()
+        details_layout.addWidget(self.stats_display)
         details_widget.setMaximumWidth(300)
         main_splitter.addWidget(details_widget)
         
@@ -115,18 +117,9 @@ class MainWindow(QMainWindow):
     def _on_character_selected(self, index):
         """Display character details when selected."""
         if 0 <= index < len(self.characters):
-            char = self.characters[index]
-            details = f"<b>{char.name}</b><br><br>"
-            details += f"STR: {char.strength} INT: {char.intelligence} WIL: {char.will}<br>"
-            details += f"HLT: {char.health} AGL: {char.agility} SKL: {char.gun_combat_skill_level}<br><br>"
-            details += f"Defensive ALM: {char.defensive_alm}<br>"
-            details += f"Knockout Value: {char.knockout_value}<br>"
-            details += f"Impulses: {char.impulses}<br><br>"
-            details += f"<b>Equipment ({len(char.equipment)} items):</b><br>"
-            for item in char.equipment:
-                details += f"- {item.name} ({item.weight} lbs)<br>"
-            details += f"<br>Total Weight: {char.encumbrance:.1f} lbs"
-            self.details_label.setText(details)
+            self.stats_display.set_character(self.characters[index])
+        else:
+            self.stats_display.clear()
     
     def _edit_character(self):
         """Edit selected character stats."""
@@ -166,7 +159,14 @@ class MainWindow(QMainWindow):
         
         from phoenix_command.gui.dialogs.shot_dialog import ShotDialog
         dialog = ShotDialog(characters=self.characters, parent=self)
-        dialog.exec()
+        if dialog.exec():
+            if hasattr(dialog, 'last_result'):
+                shooter = dialog.shooter_combo.currentData()
+                target = dialog.target_combo.currentData()
+                weapon = dialog.weapon_combo.currentData()
+                if shooter and target and weapon:
+                    self.combat_log.append_system(f"{shooter.name} shoots {weapon.name} at {target.name}")
+                    self._log_shot_result(dialog.last_result)
     
     def _three_round_burst(self):
         """Open three round burst dialog."""
@@ -190,4 +190,28 @@ class MainWindow(QMainWindow):
         
         from phoenix_command.gui.dialogs.three_round_burst_dialog import ThreeRoundBurstDialog
         dialog = ThreeRoundBurstDialog(characters=self.characters, parent=self)
-        dialog.exec()
+        if dialog.exec():
+            if hasattr(dialog, 'last_results'):
+                shooter = dialog.shooter_combo.currentData()
+                target = dialog.target_combo.currentData()
+                weapon = dialog.weapon_combo.currentData()
+                if shooter and target and weapon:
+                    self.combat_log.append_system(f"{shooter.name} fires 3RB from {weapon.name} at {target.name}")
+                for result in dialog.last_results:
+                    self._log_shot_result(result)
+    
+    def _log_shot_result(self, result):
+        """Log shot result to combat log."""
+        target_name = result.target.name if hasattr(result, 'target') and result.target else "Unknown"
+        if result.hit:
+            if result.damage_result:
+                msg = f"{target_name} - {result.damage_result.location.name}: {result.damage_result.damage} damage, {result.damage_result.shock} shock"
+                if result.incapacitation_effect:
+                    msg += f" ({result.incapacitation_effect.name})"
+                    self.combat_log.append_critical(msg)
+                else:
+                    self.combat_log.append_hit(msg)
+            else:
+                self.combat_log.append_hit(f"{target_name} - Hit")
+        else:
+            self.combat_log.append_miss(f"{target_name} - Miss (Roll: {result.roll} vs {result.odds}%)")

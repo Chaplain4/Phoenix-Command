@@ -82,10 +82,17 @@ class CombatSimulatorProbabilities:
                 else:
                     pellet_info = f"{guaranteed} guaranteed"
             else:
+                base_value = int(bphc)
                 guaranteed, probability = Table5AutoPelletShrapnel.get_pellet_hit_probability_5a(
-                    int(bphc), False, target_size_modifier
+                    base_value, False, target_size_modifier
                 )
-                pellet_info = f"{probability}% chance"
+                if guaranteed > 0:
+                    if probability > 0:
+                        pellet_info = f"{guaranteed} guaranteed + {probability}% chance"
+                    else:
+                        pellet_info = f"{guaranteed} guaranteed"
+                else:
+                    pellet_info = f"{probability}% chance"
         else:
             pellet_info = "0"
         

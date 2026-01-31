@@ -254,15 +254,18 @@ class ShotDialog(QDialog):
             ammo = self.ammo_combo.currentData()
             if ammo and hasattr(ammo, 'pellet_count') and ammo.pellet_count:
                 from phoenix_command.gui.dialogs.shotgun_dialog import ShotgunDialog
+                shooter = self.shooter_combo.currentData()
+                weapon = self.weapon_combo.currentData()
+                
                 self.accept()
                 dialog = ShotgunDialog(self.characters, self.parent())
                 # Set shooter, weapon, ammo and go to step 2
                 for i in range(dialog.shooter_combo.count()):
-                    if dialog.shooter_combo.itemData(i) == self.shooter_combo.currentData():
+                    if dialog.shooter_combo.itemData(i) == shooter:
                         dialog.shooter_combo.setCurrentIndex(i)
                         break
                 for i in range(dialog.weapon_combo.count()):
-                    if dialog.weapon_combo.itemData(i) == self.weapon_combo.currentData():
+                    if dialog.weapon_combo.itemData(i) == weapon:
                         dialog.weapon_combo.setCurrentIndex(i)
                         break
                 for i in range(dialog.ammo_combo.count()):
@@ -272,7 +275,14 @@ class ShotDialog(QDialog):
                 dialog.current_step = 1
                 dialog.stack.setCurrentIndex(1)
                 dialog._update_navigation()
-                dialog.exec()
+                if dialog.exec():
+                    # Log shotgun results to main window
+                    if hasattr(dialog, 'last_results') and hasattr(self.parent(), 'combat_log'):
+                        main_window = self.parent()
+                        if shooter and weapon:
+                            main_window.combat_log.append_system(f"{shooter.name} fires shotgun {weapon.name}")
+                        for result in dialog.last_results:
+                            main_window._log_shot_result(result)
                 return
         
         if self.current_step == 1:

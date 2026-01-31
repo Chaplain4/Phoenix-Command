@@ -199,7 +199,7 @@ class Table5AutoPelletShrapnel:
         if final_is_guaranteed:
             return (min(58, final_value), 0)
         else:
-            return (0, final_value)
+            return (0, min(100, final_value))
 
     @classmethod
     def get_scatter_distance_5c(cls, sa_difference: int) -> int:
