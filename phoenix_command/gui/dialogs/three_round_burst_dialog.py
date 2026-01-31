@@ -197,6 +197,17 @@ class ThreeRoundBurstDialog(QDialog):
         move_group.setLayout(move_layout)
         layout.addWidget(move_group)
         
+        prob_group = QGroupBox("Hit Probabilities")
+        prob_layout = QVBoxLayout()
+        self.prob_label = QLabel("Configure parameters to see probabilities")
+        self.prob_label.setWordWrap(True)
+        prob_layout.addWidget(self.prob_label)
+        calc_prob_btn = QPushButton("Calculate Probabilities")
+        calc_prob_btn.clicked.connect(self._calculate_probability)
+        prob_layout.addWidget(calc_prob_btn)
+        prob_group.setLayout(prob_layout)
+        layout.addWidget(prob_group)
+        
         return widget
     
     def _create_results_step(self):
@@ -400,3 +411,54 @@ class ThreeRoundBurstDialog(QDialog):
             layout.addWidget(close_btn)
             
             dialog.exec()
+    
+    def _calculate_probability(self):
+        """Calculate and display hit probabilities."""
+        from phoenix_command.simulations.combat_simulator_probabilities import CombatSimulatorProbabilities
+        
+        shooter = self.shooter_combo.currentData()
+        weapon = self.weapon_combo.currentData()
+        target = self.target_combo.currentData()
+        
+        if not all([shooter, weapon, target]):
+            self.prob_label.setText("Please select shooter, weapon, and target")
+            return
+        
+        range_hexes = self.range_spin.value()
+        exposure = self.exposure_combo.currentData()
+        aim_ac = self.aim_spin.value()
+        
+        stance_mods = []
+        for item in self.stance_list.selectedItems():
+            stance_mods.append(list(SituationStanceModifier4B)[self.stance_list.row(item)])
+        
+        vis_mods = []
+        for item in self.visibility_list.selectedItems():
+            vis_mods.append(list(VisibilityModifier4C)[self.visibility_list.row(item)])
+        
+        target_orient = self.target_orient_combo.currentData()
+        shooter_speed = float(self.shooter_speed_spin.value())
+        target_speed = float(self.target_speed_spin.value())
+        shooter_duck = self.shooter_duck_check.isChecked()
+        target_duck = self.target_duck_check.isChecked()
+        
+        shot_params = ShotParameters(
+            aim_time_ac=aim_ac,
+            situation_stance_modifiers=stance_mods,
+            visibility_modifiers=vis_mods,
+            target_orientation=target_orient,
+            shooter_speed_hex_per_impulse=shooter_speed,
+            target_speed_hex_per_impulse=target_speed,
+            reflexive_duck_shooter=shooter_duck,
+            reflexive_duck_target=target_duck
+        )
+        
+        eal, probabilities = CombatSimulatorProbabilities.calculate_three_round_burst_probabilities(
+            shooter, target, weapon, range_hexes, exposure, shot_params
+        )
+        
+        text = f"<b>EAL:</b> {eal}<br><b>Hit Probabilities:</b><br>"
+        for hits, prob in probabilities:
+            text += f"{hits} hit{'s' if hits != 1 else ''}: {prob}%<br>"
+        
+        self.prob_label.setText(text)

@@ -166,7 +166,7 @@ class Table4AdvancedOddsOfHitting:
             TargetExposure.STANDING_EXPOSED: {
                 AccuracyModifiers.TARGET_SIZE: 7,
                 AccuracyModifiers.AUTO_ELEV: 14,
-                AccuracyModifiers.AUTO_WIDTH: 1,
+                AccuracyModifiers.AUTO_WIDTH: 3, #fixed rules bullshit
             },
             TargetExposure.KNEELING_EXPOSED: {
                 AccuracyModifiers.TARGET_SIZE: 6,
@@ -176,37 +176,42 @@ class Table4AdvancedOddsOfHitting:
             TargetExposure.PRONE_EXPOSED: {
                 AccuracyModifiers.TARGET_SIZE: 2,
                 AccuracyModifiers.AUTO_ELEV: 2,
-                AccuracyModifiers.AUTO_WIDTH: 2,
+                AccuracyModifiers.AUTO_WIDTH: 3,
             },
             TargetExposure.RUNNING: {
                 AccuracyModifiers.TARGET_SIZE: 8,
                 AccuracyModifiers.AUTO_ELEV: 14,
-                AccuracyModifiers.AUTO_WIDTH: 1,
+                AccuracyModifiers.AUTO_WIDTH: 3,
             },
             TargetExposure.LOW_CROUCH: {
                 AccuracyModifiers.TARGET_SIZE: 7,
                 AccuracyModifiers.AUTO_ELEV: 11,
-                AccuracyModifiers.AUTO_WIDTH: 2,
+                AccuracyModifiers.AUTO_WIDTH: 3,
             },
             TargetExposure.HANDS_AND_KNEES_CROUCH: {
                 AccuracyModifiers.TARGET_SIZE: 6,
                 AccuracyModifiers.AUTO_ELEV: 8,
-                AccuracyModifiers.AUTO_WIDTH: 1,
+                AccuracyModifiers.AUTO_WIDTH: 3,
             },
             TargetExposure.LOW_PRONE: {
                 AccuracyModifiers.TARGET_SIZE: 1,
                 AccuracyModifiers.AUTO_ELEV: 0,
-                AccuracyModifiers.AUTO_WIDTH: 5,
+                AccuracyModifiers.AUTO_WIDTH: 3,
             },
             TargetExposure.HEAD: {
                 AccuracyModifiers.TARGET_SIZE: -3,
                 AccuracyModifiers.AUTO_ELEV: 0,
-                AccuracyModifiers.AUTO_WIDTH: -3,
+                AccuracyModifiers.AUTO_WIDTH: -1,
             },
             TargetExposure.BODY: {
                 AccuracyModifiers.TARGET_SIZE: 5,
                 AccuracyModifiers.AUTO_ELEV: 8,
                 AccuracyModifiers.AUTO_WIDTH: 3,
+            },
+            TargetExposure.ARMS: {
+                AccuracyModifiers.TARGET_SIZE: 3,
+                AccuracyModifiers.AUTO_ELEV: 8,
+                AccuracyModifiers.AUTO_WIDTH: 0,
             },
             TargetExposure.LEGS: {
                 AccuracyModifiers.TARGET_SIZE: 4,

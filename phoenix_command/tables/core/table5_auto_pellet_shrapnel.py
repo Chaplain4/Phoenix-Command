@@ -147,6 +147,61 @@ class Table5AutoPelletShrapnel:
             return 1 if rand < final_value else 0
 
     @classmethod
+    def get_pellet_hit_probability_5a(cls, base_shrapnel_pellet_hit_chance: float, is_guaranteed: bool,
+                                      size_modifier: int) -> tuple[int, int]:
+        """
+        Calculates the pellet hit probability without rolling.
+
+        Args:
+            base_shrapnel_pellet_hit_chance: Base hit chance or guaranteed hits value (0-100).
+            is_guaranteed: If True, search in guaranteed (*) values; else, in probability values.
+            size_modifier: Adjustment for target size.
+
+        Returns:
+            Tuple of (guaranteed_hits, probability_percent) where:
+            - guaranteed_hits: Number of guaranteed hits (0 if not guaranteed)
+            - probability_percent: Probability of 1 additional hit (0-100)
+        """
+        # Values: guaranteed (0-14), then probabilistic (15-30)
+        full_values = [58, 44, 33, 25, 19, 14, 11, 8, 6, 5, 4, 3, 2, 2, 1, 87, 65, 49, 37, 28, 21, 15, 11, 8, 6, 4, 3,
+                       2, 1, 1, 0]
+        num_guaranteed = 15
+
+        base = max(0.0, min(100.0, base_shrapnel_pellet_hit_chance))
+
+        if is_guaranteed:
+            candidates = range(num_guaranteed)
+            max_val = 58
+        else:
+            candidates = range(num_guaranteed, len(full_values))
+            max_val = 87
+
+        if base > max_val:
+            base_index = 0 if is_guaranteed else num_guaranteed
+        elif base <= full_values[-1]:
+            base_index = len(full_values) - 1
+        else:
+            base_index = None
+            for i in reversed(list(candidates)):
+                if full_values[i] >= base:
+                    base_index = i
+                    break
+            if base_index is None:
+                base_index = list(candidates)[0]
+
+        # Apply size modifier: subtract to move left (higher values), add to move right (lower values)
+        adjusted_index = base_index - size_modifier
+        adjusted_index = max(0, min(len(full_values) - 1, adjusted_index))
+
+        final_value = full_values[adjusted_index]
+        final_is_guaranteed = adjusted_index < num_guaranteed
+
+        if final_is_guaranteed:
+            return (min(58, final_value), 0)
+        else:
+            return (0, final_value)
+
+    @classmethod
     def get_scatter_distance_5c(cls, sa_difference: int) -> int:
         """
         Returns scatter distance in hexes based on difference in SA (Skill Accuracy).

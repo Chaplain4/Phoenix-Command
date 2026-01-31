@@ -203,6 +203,17 @@ class ShotgunDialog(QDialog):
         target_group.setLayout(target_layout)
         layout.addWidget(target_group)
         
+        prob_group = QGroupBox("Target Hit Probability")
+        prob_layout = QVBoxLayout()
+        self.target_prob_label = QLabel("Configure parameters to see probability")
+        self.target_prob_label.setWordWrap(True)
+        prob_layout.addWidget(self.target_prob_label)
+        calc_prob_btn = QPushButton("Calculate Probability for Current Target")
+        calc_prob_btn.clicked.connect(self._calculate_target_probability)
+        prob_layout.addWidget(calc_prob_btn)
+        prob_group.setLayout(prob_layout)
+        layout.addWidget(prob_group)
+        
         return widget
     
     def _create_results_step(self):
@@ -545,3 +556,62 @@ class ShotgunDialog(QDialog):
             layout.addWidget(close_btn)
             
             dialog.exec()
+    
+    def _calculate_target_probability(self):
+        """Calculate and display probability for current target."""
+        from phoenix_command.simulations.combat_simulator_probabilities import CombatSimulatorProbabilities
+        
+        shooter = self.shooter_combo.currentData()
+        weapon = self.weapon_combo.currentData()
+        ammo = self.ammo_combo.currentData()
+        
+        if not all([shooter, weapon, ammo]):
+            self.target_prob_label.setText("Please select shooter, weapon, and ammo")
+            return
+        
+        idx = self.params_stack.currentIndex()
+        if idx < 0:
+            self.target_prob_label.setText("No target selected")
+            return
+        
+        primary = self.target_combo.currentData()
+        targets = [primary] + self.secondary_targets
+        target = targets[idx]
+        
+        params = self.target_params[target]
+        range_hexes = params['range'].value()
+        exposure = params['exposure'].currentData()
+        aim_ac = self.common_aim_spin.value()
+        
+        stance_mods = []
+        for item in self.common_stance_list.selectedItems():
+            stance_mods.append(list(SituationStanceModifier4B)[self.common_stance_list.row(item)])
+        
+        vis_mods = []
+        for item in self.common_vis_list.selectedItems():
+            vis_mods.append(list(VisibilityModifier4C)[self.common_vis_list.row(item)])
+        
+        shooter_speed = float(self.common_shooter_speed_spin.value())
+        shooter_duck = self.common_shooter_duck_check.isChecked()
+        
+        shot_params = ShotParameters(
+            aim_time_ac=aim_ac,
+            situation_stance_modifiers=stance_mods,
+            visibility_modifiers=vis_mods,
+            target_orientation=params['orient'].currentData(),
+            shooter_speed_hex_per_impulse=shooter_speed,
+            target_speed_hex_per_impulse=float(params['target_speed'].value()),
+            reflexive_duck_shooter=shooter_duck,
+            reflexive_duck_target=params['target_duck'].isChecked()
+        )
+        
+        eal, odds, bphc, pellet_info = CombatSimulatorProbabilities.calculate_shotgun_probabilities(
+            shooter, target, weapon, ammo, range_hexes, exposure, shot_params
+        )
+        
+        text = f"<b>Target: {target.name}</b><br>"
+        text += f"<b>EAL:</b> {eal}<br><b>Pattern Hit Probability:</b> {odds}%<br>"
+        if bphc:
+            text += f"<b>BPHC:</b> {bphc}<br><b>Pellet Hits:</b> {pellet_info}"
+        
+        self.target_prob_label.setText(text)
