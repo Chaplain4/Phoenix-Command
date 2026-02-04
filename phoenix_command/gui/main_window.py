@@ -49,6 +49,8 @@ class MainWindow(QMainWindow):
         shot_action.triggered.connect(self._single_shot)
         three_rb_action = combat_menu.addAction("&Three Round Burst")
         three_rb_action.triggered.connect(self._three_round_burst)
+        burst_action = combat_menu.addAction("&Burst Fire")
+        burst_action.triggered.connect(self._burst_fire)
         combat_menu.addAction("Combat &History")
         
         help_menu = menubar.addMenu("&Help")
@@ -185,7 +187,31 @@ class MainWindow(QMainWindow):
         from phoenix_command.gui.dialogs.three_round_burst_dialog import ThreeRoundBurstDialog
         dialog = ThreeRoundBurstDialog(characters=self.characters, parent=self)
         dialog.exec()
-    
+
+    def _burst_fire(self):
+        """Open burst fire dialog."""
+        if len(self.characters) < 2:
+            self.statusBar().showMessage("Need at least 2 characters for combat")
+            return
+
+        from phoenix_command.models.gear import Weapon
+        has_full_auto_weapon = False
+        for char in self.characters:
+            for item in char.equipment:
+                if isinstance(item, Weapon) and item.full_auto and item.full_auto_rof:
+                    has_full_auto_weapon = True
+                    break
+            if has_full_auto_weapon:
+                break
+
+        if not has_full_auto_weapon:
+            self.statusBar().showMessage("No character has a full auto capable weapon")
+            return
+
+        from phoenix_command.gui.dialogs.burst_fire_dialog import BurstFireDialog
+        dialog = BurstFireDialog(characters=self.characters, parent=self)
+        dialog.exec()
+
     def _log_shot_result(self, result):
         """Log shot result to combat log."""
         target_name = result.target.name if hasattr(result, 'target') and result.target else "Unknown"

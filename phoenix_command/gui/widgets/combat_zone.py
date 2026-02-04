@@ -137,10 +137,10 @@ class CombatZoneWidget(QWidget):
         has_3rb = False
         has_burst = False
         for item in shooter.equipment:
-            if isinstance(item, Weapon) and item.ballistic_data:
-                if item.ballistic_data.three_round_burst:
+            if isinstance(item, Weapon):
+                if item.ballistic_data and item.ballistic_data.three_round_burst:
                     has_3rb = True
-                if item.ballistic_data.minimum_arc:
+                if item.full_auto and item.full_auto_rof:
                     has_burst = True
         
         if has_3rb:
@@ -157,9 +157,9 @@ class CombatZoneWidget(QWidget):
             main_window._single_shot()
         elif action.text() == "Three Round Burst" and hasattr(main_window, '_three_round_burst'):
             main_window._three_round_burst()
-        elif action.text() == "Burst Fire":
-            QMessageBox.information(self, "Not Implemented", "Burst Fire coming soon")
-    
+        elif action.text() == "Burst Fire" and hasattr(main_window, '_burst_fire'):
+            main_window._burst_fire()
+
     def clear_all(self):
         self.shooter_zone.clear()
         for zone in self.target_zones:
