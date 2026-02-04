@@ -57,6 +57,14 @@ class DropZone(QWidget):
         if isinstance(parent, CombatZoneWidget):
             parent.add_target_zone()
     
+    def refresh(self):
+        """Refresh card display."""
+        if self.character and self.card:
+            self.layout.removeWidget(self.card)
+            self.card.deleteLater()
+            self.card = CharacterCard(self.character)
+            self.layout.addWidget(self.card)
+    
     def clear(self):
         if self.card:
             self.layout.removeWidget(self.card)
@@ -172,3 +180,9 @@ class CombatZoneWidget(QWidget):
     
     def get_targets(self):
         return [zone.character for zone in self.target_zones if zone.character]
+    
+    def refresh_cards(self):
+        """Refresh all character cards."""
+        self.shooter_zone.refresh()
+        for zone in self.target_zones:
+            zone.refresh()

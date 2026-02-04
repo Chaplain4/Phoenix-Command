@@ -135,6 +135,7 @@ class MainWindow(QMainWindow):
             dialog.get_character()
             self._refresh_character_list()
             self._on_character_selected(current_row)
+            self.combat_zone.refresh_cards()
             self.statusBar().showMessage(f"Updated character: {char.name}")
     
     def _manage_equipment(self):
@@ -159,14 +160,7 @@ class MainWindow(QMainWindow):
         
         from phoenix_command.gui.dialogs.shot_dialog import ShotDialog
         dialog = ShotDialog(characters=self.characters, parent=self)
-        if dialog.exec():
-            if hasattr(dialog, 'last_result'):
-                shooter = dialog.shooter_combo.currentData()
-                target = dialog.target_combo.currentData()
-                weapon = dialog.weapon_combo.currentData()
-                if shooter and target and weapon:
-                    self.combat_log.append_system(f"{shooter.name} shoots {weapon.name} at {target.name}")
-                    self._log_shot_result(dialog.last_result)
+        dialog.exec()
     
     def _three_round_burst(self):
         """Open three round burst dialog."""
@@ -190,15 +184,7 @@ class MainWindow(QMainWindow):
         
         from phoenix_command.gui.dialogs.three_round_burst_dialog import ThreeRoundBurstDialog
         dialog = ThreeRoundBurstDialog(characters=self.characters, parent=self)
-        if dialog.exec():
-            if hasattr(dialog, 'last_results'):
-                shooter = dialog.shooter_combo.currentData()
-                target = dialog.target_combo.currentData()
-                weapon = dialog.weapon_combo.currentData()
-                if shooter and target and weapon:
-                    self.combat_log.append_system(f"{shooter.name} fires 3RB from {weapon.name} at {target.name}")
-                for result in dialog.last_results:
-                    self._log_shot_result(result)
+        dialog.exec()
     
     def _log_shot_result(self, result):
         """Log shot result to combat log."""

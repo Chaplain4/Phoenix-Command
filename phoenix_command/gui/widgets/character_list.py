@@ -12,6 +12,7 @@ class CharacterListWidget(QListWidget):
         super().__init__(parent)
         self.setDragEnabled(True)
         self.setDefaultDropAction(Qt.DropAction.CopyAction)
+        self.setSelectionMode(QListWidget.SelectionMode.SingleSelection)
 
     def startDrag(self, supported_actions):
         """Start drag with character name as text data."""
@@ -22,3 +23,15 @@ class CharacterListWidget(QListWidget):
             mime_data.setText(item.text())
             drag.setMimeData(mime_data)
             drag.exec(Qt.DropAction.CopyAction)
+
+    def mouseMoveEvent(self, event):
+        """Handle mouse move for drag initiation."""
+        if event.buttons() & Qt.MouseButton.LeftButton:
+            item = self.currentItem()
+            if item:
+                drag = QDrag(self)
+                mime_data = QMimeData()
+                mime_data.setText(item.text())
+                drag.setMimeData(mime_data)
+                drag.exec(Qt.DropAction.CopyAction)
+        super().mouseMoveEvent(event)

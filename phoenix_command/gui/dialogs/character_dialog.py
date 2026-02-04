@@ -2,7 +2,7 @@
 
 from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QTabWidget,
                              QWidget, QLabel, QSpinBox, QLineEdit, QPushButton,
-                             QComboBox, QTextEdit, QFormLayout)
+                             QComboBox, QTextEdit, QFormLayout, QGroupBox)
 
 from phoenix_command.item_database.character_templates import character_templates
 from phoenix_command.models.character import Character
@@ -16,8 +16,8 @@ class CharacterDialog(QDialog):
         super().__init__(parent)
         self.character = character
         self.setWindowTitle("Edit Character" if character else "New Character")
-        self.setMinimumSize(500, 400)
-        
+        self.setMinimumSize(500, 500)
+
         self._setup_ui()
         
         if character:
@@ -50,51 +50,117 @@ class CharacterDialog(QDialog):
     def _create_manual_tab(self):
         """Create manual input tab."""
         widget = QWidget()
-        layout = QFormLayout(widget)
-        
+        layout = QVBoxLayout(widget)
+
+        # Basic attributes group
+        attrs_group = QGroupBox("Attributes")
+        attrs_layout = QFormLayout(attrs_group)
+
         self.name_input = QLineEdit()
-        layout.addRow("Name:", self.name_input)
-        
+        attrs_layout.addRow("Name:", self.name_input)
+
         self.str_spin = QSpinBox()
         self.str_spin.setRange(1, 20)
         self.str_spin.setValue(10)
-        layout.addRow("Strength:", self.str_spin)
-        
+        attrs_layout.addRow("Strength:", self.str_spin)
+
         self.int_spin = QSpinBox()
         self.int_spin.setRange(1, 20)
         self.int_spin.setValue(10)
-        layout.addRow("Intelligence:", self.int_spin)
-        
+        attrs_layout.addRow("Intelligence:", self.int_spin)
+
         self.wil_spin = QSpinBox()
         self.wil_spin.setRange(1, 20)
         self.wil_spin.setValue(10)
-        layout.addRow("Will:", self.wil_spin)
-        
+        attrs_layout.addRow("Will:", self.wil_spin)
+
         self.hlt_spin = QSpinBox()
         self.hlt_spin.setRange(1, 20)
         self.hlt_spin.setValue(10)
-        layout.addRow("Health:", self.hlt_spin)
-        
+        attrs_layout.addRow("Health:", self.hlt_spin)
+
         self.agl_spin = QSpinBox()
         self.agl_spin.setRange(1, 20)
         self.agl_spin.setValue(10)
-        layout.addRow("Agility:", self.agl_spin)
-        
+        attrs_layout.addRow("Agility:", self.agl_spin)
+
         self.skl_spin = QSpinBox()
         self.skl_spin.setRange(1, 10)
         self.skl_spin.setValue(3)
-        layout.addRow("Gun Combat Skill:", self.skl_spin)
-        
+        attrs_layout.addRow("Gun Combat Skill:", self.skl_spin)
+
+        layout.addWidget(attrs_group)
+
+        # Damage and status group (only for editing existing character)
+        if self.character:
+            status_group = QGroupBox("Damage & Status")
+            status_layout = QFormLayout(status_group)
+
+            self.pd_spin = QSpinBox()
+            self.pd_spin.setRange(0, 999)
+            self.pd_spin.setValue(0)
+            self.pd_spin.valueChanged.connect(self._update_status_display)
+            status_layout.addRow("Physical Damage:", self.pd_spin)
+
+            # Status display
+            self.status_label = QLabel()
+            self.status_label.setStyleSheet("font-weight: bold;")
+            status_layout.addRow("Status:", self.status_label)
+
+            # Quick damage buttons
+            damage_btns = QHBoxLayout()
+            heal_btn = QPushButton("Heal All")
+            heal_btn.clicked.connect(lambda: self.pd_spin.setValue(0))
+            damage_btns.addWidget(heal_btn)
+
+            add_5_btn = QPushButton("+5 Damage")
+            add_5_btn.clicked.connect(lambda: self.pd_spin.setValue(self.pd_spin.value() + 5))
+            damage_btns.addWidget(add_5_btn)
+
+            add_10_btn = QPushButton("+10 Damage")
+            add_10_btn.clicked.connect(lambda: self.pd_spin.setValue(self.pd_spin.value() + 10))
+            damage_btns.addWidget(add_10_btn)
+
+            status_layout.addRow("", damage_btns)
+
+            layout.addWidget(status_group)
+
+        # Derived stats group
+        derived_group = QGroupBox("Derived Stats")
+        derived_layout = QVBoxLayout(derived_group)
         self.derived_label = QLabel()
         self._update_derived_stats()
-        layout.addRow("Derived Stats:", self.derived_label)
-        
+        derived_layout.addWidget(self.derived_label)
+        layout.addWidget(derived_group)
+
         for spin in [self.str_spin, self.int_spin, self.wil_spin, 
                      self.hlt_spin, self.agl_spin, self.skl_spin]:
             spin.valueChanged.connect(self._update_derived_stats)
         
+        layout.addStretch()
         return widget
     
+    def _update_status_display(self):
+        """Update status display based on physical damage."""
+        if not hasattr(self, 'status_label'):
+            return
+
+        pd = self.pd_spin.value()
+        knockout_value = int(0.5 * self.wil_spin.value() * self.skl_spin.value())
+
+        if pd == 0:
+            status = "Healthy"
+            color = "#27ae60"  # green
+        elif pd < knockout_value:
+            status = f"Wounded (KO at {knockout_value})"
+            color = "#f39c12"  # yellow
+        else:
+            status = "Seriously Wounded"
+            color = "#e67e22"  # orange
+
+        self.status_label.setText(status)
+        self.status_label.setStyleSheet(f"font-weight: bold; color: {color};")
+
     def _create_random_tab(self):
         """Create random generation tab."""
         widget = QWidget()
@@ -187,6 +253,9 @@ class CharacterDialog(QDialog):
             self.character.health = self.hlt_spin.value()
             self.character.agility = self.agl_spin.value()
             self.character.gun_combat_skill_level = self.skl_spin.value()
+            # Update physical damage if editing
+            if hasattr(self, 'pd_spin'):
+                self.character.physical_damage_total = self.pd_spin.value()
             return self.character
         
         current_tab = self.tabs.currentIndex()
@@ -227,3 +296,8 @@ class CharacterDialog(QDialog):
             self.hlt_spin.setValue(self.character.health)
             self.agl_spin.setValue(self.character.agility)
             self.skl_spin.setValue(self.character.gun_combat_skill_level)
+
+            # Load physical damage if editing
+            if hasattr(self, 'pd_spin'):
+                self.pd_spin.setValue(self.character.physical_damage_total)
+                self._update_status_display()

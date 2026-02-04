@@ -225,13 +225,17 @@ class CombatSimulator:
             shooter, target, weapon, range_hexes, target_exposure, shot_params, log=log
         )
         
-        hits = ThreeRoundBurstTable.calculate_3rb_hits(eal, rb3_value, log)
-        log.append(f"[3RB Result] EAL: {eal}, Hits: {hits}")
-        
+        # Get hit chances from table to record odds (chance to hit at least once)
+        available_3rb = sorted(ThreeRoundBurstTable.TABLE_9B.keys())
+        target_3rb = min(available_3rb, key=lambda x: abs(x - rb3_value))
+        target_eal = max(3, min(28, eal))
+        chances = ThreeRoundBurstTable.TABLE_9B[target_3rb][target_eal]
+        odds = chances[0]
+        hits, roll = ThreeRoundBurstTable.calculate_3rb_hits(eal, rb3_value, log)
+        log.append(f"[3RB Result] EAL: {eal}, Odds (1+ hit): {odds}%, Roll: {roll}, Hits: {hits}")
         if hits == 0:
             log.append("  No hits")
-            return [ShotResult(hit=False, eal=eal, odds=0, roll=0, target=target, log="\n".join(log))]
-        
+            return [ShotResult(hit=False, eal=eal, odds=odds, roll=roll, target=target, log="\n".join(log))]
         results = []
         for i in range(hits):
             hit_log = [f"--- 3RB Hit {i+1}/{hits} ---"]
@@ -242,8 +246,8 @@ class CombatSimulator:
             results.append(ShotResult(
                 hit=True,
                 eal=eal,
-                odds=100,
-                roll=0,
+                odds=odds,
+                roll=roll,
                 target=target,
                 damage_result=damage_result,
                 incapacitation_effect=incap_effect,

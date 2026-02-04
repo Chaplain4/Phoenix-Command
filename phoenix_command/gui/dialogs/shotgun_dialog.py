@@ -494,6 +494,22 @@ class ShotgunDialog(QDialog):
         )
         
         self.last_results = results
+
+        main_window = self.window()
+        while main_window and not hasattr(main_window, 'combat_log'):
+            main_window = main_window.parent()
+
+        if main_window and hasattr(main_window, 'combat_log'):
+            main_window.combat_log.append_system(f"{shooter.name} fires shotgun {weapon.name}")
+            for result in results:
+                main_window._log_shot_result(result)
+            if hasattr(main_window, 'combat_zone'):
+                main_window.combat_zone.refresh_cards()
+            if hasattr(main_window, 'stats_display') and hasattr(main_window, 'character_list'):
+                current_row = main_window.character_list.currentRow()
+                if current_row >= 0:
+                    main_window._on_character_selected(current_row)
+
         self.current_step = 5
         self.stack.setCurrentIndex(5)
         self._update_navigation()

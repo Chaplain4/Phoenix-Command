@@ -252,4 +252,4 @@ class ThreeRoundBurstTable:
                 break
         
         log.append(f"  Total hits: {hits}")
-        return hits
+        return hits, roll
