@@ -158,7 +158,10 @@ class CombatSimulator:
             weapon, target_group, continuous_burst_impulses, arc_of_fire, shooter, log
         )
 
-        target_hits: List[tuple[int, int, Character, int, TargetExposure, ShotParameters, bool]] = []
+        # Store tuples with (idx, hits, target, rng, exposure, shot_params, front, eal, odds, roll)
+        target_hits: List[tuple[int, int, Character, int, TargetExposure, ShotParameters, bool, int, int, int]] = []
+        # Store miss results for targets that failed elevation check
+        miss_results: List[tuple[Character, int, int, int]] = []  # (target, eal, odds, roll)
 
         for idx, (target, rng, exposure, shot_params, front) in enumerate(zip(
             target_group.targets, target_group.ranges, target_group.exposures,
@@ -169,20 +172,39 @@ class CombatSimulator:
             )
 
             if result.hit and result.hits > 0:
-                target_hits.append((idx, result.hits, target, rng, exposure, shot_params, front))
-        
-        target_hits = CombatSimulatorUtils.redistribute_hits_by_eal(
-            shooter, weapon, target_hits, sab_penalty, log
-        )
-        
+                target_hits.append((idx, result.hits, target, rng, exposure, shot_params, front, result.eal, result.odds, result.roll))
+            else:
+                # Store miss with actual eal, odds, roll values
+                miss_results.append((target, result.eal, result.odds, result.roll))
+
+        # Redistribute hits if needed (keeping eal, odds, roll)
+        if target_hits:
+            total_hits = sum(h[1] for h in target_hits)
+            if total_hits > weapon.full_auto_rof:
+                log.append(f"[Redistribute] Total hits {total_hits} > ROF {weapon.full_auto_rof}, redistributing...")
+                total_eal = sum(h[7] for h in target_hits)
+                redistributed = []
+                remaining_rof = weapon.full_auto_rof
+                for i, (idx, hits, target, rng, exposure, shot_params, front, eal, odds, roll) in enumerate(target_hits):
+                    if i == len(target_hits) - 1:
+                        new_hits = remaining_rof
+                    else:
+                        proportion = eal / total_eal if total_eal > 0 else 1.0 / len(target_hits)
+                        new_hits = max(1, int(weapon.full_auto_rof * proportion))
+                        remaining_rof -= new_hits
+                    log.append(f"  Target {target.name}: {hits} -> {new_hits} hits")
+                    redistributed.append((idx, new_hits, target, rng, exposure, shot_params, front, eal, odds, roll))
+                target_hits = redistributed
+
         results = []
-        for idx, hits, target, rng, exposure, shot_params, front in target_hits:
+        for idx, hits, target, rng, exposure, shot_params, front, eal, odds, roll in target_hits:
             hit_results = CombatSimulatorUtils.process_target_hits(
-                target, ammo, rng, exposure, shot_params, front, hits, log
+                target, ammo, rng, exposure, shot_params, front, hits, log,
+                eal=eal, odds=odds, roll=roll
             )
             results.extend(hit_results)
         
-        # Add header log to first result or create miss result
+        # Add header log to first result or create miss results
         if results:
             results[0] = ShotResult(
                 hit=results[0].hit, eal=results[0].eal, odds=results[0].odds, roll=results[0].roll,
@@ -193,9 +215,13 @@ class CombatSimulator:
                 log="\n".join(log) + "\n" + (results[0].log or "")
             )
         else:
+            # Create miss results with actual eal, odds, roll for each target
             log.append("No targets hit")
-            results = [ShotResult(hit=False, eal=0, odds=0, roll=0, target=target_group.targets[0], log="\n".join(log))]
-        
+            for target, eal, odds, roll in miss_results:
+                results.append(ShotResult(
+                    hit=False, eal=eal, odds=odds, roll=roll,
+                    target=target, log="\n".join(log) if not results else None
+                ))
         return results
 
     @staticmethod
@@ -512,7 +538,7 @@ class CombatSimulator:
             return [ExplosiveShotResult(hit=False, eal=eal, odds=odds, roll=roll, scatter_hexes=0)]
         
         hits = Table5AutoPelletShrapnel.get_fire_table_value5a(
-            final_arc, weapon.full_auto_rof, 0
+            final_arc, weapon.full_auto_rof, 0, log
         )
         
         log.append(f"  Burst HIT, grenades on target: {hits}")

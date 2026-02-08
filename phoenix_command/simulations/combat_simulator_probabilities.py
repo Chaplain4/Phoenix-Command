@@ -1,12 +1,13 @@
 """Probability calculations for combat simulation."""
 
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 
 from phoenix_command.models.character import Character
-from phoenix_command.models.enums import TargetExposure, ShotType, AccuracyModifiers
+from phoenix_command.models.enums import TargetExposure, ShotType, AccuracyModifiers, SituationStanceModifier4B
 from phoenix_command.models.gear import Weapon, AmmoType
 from phoenix_command.models.hit_result_advanced import ShotParameters
 from phoenix_command.simulations.combat_simulator_utils import CombatSimulatorUtils
+from phoenix_command.tables.advanced_rules.effective_min_arc import EffectiveMinimumArc
 from phoenix_command.tables.advanced_rules.three_round_burst import ThreeRoundBurstTable
 from phoenix_command.tables.core.table4_advanced_odds_of_hitting import Table4AdvancedOddsOfHitting
 from phoenix_command.tables.core.table5_auto_pellet_shrapnel import Table5AutoPelletShrapnel
@@ -161,3 +162,93 @@ class CombatSimulatorProbabilities:
                 probabilities.append((3, prob_3_hits))
         
         return eal, probabilities
+
+    @staticmethod
+    def calculate_burst_fire_probabilities(
+        shooter: Character,
+        target: Character,
+        weapon: Weapon,
+        range_hexes: int,
+        target_exposure: TargetExposure,
+        shot_params: ShotParameters,
+        arc_of_fire: Optional[float] = None,
+        continuous_burst_impulses: int = 0
+    ) -> Tuple[int, int, float, str]:
+        """Calculate burst fire hit probability and expected hits for a single target.
+
+        Args:
+            shooter: Shooter character
+            target: Target character
+            weapon: Full auto weapon
+            range_hexes: Range in hexes
+            target_exposure: Target exposure
+            shot_params: Shot parameters
+            arc_of_fire: Custom arc of fire (None for auto calculation)
+            continuous_burst_impulses: Number of impulses of continuous burst (SAB penalty)
+
+        Returns:
+            Tuple of (eal, elevation_odds_percent, effective_arc, hits_info)
+            where hits_info is formatted string like "5 guaranteed" or "37% chance of 1 hit"
+        """
+        if not weapon.full_auto or not weapon.full_auto_rof:
+            return 0, 0, 0.0, "N/A"
+
+        if not weapon.ballistic_data:
+            return 0, 0, 0.0, "N/A"
+
+        # Calculate SAB penalty
+        sab_penalty = 0
+        if continuous_burst_impulses > 0 and weapon.sustained_auto_burst:
+            sab_penalty = continuous_burst_impulses * weapon.sustained_auto_burst
+
+        # Calculate minimum arc
+        min_arc = weapon.ballistic_data.get_minimum_arc(range_hexes)
+        if min_arc is None:
+            return 0, 0, 0.0, "N/A"
+
+        # Determine stance
+        stance = None
+        for mod in shot_params.situation_stance_modifiers:
+            if mod in (SituationStanceModifier4B.STANDING, SituationStanceModifier4B.STANDING_AND_BRACED,
+                      SituationStanceModifier4B.KNEELING, SituationStanceModifier4B.KNEELING_AND_BRACED,
+                      SituationStanceModifier4B.PRONE, SituationStanceModifier4B.PRONE_AND_BRACED,
+                      SituationStanceModifier4B.FIRING_FROM_THE_HIP):
+                stance = mod
+                break
+
+        is_moving = shot_params.shooter_speed_hex_per_impulse > 0
+
+        effective_ma = EffectiveMinimumArc().get_effective_ma(
+            min_arc, weapon.weapon_type, stance, shooter.strength, False, is_moving
+        )
+
+        final_arc = max(arc_of_fire, effective_ma) if arc_of_fire is not None else effective_ma
+
+        # Calculate EAL for elevation check
+        eal = CombatSimulatorUtils.calculate_eal(
+            shooter, target, weapon, range_hexes, target_exposure, shot_params,
+            AccuracyModifiers.AUTO_ELEV
+        ) - sab_penalty
+
+        # Get elevation odds
+        elevation_odds = Table4AdvancedOddsOfHitting.get_odds_of_hitting_4g(eal, ShotType.BURST)
+
+        # Get target width modifier
+        auto_width_modifier = Table4AdvancedOddsOfHitting.get_standard_target_size_modifier_4e(
+            target_exposure, AccuracyModifiers.AUTO_WIDTH
+        )
+
+        # Get hits probability from Table 5A
+        guaranteed_hits, probability = Table5AutoPelletShrapnel.get_fire_table_probability_5a(
+            final_arc, weapon.full_auto_rof, auto_width_modifier
+        )
+
+        if guaranteed_hits > 0:
+            hits_info = f"{guaranteed_hits} guaranteed"
+        elif probability > 0:
+            hits_info = f"{probability}% chance of 1 hit"
+        else:
+            hits_info = "0 hits"
+
+        return eal, elevation_odds, final_arc, hits_info
+

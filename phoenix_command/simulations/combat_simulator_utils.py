@@ -10,6 +10,7 @@ from phoenix_command.models.hit_result_advanced import ShotParameters, ShotResul
 from phoenix_command.tables.advanced_damage_tables.advanced_damage_calculator import AdvancedDamageCalculator
 from phoenix_command.tables.advanced_damage_tables.table_1_get_hit_location import Table1AdvancedDamageHitLocation
 from phoenix_command.tables.advanced_rules.blunt_damage import Table9ABluntDamage
+from phoenix_command.tables.advanced_rules.effective_min_arc import EffectiveMinimumArc
 from phoenix_command.tables.core.table4_advanced_odds_of_hitting import Table4AdvancedOddsOfHitting
 from phoenix_command.tables.core.table5_auto_pellet_shrapnel import Table5AutoPelletShrapnel
 from phoenix_command.tables.core.table8_healing_and_recovery import Table8HealingAndRecovery
@@ -180,8 +181,6 @@ class CombatSimulatorUtils:
             log: List[str]
     ) -> tuple[int, float]:
         """Setup burst fire parameters and return SAB penalty and arc of fire."""
-        from phoenix_command.tables.advanced_rules.effective_min_arc import EffectiveMinimumArc
-        
         log.append(f"[Burst Fire Setup] Weapon: {weapon.name}, ROF: {weapon.full_auto_rof}")
 
         sab_penalty, min_arc = CombatSimulatorUtils.validate_burst_fire_inputs(
@@ -434,7 +433,10 @@ class CombatSimulatorUtils:
         shot_params: ShotParameters,
         is_front_shot: bool,
         hits: int,
-        log: List[str]
+        log: List[str],
+        eal: int = 0,
+        odds: int = 0,
+        roll: int = 0
     ) -> List[ShotResult]:
         """Process multiple hits on a single target."""
         log.append(f"[Process Target Hits] {hits} hits on {target.name}")
@@ -449,9 +451,9 @@ class CombatSimulatorUtils:
             log.extend(hit_log)
             target_results.append(ShotResult(
                 hit=True,
-                eal=0,
-                odds=100,
-                roll=0,
+                eal=eal,
+                odds=odds,
+                roll=roll,
                 target=target,
                 damage_result=dmg,
                 incapacitation_effect=effect,
@@ -516,7 +518,7 @@ class CombatSimulatorUtils:
         )
         
         hits = Table5AutoPelletShrapnel.get_fire_table_value5a(
-            arc_of_fire, weapon.full_auto_rof, auto_width_modifier
+            arc_of_fire, weapon.full_auto_rof, auto_width_modifier, log
         )
 
         log.append(f"  Hit! Arc: {arc_of_fire}, ROF: {weapon.full_auto_rof}, Width mod: {auto_width_modifier}")

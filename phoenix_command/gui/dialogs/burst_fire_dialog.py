@@ -10,6 +10,7 @@ from phoenix_command.models.enums import TargetExposure, SituationStanceModifier
 from phoenix_command.models.gear import Weapon, AmmoType
 from phoenix_command.models.hit_result_advanced import ShotParameters, TargetGroup
 from phoenix_command.simulations.combat_simulator import CombatSimulator
+from phoenix_command.simulations.combat_simulator_probabilities import CombatSimulatorProbabilities
 
 
 class BurstFireDialog(QDialog):
@@ -223,6 +224,18 @@ class BurstFireDialog(QDialog):
 
         target_group.setLayout(target_layout)
         layout.addWidget(target_group)
+
+        # Probability display section
+        prob_group = QGroupBox("Target Hit Probability")
+        prob_layout = QVBoxLayout()
+        self.target_prob_label = QLabel("Configure parameters to see probability")
+        self.target_prob_label.setWordWrap(True)
+        prob_layout.addWidget(self.target_prob_label)
+        calc_prob_btn = QPushButton("Calculate Probability for Current Target")
+        calc_prob_btn.clicked.connect(self._calculate_target_probability)
+        prob_layout.addWidget(calc_prob_btn)
+        prob_group.setLayout(prob_layout)
+        layout.addWidget(prob_group)
 
         return widget
 
@@ -604,3 +617,65 @@ class BurstFireDialog(QDialog):
 
             dialog.exec()
 
+    def _calculate_target_probability(self):
+        """Calculate and display the hit probability for the current target."""
+        idx = self.params_stack.currentIndex()
+        if idx < 0 or idx >= len(self.selected_targets):
+            self.target_prob_label.setText("No target selected")
+            return
+
+        shooter = self.shooter_combo.currentData()
+        weapon = self.weapon_combo.currentData()
+
+        if not shooter or not weapon:
+            self.target_prob_label.setText("Please select shooter and weapon")
+            return
+
+        target = self.selected_targets[idx]
+        params = self.target_params[target]
+
+        # Get common parameters
+        aim_ac = self.common_aim_spin.value()
+        continuous_burst = self.continuous_burst_spin.value()
+
+        stance_mods = []
+        for item in self.common_stance_list.selectedItems():
+            stance_mods.append(list(SituationStanceModifier4B)[self.common_stance_list.row(item)])
+
+        vis_mods = []
+        for item in self.common_vis_list.selectedItems():
+            vis_mods.append(list(VisibilityModifier4C)[self.common_vis_list.row(item)])
+
+        shooter_speed = float(self.common_shooter_speed_spin.value())
+        shooter_duck = self.common_shooter_duck_check.isChecked()
+
+        # Get arc of fire
+        arc_of_fire = None if self.arc_auto_check.isChecked() else self.arc_spin.value()
+
+        # Build shot parameters
+        shot_params = ShotParameters(
+            aim_time_ac=aim_ac,
+            situation_stance_modifiers=stance_mods,
+            visibility_modifiers=vis_mods,
+            target_orientation=params['orient'].currentData(),
+            shooter_speed_hex_per_impulse=shooter_speed,
+            target_speed_hex_per_impulse=float(params['target_speed'].value()),
+            reflexive_duck_shooter=shooter_duck,
+            reflexive_duck_target=params['target_duck'].isChecked()
+        )
+
+        range_hexes = params['range'].value()
+        exposure = params['exposure'].currentData()
+
+        # Calculate probability using the proper method
+        eal, elevation_odds, effective_arc, hits_info = CombatSimulatorProbabilities.calculate_burst_fire_probabilities(
+            shooter, target, weapon, range_hexes, exposure, shot_params, arc_of_fire, continuous_burst
+        )
+
+        text = f"<b>Target: {target.name}</b><br>"
+        text += f"<b>EAL:</b> {eal}<br>"
+        text += f"<b>Elevation Hit Probability:</b> {elevation_odds}%<br>"
+        text += f"<b>Effective Arc:</b> {effective_arc:.2f} hexes<br>"
+        text += f"<b>Hits (if elevation succeeds):</b> {hits_info}"
+
+        self.target_prob_label.setText(text)
