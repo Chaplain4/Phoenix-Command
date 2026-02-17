@@ -78,7 +78,7 @@ class Table5AutoPelletShrapnel:
         arc_key = Table5AutoPelletShrapnel.ceil_key(arc_of_fire, arc_keys)
 
         row_index = arc_keys.index(arc_key)
-        shifted_index = row_index + size_modifier
+        shifted_index = row_index - size_modifier
         shifted_index = max(0, min(len(arc_keys) - 1, shifted_index))  # Clamp to bounds
         if not (0 <= shifted_index < len(arc_keys)):
             raise ValueError("size_modifier moves arc_of_fire out of table range")
@@ -185,7 +185,7 @@ class Table5AutoPelletShrapnel:
         arc_key = cls.ceil_key(arc_of_fire, arc_keys)
 
         row_index = arc_keys.index(arc_key)
-        shifted_index = row_index + size_modifier
+        shifted_index = row_index - size_modifier
         shifted_index = max(0, min(len(arc_keys) - 1, shifted_index))
         row_key = arc_keys[shifted_index]
 

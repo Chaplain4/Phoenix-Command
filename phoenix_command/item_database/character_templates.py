@@ -4,7 +4,7 @@ from phoenix_command.models.character import Character
 from phoenix_command.models.gear import Gear
 from phoenix_command.item_database.weapons import ak_74, ammo_545x39_ak74_fmj, dragunov_svd, ammo_762x54_svd_fmj, \
     rpk_74, ammo_545sov_rpk74_fmj, rpg_7v, ammo_85mm_he_rpg7, spas12, ammo_12g_spas_aps, ammo_12g_spas_shot, m16a2, \
-    ammo_556nato_m16a2_fmj
+    ammo_556nato_m16a2_fmj, atchisson_assault_12, ammo_12g_atchisson_shot, ammo_12g_atchisson_slug
 
 ak74_fighter = Character(
     strength=10,
@@ -88,11 +88,26 @@ m16a2_fighter.add_gear(m16a2)
 m16a2_fighter.add_gear(Gear(name="Clothing", weight=5.0, description="Standard field clothing")),
 m16a2_fighter.add_gear(ammo_556nato_m16a2_fmj)
 
+auto_shotgun_fighter = Character(
+    strength=10,
+    intelligence=10,
+    will=10,
+    health=10,
+    agility=10,
+    gun_combat_skill_level=3,
+    name="Automatic Shotgun Fighter"
+)
+auto_shotgun_fighter.add_gear(atchisson_assault_12),
+auto_shotgun_fighter.add_gear(Gear(name="Clothing", weight=5.0, description="Standard field clothing")),
+auto_shotgun_fighter.add_gear(ammo_12g_atchisson_shot),
+auto_shotgun_fighter.add_gear(ammo_12g_atchisson_slug)
+
 character_templates = [
     ak74_fighter,
     dragunov_fighter,
     rpk_74_fighter,
     rpg_fighter,
     shotgun_fighter,
-    m16a2_fighter
+    m16a2_fighter,
+    auto_shotgun_fighter
 ]

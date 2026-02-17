@@ -288,6 +288,37 @@ class BurstFireDialog(QDialog):
                 QMessageBox.warning(self, "Error", "Selected weapon is not full auto capable")
                 return
 
+            # Check for pellet ammo and switch to shotgun burst fire dialog
+            ammo = self.ammo_combo.currentData()
+            if ammo and hasattr(ammo, 'pellet_count') and ammo.pellet_count:
+                from phoenix_command.gui.dialogs.shotgun_burst_fire_dialog import ShotgunBurstFireDialog
+                shooter = self.shooter_combo.currentData()
+
+                self.accept()
+                dialog = ShotgunBurstFireDialog(
+                    self.characters, self.parent(),
+                    preset_shooter=shooter, preset_weapon=weapon, preset_ammo=ammo
+                )
+                # Set shooter, weapon, ammo
+                for i in range(dialog.shooter_combo.count()):
+                    if dialog.shooter_combo.itemData(i) == shooter:
+                        dialog.shooter_combo.setCurrentIndex(i)
+                        break
+                for i in range(dialog.weapon_combo.count()):
+                    if dialog.weapon_combo.itemData(i) == weapon:
+                        dialog.weapon_combo.setCurrentIndex(i)
+                        break
+                for i in range(dialog.ammo_combo.count()):
+                    if dialog.ammo_combo.itemData(i) == ammo:
+                        dialog.ammo_combo.setCurrentIndex(i)
+                        break
+                # Go to step 2 (common parameters)
+                dialog.current_step = 1
+                dialog.stack.setCurrentIndex(1)
+                dialog._update_navigation()
+                dialog.exec()
+                return
+
         if self.current_step == 2:
             # Validate target selection
             selected = self.targets_list.selectedItems()

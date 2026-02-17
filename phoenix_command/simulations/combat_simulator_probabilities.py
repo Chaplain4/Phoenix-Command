@@ -252,3 +252,133 @@ class CombatSimulatorProbabilities:
 
         return eal, elevation_odds, final_arc, hits_info
 
+    @staticmethod
+    def calculate_shotgun_burst_fire_probabilities(
+        shooter: Character,
+        target: Character,
+        weapon: Weapon,
+        ammo: AmmoType,
+        range_hexes: int,
+        target_exposure: TargetExposure,
+        shot_params: ShotParameters,
+        arc_of_fire: Optional[float] = None,
+        continuous_burst_impulses: int = 0
+    ) -> Tuple[int, int, float, str, str]:
+        """Calculate shotgun burst fire hit probability and expected pattern/pellet hits.
+
+        Args:
+            shooter: Shooter character
+            target: Target character
+            weapon: Full auto weapon with shotgun ammo
+            ammo: Pellet ammunition
+            range_hexes: Range in hexes
+            target_exposure: Target exposure
+            shot_params: Shot parameters
+            arc_of_fire: Custom arc of fire (None for auto calculation)
+            continuous_burst_impulses: Number of impulses of continuous burst (SAB penalty)
+
+        Returns:
+            Tuple of (eal, elevation_odds_percent, effective_arc, patterns_info, pellet_info)
+            where patterns_info describes number of patterns hitting target
+            and pellet_info describes pellet hits per pattern
+        """
+        if not weapon.full_auto or not weapon.full_auto_rof:
+            return 0, 0, 0.0, "N/A", "N/A"
+
+        if not weapon.ballistic_data:
+            return 0, 0, 0.0, "N/A", "N/A"
+
+        # Get shotgun data at range
+        data = CombatSimulatorUtils.get_shotgun_data_at_range(ammo, range_hexes)
+
+        # Calculate SAB penalty
+        sab_penalty = 0
+        if continuous_burst_impulses > 0 and weapon.sustained_auto_burst:
+            sab_penalty = continuous_burst_impulses * weapon.sustained_auto_burst
+
+        # Calculate minimum arc
+        min_arc = weapon.ballistic_data.get_minimum_arc(range_hexes)
+        if min_arc is None:
+            return 0, 0, 0.0, "N/A", "N/A"
+
+        # Determine stance
+        stance = None
+        for mod in shot_params.situation_stance_modifiers:
+            if mod in (SituationStanceModifier4B.STANDING, SituationStanceModifier4B.STANDING_AND_BRACED,
+                      SituationStanceModifier4B.KNEELING, SituationStanceModifier4B.KNEELING_AND_BRACED,
+                      SituationStanceModifier4B.PRONE, SituationStanceModifier4B.PRONE_AND_BRACED,
+                      SituationStanceModifier4B.FIRING_FROM_THE_HIP):
+                stance = mod
+                break
+
+        is_moving = shot_params.shooter_speed_hex_per_impulse > 0
+
+        effective_ma = EffectiveMinimumArc().get_effective_ma(
+            min_arc, weapon.weapon_type, stance, shooter.strength, False, is_moving
+        )
+
+        final_arc = max(arc_of_fire, effective_ma) if arc_of_fire is not None else effective_ma
+
+        # Calculate EAL for elevation check using SALM if available
+        if data.shotgun_accuracy_level_modifier is not None:
+            eal = CombatSimulatorUtils.calculate_shotgun_eal(
+                shooter, target, weapon, range_hexes, target_exposure, shot_params,
+                data.shotgun_accuracy_level_modifier, sab_penalty
+            )
+        else:
+            eal = CombatSimulatorUtils.calculate_eal(
+                shooter, target, weapon, range_hexes, target_exposure, shot_params,
+                AccuracyModifiers.AUTO_ELEV
+            ) - sab_penalty
+
+        # Get elevation odds
+        elevation_odds = Table4AdvancedOddsOfHitting.get_odds_of_hitting_4g(eal, ShotType.BURST)
+
+        # Get target width modifier for pattern hits calculation
+        auto_width_modifier = Table4AdvancedOddsOfHitting.get_standard_target_size_modifier_4e(
+            target_exposure, AccuracyModifiers.AUTO_WIDTH
+        )
+
+        # Get patterns (hits) from Table 5A
+        guaranteed_patterns, pattern_probability = Table5AutoPelletShrapnel.get_fire_table_probability_5a(
+            final_arc, weapon.full_auto_rof, auto_width_modifier
+        )
+
+        if guaranteed_patterns > 0:
+            patterns_info = f"{guaranteed_patterns} patterns guaranteed"
+        elif pattern_probability > 0:
+            patterns_info = f"{pattern_probability}% chance of 1 pattern"
+        else:
+            patterns_info = "0 patterns"
+
+        # Calculate pellet hits per pattern
+        bphc = data.base_pellet_hit_chance
+        if bphc:
+            target_size_modifier = Table4AdvancedOddsOfHitting.get_standard_target_size_modifier_4e(
+                target_exposure, AccuracyModifiers.AUTO_WIDTH
+            )
+            if bphc.startswith('*'):
+                base_hits = int(bphc[1:])
+                guaranteed, probability = Table5AutoPelletShrapnel.get_pellet_hit_probability_5a(
+                    base_hits, True, target_size_modifier
+                )
+                if probability > 0:
+                    pellet_info = f"{guaranteed} guaranteed + {probability}% chance per pattern"
+                else:
+                    pellet_info = f"{guaranteed} guaranteed per pattern"
+            else:
+                base_value = int(bphc)
+                guaranteed, probability = Table5AutoPelletShrapnel.get_pellet_hit_probability_5a(
+                    base_value, False, target_size_modifier
+                )
+                if guaranteed > 0:
+                    if probability > 0:
+                        pellet_info = f"{guaranteed} guaranteed + {probability}% chance per pattern"
+                    else:
+                        pellet_info = f"{guaranteed} guaranteed per pattern"
+                else:
+                    pellet_info = f"{probability}% chance per pattern"
+        else:
+            pellet_info = "0 pellets"
+
+        return eal, elevation_odds, final_arc, patterns_info, pellet_info
