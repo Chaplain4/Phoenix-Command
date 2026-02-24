@@ -142,7 +142,12 @@ class Table1CharacterGeneration:
 
 
         if max_speed not in table:
-            raise ValueError(f"No data for MS={max_speed}")
+            if max_speed < 1:
+                max_speed = 1
+            elif max_speed > 13:
+                max_speed = 13
+            else:
+                raise ValueError(f"No data for MS={max_speed}")
 
         if intelligence_skill_factor <= isf_values[0]:
             quantized_isf = isf_values[0]

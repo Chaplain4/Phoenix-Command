@@ -76,6 +76,7 @@ class ExplosiveShotResult:
     roll: int
     scatter_hexes: int = 0
     is_long: bool = True
+    elevation_failed: bool = False
 
 
 @dataclass

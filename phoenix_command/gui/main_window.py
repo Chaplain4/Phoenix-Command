@@ -1,6 +1,6 @@
 """Main window for Phoenix Command GUI."""
 
-from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
+from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                               QSplitter, QMenuBar, QMenu, QStatusBar, QLabel)
 from PyQt6.QtCore import Qt
 from phoenix_command.models.character import Character
@@ -12,28 +12,28 @@ from phoenix_command.gui.widgets.character_list import CharacterListWidget
 
 class MainWindow(QMainWindow):
     """Main application window."""
-    
+
     def __init__(self):
         super().__init__()
         self.characters = []
         self.setWindowTitle("Phoenix Command")
         self.setGeometry(100, 100, 1400, 900)
-        
+
         self._create_menu_bar()
         self._create_central_widget()
         self._create_status_bar()
-    
+
     def _create_menu_bar(self):
         """Create menu bar."""
         menubar = self.menuBar()
-        
+
         file_menu = menubar.addMenu("&File")
         file_menu.addAction("&New Session")
         file_menu.addAction("&Load Session")
         file_menu.addAction("&Save Session")
         file_menu.addSeparator()
         file_menu.addAction("E&xit", self.close)
-        
+
         char_menu = menubar.addMenu("&Characters")
         add_char_action = char_menu.addAction("&Add Character")
         add_char_action.triggered.connect(self._add_character)
@@ -43,7 +43,7 @@ class MainWindow(QMainWindow):
         equip_action.triggered.connect(self._manage_equipment)
         char_menu.addSeparator()
         char_menu.addAction("&Import Template")
-        
+
         combat_menu = menubar.addMenu("C&ombat")
         shot_action = combat_menu.addAction("&Single Shot")
         shot_action.triggered.connect(self._single_shot)
@@ -51,54 +51,60 @@ class MainWindow(QMainWindow):
         three_rb_action.triggered.connect(self._three_round_burst)
         burst_action = combat_menu.addAction("&Burst Fire")
         burst_action.triggered.connect(self._burst_fire)
+        combat_menu.addSeparator()
+        thrown_grenade_action = combat_menu.addAction("Thrown &Grenade")
+        thrown_grenade_action.triggered.connect(self._thrown_grenade)
+        explosion_action = combat_menu.addAction("&Explosion Damage")
+        explosion_action.triggered.connect(self._explosion_damage)
+        combat_menu.addSeparator()
         combat_menu.addAction("Combat &History")
-        
+
         help_menu = menubar.addMenu("&Help")
         help_menu.addAction("&Documentation")
         help_menu.addAction("&About")
-    
+
     def _create_central_widget(self):
         """Create central widget with panels."""
         central = QWidget()
         self.setCentralWidget(central)
-        
+
         layout = QHBoxLayout(central)
-        
+
         main_splitter = QSplitter(Qt.Orientation.Horizontal)
-        
+
         self.character_list = CharacterListWidget()
         self.character_list.setMaximumWidth(250)
         self.character_list.setDragEnabled(True)
         self.character_list.currentRowChanged.connect(self._on_character_selected)
         main_splitter.addWidget(self.character_list)
-        
+
         center_splitter = QSplitter(Qt.Orientation.Vertical)
-        
+
         self.combat_zone = CombatZoneWidget()
         center_splitter.addWidget(self.combat_zone)
-        
+
         self.combat_log = CombatLogWidget()
         center_splitter.addWidget(self.combat_log)
-        
+
         main_splitter.addWidget(center_splitter)
-        
+
         details_widget = QWidget()
         details_layout = QVBoxLayout(details_widget)
         self.stats_display = StatsDisplayWidget()
         details_layout.addWidget(self.stats_display)
         details_widget.setMaximumWidth(300)
         main_splitter.addWidget(details_widget)
-        
+
         main_splitter.setStretchFactor(0, 1)
         main_splitter.setStretchFactor(1, 3)
         main_splitter.setStretchFactor(2, 1)
-        
+
         layout.addWidget(main_splitter)
-    
+
     def _create_status_bar(self):
         """Create status bar."""
         self.statusBar().showMessage("Ready")
-    
+
     def _add_character(self):
         """Open character creation dialog."""
         from phoenix_command.gui.dialogs.character_dialog import CharacterDialog
@@ -109,27 +115,27 @@ class MainWindow(QMainWindow):
                 self.characters.append(character)
                 self._refresh_character_list()
                 self.statusBar().showMessage(f"Added character: {character.name}")
-    
+
     def _refresh_character_list(self):
         """Refresh character list display."""
         self.character_list.clear()
         for char in self.characters:
             self.character_list.addItem(char.name)
-    
+
     def _on_character_selected(self, index):
         """Display character details when selected."""
         if 0 <= index < len(self.characters):
             self.stats_display.set_character(self.characters[index])
         else:
             self.stats_display.clear()
-    
+
     def _edit_character(self):
         """Edit selected character stats."""
         current_row = self.character_list.currentRow()
         if current_row < 0:
             self.statusBar().showMessage("No character selected")
             return
-        
+
         from phoenix_command.gui.dialogs.character_dialog import CharacterDialog
         char = self.characters[current_row]
         dialog = CharacterDialog(character=char, parent=self)
@@ -139,37 +145,37 @@ class MainWindow(QMainWindow):
             self._on_character_selected(current_row)
             self.combat_zone.refresh_cards()
             self.statusBar().showMessage(f"Updated character: {char.name}")
-    
+
     def _manage_equipment(self):
         """Open equipment management dialog."""
         current_row = self.character_list.currentRow()
         if current_row < 0:
             self.statusBar().showMessage("No character selected")
             return
-        
+
         from phoenix_command.gui.dialogs.equipment_dialog import EquipmentDialog
         char = self.characters[current_row]
         dialog = EquipmentDialog(character=char, parent=self)
         dialog.exec()
         self._on_character_selected(current_row)
         self.statusBar().showMessage(f"Equipment updated for {char.name}")
-    
+
     def _single_shot(self):
         """Open single shot dialog."""
         if len(self.characters) < 2:
             self.statusBar().showMessage("Need at least 2 characters for combat")
             return
-        
+
         from phoenix_command.gui.dialogs.shot_dialog import ShotDialog
         dialog = ShotDialog(characters=self.characters, parent=self)
         dialog.exec()
-    
+
     def _three_round_burst(self):
         """Open three round burst dialog."""
         if len(self.characters) < 2:
             self.statusBar().showMessage("Need at least 2 characters for combat")
             return
-        
+
         from phoenix_command.models.gear import Weapon
         has_3rb_weapon = False
         for char in self.characters:
@@ -179,11 +185,11 @@ class MainWindow(QMainWindow):
                     break
             if has_3rb_weapon:
                 break
-        
+
         if not has_3rb_weapon:
             self.statusBar().showMessage("No character has a weapon with three round burst capability")
             return
-        
+
         from phoenix_command.gui.dialogs.three_round_burst_dialog import ThreeRoundBurstDialog
         dialog = ThreeRoundBurstDialog(characters=self.characters, parent=self)
         dialog.exec()
@@ -210,6 +216,40 @@ class MainWindow(QMainWindow):
 
         from phoenix_command.gui.dialogs.burst_fire_dialog import BurstFireDialog
         dialog = BurstFireDialog(characters=self.characters, parent=self)
+        dialog.exec()
+
+    def _explosion_damage(self):
+        """Open explosion damage dialog."""
+        if len(self.characters) < 1:
+            self.statusBar().showMessage("Need at least 1 character")
+            return
+
+        from phoenix_command.gui.dialogs.explosion_damage_dialog import ExplosionDamageDialog
+        dialog = ExplosionDamageDialog(characters=self.characters, parent=self)
+        dialog.exec()
+
+    def _thrown_grenade(self):
+        """Open thrown grenade dialog."""
+        if len(self.characters) < 1:
+            self.statusBar().showMessage("Need at least 1 character")
+            return
+
+        from phoenix_command.models.gear import Grenade
+        has_grenade = False
+        for char in self.characters:
+            for item in char.equipment:
+                if isinstance(item, Grenade):
+                    has_grenade = True
+                    break
+            if has_grenade:
+                break
+
+        if not has_grenade:
+            self.statusBar().showMessage("No character has a grenade")
+            return
+
+        from phoenix_command.gui.dialogs.thrown_grenade_dialog import ThrownGrenadeDialog
+        dialog = ThrownGrenadeDialog(characters=self.characters, parent=self)
         dialog.exec()
 
     def _log_shot_result(self, result):

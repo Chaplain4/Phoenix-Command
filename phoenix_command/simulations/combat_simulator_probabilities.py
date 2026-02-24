@@ -3,7 +3,8 @@
 from typing import List, Tuple, Optional
 
 from phoenix_command.models.character import Character
-from phoenix_command.models.enums import TargetExposure, ShotType, AccuracyModifiers, SituationStanceModifier4B
+from phoenix_command.models.enums import TargetExposure, ShotType, AccuracyModifiers, SituationStanceModifier4B, \
+    ExplosiveTarget
 from phoenix_command.models.gear import Weapon, AmmoType
 from phoenix_command.models.hit_result_advanced import ShotParameters
 from phoenix_command.simulations.combat_simulator_utils import CombatSimulatorUtils
@@ -382,3 +383,113 @@ class CombatSimulatorProbabilities:
             pellet_info = "0 pellets"
 
         return eal, elevation_odds, final_arc, patterns_info, pellet_info
+
+    @staticmethod
+    def calculate_explosive_weapon_probability(
+        shooter: Character,
+        weapon: Weapon,
+        range_hexes: int,
+        target: 'ExplosiveTarget',
+        shot_params: ShotParameters
+    ) -> Tuple[int, int]:
+        """Calculate hit probability for explosive weapon shot.
+
+        Returns:
+            Tuple of (eal, odds_percent)
+        """
+        target_size_alm = target.value
+
+        eal = CombatSimulatorUtils.calculate_explosive_eal(
+            shooter, weapon, range_hexes, target_size_alm, shot_params, log=[]
+        )
+        odds = Table4AdvancedOddsOfHitting.get_odds_of_hitting_4g(eal, ShotType.SINGLE)
+        return eal, odds
+
+    @staticmethod
+    def calculate_thrown_grenade_probability(
+        shooter: Character,
+        range_hexes: int,
+        target: 'ExplosiveTarget',
+        aim_time_ac: int,
+        situation_stance_modifiers: list,
+        visibility_modifiers: list
+    ) -> Tuple[int, int]:
+        """Calculate hit probability for thrown grenade.
+
+        Returns:
+            Tuple of (eal, odds_percent)
+        """
+        target_size_alm = target.value
+        aim_alm = Table4AdvancedOddsOfHitting.get_thrown_grenade_aim_alm_4h(aim_time_ac)
+
+        eal = CombatSimulatorUtils.calculate_grenade_eal(
+            shooter, range_hexes, target_size_alm, aim_alm,
+            situation_stance_modifiers, visibility_modifiers, log=[]
+        )
+        odds = Table4AdvancedOddsOfHitting.get_odds_of_hitting_4g(eal, ShotType.SINGLE)
+        return eal, odds
+
+    @staticmethod
+    def calculate_auto_grenade_launcher_probability(
+        shooter: Character,
+        weapon: Weapon,
+        range_hexes: int,
+        target: 'ExplosiveTarget',
+        shot_params: ShotParameters,
+        arc_of_fire: Optional[float] = None,
+        continuous_burst_impulses: int = 0
+    ) -> Tuple[int, int, float, str]:
+        """Calculate auto grenade launcher burst probability.
+
+        Returns:
+            Tuple of (eal, elevation_odds_percent, effective_arc, grenades_info)
+        """
+        if not weapon.full_auto or not weapon.full_auto_rof:
+            return 0, 0, 0.0, "N/A"
+        if not weapon.ballistic_data:
+            return 0, 0, 0.0, "N/A"
+
+        sab_penalty = 0
+        if continuous_burst_impulses > 0 and weapon.sustained_auto_burst:
+            sab_penalty = continuous_burst_impulses * weapon.sustained_auto_burst
+
+        min_arc = weapon.ballistic_data.get_minimum_arc(range_hexes)
+        if min_arc is None:
+            return 0, 0, 0.0, "N/A"
+
+        stance = None
+        for mod in shot_params.situation_stance_modifiers:
+            if mod in (SituationStanceModifier4B.STANDING, SituationStanceModifier4B.STANDING_AND_BRACED,
+                      SituationStanceModifier4B.KNEELING, SituationStanceModifier4B.KNEELING_AND_BRACED,
+                      SituationStanceModifier4B.PRONE, SituationStanceModifier4B.PRONE_AND_BRACED,
+                      SituationStanceModifier4B.FIRING_FROM_THE_HIP):
+                stance = mod
+                break
+
+        is_moving = shot_params.shooter_speed_hex_per_impulse > 0
+        effective_ma = EffectiveMinimumArc().get_effective_ma(
+            min_arc, weapon.weapon_type, stance, shooter.strength, False, is_moving
+        )
+        final_arc = max(arc_of_fire, effective_ma) if arc_of_fire is not None else effective_ma
+
+        target_size_alm = target.value
+        eal = CombatSimulatorUtils.calculate_explosive_eal(
+            shooter, weapon, range_hexes, target_size_alm, shot_params, log=[]
+        ) - sab_penalty
+
+        elevation_odds = Table4AdvancedOddsOfHitting.get_odds_of_hitting_4g(eal, ShotType.BURST)
+
+        # target_size_modifier = 0 for explosive targets (hex-sized)
+        guaranteed, probability = Table5AutoPelletShrapnel.get_fire_table_probability_5a(
+            final_arc, weapon.full_auto_rof, 0
+        )
+
+        if guaranteed > 0:
+            grenades_info = f"{guaranteed} guaranteed"
+        elif probability > 0:
+            grenades_info = f"{probability}% chance of 1"
+        else:
+            grenades_info = "0"
+
+        return eal, elevation_odds, final_arc, grenades_info
+

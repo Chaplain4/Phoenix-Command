@@ -250,8 +250,35 @@ class ShotDialog(QDialog):
     def _next_step(self):
         """Go to next step."""
         if self.current_step == 0:
-            # Check for pellet ammo and switch to shotgun dialog
             ammo = self.ammo_combo.currentData()
+
+            # Check for explosive ammo and switch to explosive weapon dialog
+            if ammo and hasattr(ammo, 'explosive_data') and ammo.explosive_data:
+                from phoenix_command.gui.dialogs.explosive_weapon_dialog import ExplosiveWeaponDialog
+                shooter = self.shooter_combo.currentData()
+                weapon = self.weapon_combo.currentData()
+
+                self.accept()
+                dialog = ExplosiveWeaponDialog(self.characters, self.parent())
+                for i in range(dialog.shooter_combo.count()):
+                    if dialog.shooter_combo.itemData(i) == shooter:
+                        dialog.shooter_combo.setCurrentIndex(i)
+                        break
+                for i in range(dialog.weapon_combo.count()):
+                    if dialog.weapon_combo.itemData(i) == weapon:
+                        dialog.weapon_combo.setCurrentIndex(i)
+                        break
+                for i in range(dialog.ammo_combo.count()):
+                    if dialog.ammo_combo.itemData(i) == ammo:
+                        dialog.ammo_combo.setCurrentIndex(i)
+                        break
+                dialog.current_step = 1
+                dialog.stack.setCurrentIndex(1)
+                dialog._update_navigation()
+                dialog.exec()
+                return
+
+            # Check for pellet ammo and switch to shotgun dialog
             if ammo and hasattr(ammo, 'pellet_count') and ammo.pellet_count:
                 from phoenix_command.gui.dialogs.shotgun_dialog import ShotgunDialog
                 shooter = self.shooter_combo.currentData()
@@ -348,11 +375,6 @@ class ShotDialog(QDialog):
         
         if not all([shooter, weapon, ammo, target]):
             QMessageBox.warning(self, "Error", "Please select all parameters")
-            return
-        
-        if hasattr(ammo, 'explosive_data') and ammo.explosive_data:
-            QMessageBox.information(self, "Not Implemented",
-                                   "Explosive ammunition will be handled separately (coming soon)")
             return
         
         range_hexes = self.range_spin.value()

@@ -319,6 +319,31 @@ class BurstFireDialog(QDialog):
                 dialog.exec()
                 return
 
+            # Check for explosive ammo and switch to auto grenade launcher dialog
+            if ammo and hasattr(ammo, 'explosive_data') and ammo.explosive_data:
+                from phoenix_command.gui.dialogs.auto_grenade_launcher_dialog import AutoGrenadeLauncherDialog
+                shooter = self.shooter_combo.currentData()
+
+                self.accept()
+                dialog = AutoGrenadeLauncherDialog(self.characters, self.parent())
+                for i in range(dialog.shooter_combo.count()):
+                    if dialog.shooter_combo.itemData(i) == shooter:
+                        dialog.shooter_combo.setCurrentIndex(i)
+                        break
+                for i in range(dialog.weapon_combo.count()):
+                    if dialog.weapon_combo.itemData(i) == weapon:
+                        dialog.weapon_combo.setCurrentIndex(i)
+                        break
+                for i in range(dialog.ammo_combo.count()):
+                    if dialog.ammo_combo.itemData(i) == ammo:
+                        dialog.ammo_combo.setCurrentIndex(i)
+                        break
+                dialog.current_step = 1
+                dialog.stack.setCurrentIndex(1)
+                dialog._update_navigation()
+                dialog.exec()
+                return
+
         if self.current_step == 2:
             # Validate target selection
             selected = self.targets_list.selectedItems()

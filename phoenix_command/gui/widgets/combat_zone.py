@@ -118,8 +118,8 @@ class CombatZoneWidget(QWidget):
         """Show menu to select combat type."""
         from PyQt6.QtWidgets import QMessageBox, QMenu
         from PyQt6.QtGui import QCursor
-        from phoenix_command.models.gear import Weapon
-        
+        from phoenix_command.models.gear import Weapon, Grenade
+
         shooter = self.get_shooter()
         targets = self.get_targets()
         
@@ -136,18 +136,24 @@ class CombatZoneWidget(QWidget):
         
         has_3rb = False
         has_burst = False
+        has_grenade = False
         for item in shooter.equipment:
             if isinstance(item, Weapon):
                 if item.ballistic_data and item.ballistic_data.three_round_burst:
                     has_3rb = True
                 if item.full_auto and item.full_auto_rof:
                     has_burst = True
-        
+            if isinstance(item, Grenade):
+                has_grenade = True
+
         if has_3rb:
             menu.addAction("Three Round Burst")
         if has_burst:
             menu.addAction("Burst Fire")
-        
+        if has_grenade:
+            menu.addSeparator()
+            menu.addAction("Thrown Grenade")
+
         action = menu.exec(QCursor.pos())
         if not action:
             return
@@ -159,6 +165,8 @@ class CombatZoneWidget(QWidget):
             main_window._three_round_burst()
         elif action.text() == "Burst Fire" and hasattr(main_window, '_burst_fire'):
             main_window._burst_fire()
+        elif action.text() == "Thrown Grenade" and hasattr(main_window, '_thrown_grenade'):
+            main_window._thrown_grenade()
 
     def clear_all(self):
         self.shooter_zone.clear()

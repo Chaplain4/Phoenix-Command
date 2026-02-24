@@ -534,9 +534,30 @@ class CombatSimulator:
         log.append(f"[Elevation Check] Odds: {odds}%, Roll: {roll}")
         
         if roll > odds:
-            log.append("  Burst MISSED")
-            return [ExplosiveShotResult(hit=False, eal=eal, odds=odds, roll=roll, scatter_hexes=0)]
-        
+            log.append("  Burst MISSED elevation, calculating scatter...")
+
+            eal_diff = 0
+            for test_eal in range(eal + 1, 29):
+                test_odds = Table4AdvancedOddsOfHitting.get_odds_of_hitting_4g(test_eal, ShotType.SINGLE)
+                if test_odds > roll:
+                    eal_diff = test_eal - eal
+                    break
+
+            scatter_hexes = Table5AutoPelletShrapnel.get_scatter_distance_5c(eal_diff)
+
+            if scatter_hexes == 1:
+                is_long = random.randint(1, 6) > 3
+            else:
+                is_long = random.randint(0, 9) >= 5
+
+            log.append(f"  EAL diff: {eal_diff}, Scatter: {scatter_hexes} hexes, Long: {is_long}")
+
+            return [ExplosiveShotResult(
+                hit=False, eal=eal, odds=odds, roll=roll,
+                scatter_hexes=scatter_hexes, is_long=is_long,
+                elevation_failed=True
+            )]
+
         hits = Table5AutoPelletShrapnel.get_fire_table_value5a(
             final_arc, weapon.full_auto_rof, 0, log
         )
