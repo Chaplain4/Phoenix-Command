@@ -2736,6 +2736,357 @@ ammo_556nato_m16a2_ap = AmmoType(
     ]
 )
 
+# ============================================================================
+# M4A1 ammunition (14.5" barrel, 5.56mm NATO)
+# Ballistics between XM177 (11.5") and M16A2 (20")
+# Muzzle velocity ~2900 fps with M855
+# ============================================================================
+ammo_556nato_m4a1_fmj = AmmoType(
+    name="5.56mm NATO FMJ (M4A1)", description="FMJ",
+    weight=1.0,
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=15.0, damage_class=6),
+        BallisticData(range_hexes=20, penetration=14.0, damage_class=6),
+        BallisticData(range_hexes=40, penetration=13.0, damage_class=6),
+        BallisticData(range_hexes=70, penetration=12.0, damage_class=5),
+        BallisticData(range_hexes=100, penetration=10.0, damage_class=5),
+        BallisticData(range_hexes=200, penetration=6.7, damage_class=4),
+        BallisticData(range_hexes=300, penetration=4.3, damage_class=3),
+        BallisticData(range_hexes=400, penetration=2.8, damage_class=2, beyond_max_range=True)
+    ]
+)
+
+ammo_556nato_m4a1_jhp = AmmoType(
+    name="5.56mm NATO JHP (M4A1)", description="JHP",
+    weight=1.0,
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=15.0, damage_class=8),
+        BallisticData(range_hexes=20, penetration=14.0, damage_class=8),
+        BallisticData(range_hexes=40, penetration=13.0, damage_class=7),
+        BallisticData(range_hexes=70, penetration=11.0, damage_class=7),
+        BallisticData(range_hexes=100, penetration=9.5, damage_class=7),
+        BallisticData(range_hexes=200, penetration=6.4, damage_class=6),
+        BallisticData(range_hexes=300, penetration=4.1, damage_class=4),
+        BallisticData(range_hexes=400, penetration=2.7, damage_class=3, beyond_max_range=True)
+    ]
+)
+
+ammo_556nato_m4a1_ap = AmmoType(
+    name="5.56mm NATO AP (M4A1)", description="AP",
+    weight=1.0,
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=21.0, damage_class=6),
+        BallisticData(range_hexes=20, penetration=20.0, damage_class=6),
+        BallisticData(range_hexes=40, penetration=18.0, damage_class=5),
+        BallisticData(range_hexes=70, penetration=16.0, damage_class=5),
+        BallisticData(range_hexes=100, penetration=14.0, damage_class=4),
+        BallisticData(range_hexes=200, penetration=9.4, damage_class=3),
+        BallisticData(range_hexes=300, penetration=6.1, damage_class=3),
+        BallisticData(range_hexes=400, penetration=4.0, damage_class=2, beyond_max_range=True)
+    ]
+)
+
+# ============================================================================
+# Mk 18 CQBR ammunition (10.3" barrel, 5.56mm NATO)
+# Shorter barrel than XM177 (11.5"), significant velocity loss
+# Muzzle velocity ~2600 fps with M855
+# ============================================================================
+ammo_556nato_mk18_fmj = AmmoType(
+    name="5.56mm NATO FMJ (Mk 18)", description="FMJ",
+    weight=1.0,
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=13.0, damage_class=6),
+        BallisticData(range_hexes=20, penetration=12.0, damage_class=6),
+        BallisticData(range_hexes=40, penetration=11.0, damage_class=5),
+        BallisticData(range_hexes=70, penetration=9.5, damage_class=5),
+        BallisticData(range_hexes=100, penetration=8.2, damage_class=4),
+        BallisticData(range_hexes=200, penetration=5.2, damage_class=3),
+        BallisticData(range_hexes=300, penetration=3.3, damage_class=2),
+        BallisticData(range_hexes=400, penetration=2.1, damage_class=2, beyond_max_range=True)
+    ]
+)
+
+ammo_556nato_mk18_jhp = AmmoType(
+    name="5.56mm NATO JHP (Mk 18)", description="JHP",
+    weight=1.0,
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=13.0, damage_class=7),
+        BallisticData(range_hexes=20, penetration=12.0, damage_class=7),
+        BallisticData(range_hexes=40, penetration=11.0, damage_class=7),
+        BallisticData(range_hexes=70, penetration=9.2, damage_class=6),
+        BallisticData(range_hexes=100, penetration=7.8, damage_class=6),
+        BallisticData(range_hexes=200, penetration=5.0, damage_class=5),
+        BallisticData(range_hexes=300, penetration=3.1, damage_class=4),
+        BallisticData(range_hexes=400, penetration=2.0, damage_class=3, beyond_max_range=True)
+    ]
+)
+
+ammo_556nato_mk18_ap = AmmoType(
+    name="5.56mm NATO AP (Mk 18)", description="AP",
+    weight=1.0,
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=18.0, damage_class=6),
+        BallisticData(range_hexes=20, penetration=17.0, damage_class=5),
+        BallisticData(range_hexes=40, penetration=15.0, damage_class=5),
+        BallisticData(range_hexes=70, penetration=13.0, damage_class=5),
+        BallisticData(range_hexes=100, penetration=11.0, damage_class=4),
+        BallisticData(range_hexes=200, penetration=7.3, damage_class=3),
+        BallisticData(range_hexes=300, penetration=4.6, damage_class=2),
+        BallisticData(range_hexes=400, penetration=3.0, damage_class=2, beyond_max_range=True)
+    ]
+)
+
+# ============================================================================
+# HK416 ammunition (14.5" barrel, 5.56mm NATO)
+# Same barrel length as M4A1, gas piston system
+# Ballistics very similar to M4A1
+# ============================================================================
+ammo_556nato_hk416_fmj = AmmoType(
+    name="5.56mm NATO FMJ (HK416)", description="FMJ",
+    weight=1.0,
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=15.0, damage_class=6),
+        BallisticData(range_hexes=20, penetration=14.0, damage_class=6),
+        BallisticData(range_hexes=40, penetration=13.0, damage_class=6),
+        BallisticData(range_hexes=70, penetration=12.0, damage_class=5),
+        BallisticData(range_hexes=100, penetration=10.0, damage_class=5),
+        BallisticData(range_hexes=200, penetration=6.7, damage_class=4),
+        BallisticData(range_hexes=300, penetration=4.3, damage_class=3),
+        BallisticData(range_hexes=400, penetration=2.8, damage_class=2, beyond_max_range=True)
+    ]
+)
+
+ammo_556nato_hk416_jhp = AmmoType(
+    name="5.56mm NATO JHP (HK416)", description="JHP",
+    weight=1.0,
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=15.0, damage_class=8),
+        BallisticData(range_hexes=20, penetration=14.0, damage_class=8),
+        BallisticData(range_hexes=40, penetration=13.0, damage_class=7),
+        BallisticData(range_hexes=70, penetration=11.0, damage_class=7),
+        BallisticData(range_hexes=100, penetration=9.5, damage_class=7),
+        BallisticData(range_hexes=200, penetration=6.4, damage_class=6),
+        BallisticData(range_hexes=300, penetration=4.1, damage_class=4),
+        BallisticData(range_hexes=400, penetration=2.7, damage_class=3, beyond_max_range=True)
+    ]
+)
+
+ammo_556nato_hk416_ap = AmmoType(
+    name="5.56mm NATO AP (HK416)", description="AP",
+    weight=1.0,
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=21.0, damage_class=6),
+        BallisticData(range_hexes=20, penetration=20.0, damage_class=6),
+        BallisticData(range_hexes=40, penetration=18.0, damage_class=5),
+        BallisticData(range_hexes=70, penetration=16.0, damage_class=5),
+        BallisticData(range_hexes=100, penetration=14.0, damage_class=4),
+        BallisticData(range_hexes=200, penetration=9.4, damage_class=3),
+        BallisticData(range_hexes=300, penetration=6.1, damage_class=3),
+        BallisticData(range_hexes=400, penetration=4.0, damage_class=2, beyond_max_range=True)
+    ]
+)
+
+# ============================================================================
+# SR-16 ammunition (16" barrel, 5.56mm NATO)
+# Slightly shorter than M16A2 (20") but longer than M4A1 (14.5")
+# Muzzle velocity ~2950 fps with M855, very accurate
+# ============================================================================
+ammo_556nato_sr16_fmj = AmmoType(
+    name="5.56mm NATO FMJ (SR-16)", description="FMJ",
+    weight=1.0,
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=16.0, damage_class=6),
+        BallisticData(range_hexes=20, penetration=15.0, damage_class=6),
+        BallisticData(range_hexes=40, penetration=14.0, damage_class=6),
+        BallisticData(range_hexes=70, penetration=12.0, damage_class=6),
+        BallisticData(range_hexes=100, penetration=11.0, damage_class=5),
+        BallisticData(range_hexes=200, penetration=7.3, damage_class=4),
+        BallisticData(range_hexes=300, penetration=4.8, damage_class=3),
+        BallisticData(range_hexes=400, penetration=3.1, damage_class=2, beyond_max_range=True)
+    ]
+)
+
+ammo_556nato_sr16_jhp = AmmoType(
+    name="5.56mm NATO JHP (SR-16)", description="JHP",
+    weight=1.0,
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=16.0, damage_class=8),
+        BallisticData(range_hexes=20, penetration=15.0, damage_class=8),
+        BallisticData(range_hexes=40, penetration=14.0, damage_class=8),
+        BallisticData(range_hexes=70, penetration=12.0, damage_class=7),
+        BallisticData(range_hexes=100, penetration=10.0, damage_class=7),
+        BallisticData(range_hexes=200, penetration=7.0, damage_class=6),
+        BallisticData(range_hexes=300, penetration=4.6, damage_class=5),
+        BallisticData(range_hexes=400, penetration=3.0, damage_class=3, beyond_max_range=True)
+    ]
+)
+
+ammo_556nato_sr16_ap = AmmoType(
+    name="5.56mm NATO AP (SR-16)", description="AP",
+    weight=1.0,
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=23.0, damage_class=6),
+        BallisticData(range_hexes=20, penetration=22.0, damage_class=6),
+        BallisticData(range_hexes=40, penetration=20.0, damage_class=6),
+        BallisticData(range_hexes=70, penetration=17.0, damage_class=5),
+        BallisticData(range_hexes=100, penetration=15.0, damage_class=5),
+        BallisticData(range_hexes=200, penetration=10.0, damage_class=4),
+        BallisticData(range_hexes=300, penetration=6.8, damage_class=3),
+        BallisticData(range_hexes=400, penetration=4.4, damage_class=2, beyond_max_range=True)
+    ]
+)
+
+# ============================================================================
+# SR-25 ammunition (20" barrel, 7.62mm NATO)
+# Match-grade semi-auto DMR. 20" barrel gives full velocity to 7.62 NATO.
+# Very close to M14 ballistics but with match-grade barrel — slightly better.
+# ============================================================================
+ammo_762nato_sr25_fmj = AmmoType(
+    name="7.62mm NATO FMJ (SR-25)", description="FMJ",
+    weight=1.4,
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=20.0, damage_class=8),
+        BallisticData(range_hexes=20, penetration=19.0, damage_class=8),
+        BallisticData(range_hexes=40, penetration=18.0, damage_class=8),
+        BallisticData(range_hexes=70, penetration=16.0, damage_class=7),
+        BallisticData(range_hexes=100, penetration=15.0, damage_class=7),
+        BallisticData(range_hexes=200, penetration=11.0, damage_class=7),
+        BallisticData(range_hexes=300, penetration=7.8, damage_class=6),
+        BallisticData(range_hexes=400, penetration=5.6, damage_class=5)
+    ]
+)
+
+ammo_762nato_sr25_jhp = AmmoType(
+    name="7.62mm NATO JHP (SR-25)", description="JHP",
+    weight=1.4,
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=19.0, damage_class=9),
+        BallisticData(range_hexes=20, penetration=18.0, damage_class=9),
+        BallisticData(range_hexes=40, penetration=17.0, damage_class=9),
+        BallisticData(range_hexes=70, penetration=16.0, damage_class=9),
+        BallisticData(range_hexes=100, penetration=14.0, damage_class=9),
+        BallisticData(range_hexes=200, penetration=10.0, damage_class=8),
+        BallisticData(range_hexes=300, penetration=7.5, damage_class=8),
+        BallisticData(range_hexes=400, penetration=5.4, damage_class=7)
+    ]
+)
+
+ammo_762nato_sr25_ap = AmmoType(
+    name="7.62mm NATO AP (SR-25)", description="AP",
+    weight=1.4,
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=28.0, damage_class=8),
+        BallisticData(range_hexes=20, penetration=27.0, damage_class=8),
+        BallisticData(range_hexes=40, penetration=25.0, damage_class=7),
+        BallisticData(range_hexes=70, penetration=23.0, damage_class=7),
+        BallisticData(range_hexes=100, penetration=21.0, damage_class=7),
+        BallisticData(range_hexes=200, penetration=15.0, damage_class=6),
+        BallisticData(range_hexes=300, penetration=11.0, damage_class=6),
+        BallisticData(range_hexes=400, penetration=7.9, damage_class=5)
+    ]
+)
+
+# ============================================================================
+# Mk 12 SPR ammunition (18" barrel, 5.56mm NATO)
+# Match-grade 5.56 platform, longer barrel than M16A2 (20" vs 18")
+# but match-grade barrel compensates — near M16A2 penetration,
+# slightly less than 20" but very close due to Mk 262 77gr OTM capability
+# ============================================================================
+ammo_556nato_mk12_fmj = AmmoType(
+    name="5.56mm NATO FMJ (Mk 12)", description="FMJ",
+    weight=1.0,
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=16.0, damage_class=6),
+        BallisticData(range_hexes=20, penetration=15.0, damage_class=6),
+        BallisticData(range_hexes=40, penetration=14.0, damage_class=6),
+        BallisticData(range_hexes=70, penetration=13.0, damage_class=6),
+        BallisticData(range_hexes=100, penetration=11.0, damage_class=5),
+        BallisticData(range_hexes=200, penetration=7.5, damage_class=4),
+        BallisticData(range_hexes=300, penetration=5.0, damage_class=3),
+        BallisticData(range_hexes=400, penetration=3.3, damage_class=3, beyond_max_range=True)
+    ]
+)
+
+ammo_556nato_mk12_jhp = AmmoType(
+    name="5.56mm NATO JHP (Mk 12)", description="JHP",
+    weight=1.0,
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=16.0, damage_class=8),
+        BallisticData(range_hexes=20, penetration=15.0, damage_class=8),
+        BallisticData(range_hexes=40, penetration=14.0, damage_class=8),
+        BallisticData(range_hexes=70, penetration=12.0, damage_class=7),
+        BallisticData(range_hexes=100, penetration=11.0, damage_class=7),
+        BallisticData(range_hexes=200, penetration=7.2, damage_class=6),
+        BallisticData(range_hexes=300, penetration=4.8, damage_class=5),
+        BallisticData(range_hexes=400, penetration=3.1, damage_class=4, beyond_max_range=True)
+    ]
+)
+
+ammo_556nato_mk12_ap = AmmoType(
+    name="5.56mm NATO AP (Mk 12)", description="AP",
+    weight=1.0,
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=23.0, damage_class=6),
+        BallisticData(range_hexes=20, penetration=22.0, damage_class=6),
+        BallisticData(range_hexes=40, penetration=20.0, damage_class=6),
+        BallisticData(range_hexes=70, penetration=18.0, damage_class=5),
+        BallisticData(range_hexes=100, penetration=16.0, damage_class=5),
+        BallisticData(range_hexes=200, penetration=10.0, damage_class=4),
+        BallisticData(range_hexes=300, penetration=7.1, damage_class=3),
+        BallisticData(range_hexes=400, penetration=4.7, damage_class=2, beyond_max_range=True)
+    ]
+)
+
+# ============================================================================
+# HK417 ammunition (16.5" barrel, 7.62mm NATO)
+# Shorter barrel than M14/SR-25 (20"), so slightly reduced velocity
+# Similar to G3 but slightly better due to modern barrel
+# ============================================================================
+ammo_762nato_hk417_fmj = AmmoType(
+    name="7.62mm NATO FMJ (HK417)", description="FMJ",
+    weight=1.4,
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=18.0, damage_class=8),
+        BallisticData(range_hexes=20, penetration=17.0, damage_class=8),
+        BallisticData(range_hexes=40, penetration=16.0, damage_class=7),
+        BallisticData(range_hexes=70, penetration=15.0, damage_class=7),
+        BallisticData(range_hexes=100, penetration=13.0, damage_class=7),
+        BallisticData(range_hexes=200, penetration=9.5, damage_class=6),
+        BallisticData(range_hexes=300, penetration=6.7, damage_class=6),
+        BallisticData(range_hexes=400, penetration=4.8, damage_class=5)
+    ]
+)
+
+ammo_762nato_hk417_jhp = AmmoType(
+    name="7.62mm NATO JHP (HK417)", description="JHP",
+    weight=1.4,
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=17.0, damage_class=9),
+        BallisticData(range_hexes=20, penetration=17.0, damage_class=9),
+        BallisticData(range_hexes=40, penetration=16.0, damage_class=9),
+        BallisticData(range_hexes=70, penetration=14.0, damage_class=9),
+        BallisticData(range_hexes=100, penetration=13.0, damage_class=8),
+        BallisticData(range_hexes=200, penetration=9.1, damage_class=8),
+        BallisticData(range_hexes=300, penetration=6.5, damage_class=7),
+        BallisticData(range_hexes=400, penetration=4.6, damage_class=6)
+    ]
+)
+
+ammo_762nato_hk417_ap = AmmoType(
+    name="7.62mm NATO AP (HK417)", description="AP",
+    weight=1.4,
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=25.0, damage_class=7),
+        BallisticData(range_hexes=20, penetration=24.0, damage_class=7),
+        BallisticData(range_hexes=40, penetration=23.0, damage_class=7),
+        BallisticData(range_hexes=70, penetration=21.0, damage_class=7),
+        BallisticData(range_hexes=100, penetration=19.0, damage_class=7),
+        BallisticData(range_hexes=200, penetration=13.0, damage_class=6),
+        BallisticData(range_hexes=300, penetration=9.5, damage_class=5),
+        BallisticData(range_hexes=400, penetration=6.8, damage_class=5)
+    ]
+)
+
 ammo_762nato_m40a1_fmj = AmmoType(
     name="7.62mm NATO FMJ (M40A1)", description="FMJ",
     weight=0.06,
@@ -3857,6 +4208,157 @@ ammo_50bmg_m2hb_ap = AmmoType(
         BallisticData(range_hexes=200, penetration=39.0, damage_class=10),
         BallisticData(range_hexes=300, penetration=33.0, damage_class=10),
         BallisticData(range_hexes=400, penetration=27.0, damage_class=10)
+    ]
+)
+
+# ============================================================================
+# Barrett M107 ammunition (29" barrel, .50 BMG)
+# Longer barrel than M2HB (45" weapon but short barrel), semi-auto sniper
+# Slightly better velocity than M2HB due to longer barrel
+# Single round weight for magazine-fed system
+# ============================================================================
+ammo_50bmg_m107_fmj = AmmoType(
+    name=".50 BMG FMJ (M107)", description="FMJ",
+    weight=2.4,
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=42.0, damage_class=10),
+        BallisticData(range_hexes=20, penetration=41.0, damage_class=10),
+        BallisticData(range_hexes=40, penetration=39.0, damage_class=10),
+        BallisticData(range_hexes=70, penetration=37.0, damage_class=10),
+        BallisticData(range_hexes=100, penetration=35.0, damage_class=10),
+        BallisticData(range_hexes=200, penetration=29.0, damage_class=10),
+        BallisticData(range_hexes=300, penetration=24.0, damage_class=10),
+        BallisticData(range_hexes=400, penetration=20.0, damage_class=10)
+    ]
+)
+
+ammo_50bmg_m107_jhp = AmmoType(
+    name=".50 BMG JHP (M107)", description="JHP",
+    weight=2.4,
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=40.0, damage_class=10),
+        BallisticData(range_hexes=20, penetration=39.0, damage_class=10),
+        BallisticData(range_hexes=40, penetration=37.0, damage_class=10),
+        BallisticData(range_hexes=70, penetration=35.0, damage_class=10),
+        BallisticData(range_hexes=100, penetration=33.0, damage_class=10),
+        BallisticData(range_hexes=200, penetration=28.0, damage_class=10),
+        BallisticData(range_hexes=300, penetration=23.0, damage_class=10),
+        BallisticData(range_hexes=400, penetration=19.0, damage_class=10)
+    ]
+)
+
+ammo_50bmg_m107_ap = AmmoType(
+    name=".50 BMG AP (M107)", description="AP",
+    weight=2.4,
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=59.0, damage_class=10),
+        BallisticData(range_hexes=20, penetration=58.0, damage_class=10),
+        BallisticData(range_hexes=40, penetration=55.0, damage_class=10),
+        BallisticData(range_hexes=70, penetration=52.0, damage_class=10),
+        BallisticData(range_hexes=100, penetration=49.0, damage_class=10),
+        BallisticData(range_hexes=200, penetration=41.0, damage_class=10),
+        BallisticData(range_hexes=300, penetration=34.0, damage_class=10),
+        BallisticData(range_hexes=400, penetration=28.0, damage_class=10)
+    ]
+)
+
+# ============================================================================
+# Barrett MRAD / Mk 22 ASR ammunition (27" barrel, .338 Norma Magnum)
+# .338 NM sits between .300 Win Mag and .50 BMG in power
+# MV ~2650 fps with 300gr bullet, excellent long-range ballistics
+# ============================================================================
+ammo_338nm_mrad_fmj = AmmoType(
+    name=".338 Norma Mag FMJ (MRAD)", description="FMJ",
+    weight=1.1,
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=32.0, damage_class=9),
+        BallisticData(range_hexes=20, penetration=31.0, damage_class=9),
+        BallisticData(range_hexes=40, penetration=29.0, damage_class=9),
+        BallisticData(range_hexes=70, penetration=27.0, damage_class=9),
+        BallisticData(range_hexes=100, penetration=25.0, damage_class=9),
+        BallisticData(range_hexes=200, penetration=20.0, damage_class=8),
+        BallisticData(range_hexes=300, penetration=16.0, damage_class=8),
+        BallisticData(range_hexes=400, penetration=12.0, damage_class=7)
+    ]
+)
+
+ammo_338nm_mrad_jhp = AmmoType(
+    name=".338 Norma Mag JHP (MRAD)", description="JHP",
+    weight=1.1,
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=30.0, damage_class=10),
+        BallisticData(range_hexes=20, penetration=29.0, damage_class=10),
+        BallisticData(range_hexes=40, penetration=27.0, damage_class=10),
+        BallisticData(range_hexes=70, penetration=26.0, damage_class=10),
+        BallisticData(range_hexes=100, penetration=24.0, damage_class=10),
+        BallisticData(range_hexes=200, penetration=19.0, damage_class=9),
+        BallisticData(range_hexes=300, penetration=15.0, damage_class=9),
+        BallisticData(range_hexes=400, penetration=11.0, damage_class=8)
+    ]
+)
+
+ammo_338nm_mrad_ap = AmmoType(
+    name=".338 Norma Mag AP (MRAD)", description="AP",
+    weight=1.1,
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=45.0, damage_class=9),
+        BallisticData(range_hexes=20, penetration=44.0, damage_class=9),
+        BallisticData(range_hexes=40, penetration=41.0, damage_class=9),
+        BallisticData(range_hexes=70, penetration=38.0, damage_class=9),
+        BallisticData(range_hexes=100, penetration=35.0, damage_class=8),
+        BallisticData(range_hexes=200, penetration=28.0, damage_class=8),
+        BallisticData(range_hexes=300, penetration=22.0, damage_class=7),
+        BallisticData(range_hexes=400, penetration=17.0, damage_class=7)
+    ]
+)
+
+# ============================================================================
+# M2010 Enhanced Sniper Rifle ammunition (24" barrel, .300 Win Mag)
+# Remington M700 action in .300 WM, 24" barrel — very similar to Walther 2000
+# Slightly shorter barrel but modern match ammo compensates
+# ============================================================================
+ammo_300wm_m2010_fmj = AmmoType(
+    name=".300 Win Mag FMJ (M2010)", description="FMJ",
+    weight=0.9,
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=27.0, damage_class=8),
+        BallisticData(range_hexes=20, penetration=26.0, damage_class=8),
+        BallisticData(range_hexes=40, penetration=25.0, damage_class=8),
+        BallisticData(range_hexes=70, penetration=23.0, damage_class=8),
+        BallisticData(range_hexes=100, penetration=22.0, damage_class=8),
+        BallisticData(range_hexes=200, penetration=17.0, damage_class=7),
+        BallisticData(range_hexes=300, penetration=13.0, damage_class=7),
+        BallisticData(range_hexes=400, penetration=9.6, damage_class=7)
+    ]
+)
+
+ammo_300wm_m2010_jhp = AmmoType(
+    name=".300 Win Mag JHP (M2010)", description="JHP",
+    weight=0.9,
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=26.0, damage_class=10),
+        BallisticData(range_hexes=20, penetration=25.0, damage_class=10),
+        BallisticData(range_hexes=40, penetration=24.0, damage_class=10),
+        BallisticData(range_hexes=70, penetration=22.0, damage_class=10),
+        BallisticData(range_hexes=100, penetration=21.0, damage_class=9),
+        BallisticData(range_hexes=200, penetration=16.0, damage_class=9),
+        BallisticData(range_hexes=300, penetration=12.0, damage_class=9),
+        BallisticData(range_hexes=400, penetration=9.2, damage_class=8)
+    ]
+)
+
+ammo_300wm_m2010_ap = AmmoType(
+    name=".300 Win Mag AP (M2010)", description="AP",
+    weight=0.9,
+    ballistic_data=[
+        BallisticData(range_hexes=10, penetration=38.0, damage_class=8),
+        BallisticData(range_hexes=20, penetration=37.0, damage_class=8),
+        BallisticData(range_hexes=40, penetration=35.0, damage_class=8),
+        BallisticData(range_hexes=70, penetration=33.0, damage_class=8),
+        BallisticData(range_hexes=100, penetration=30.0, damage_class=8),
+        BallisticData(range_hexes=200, penetration=24.0, damage_class=7),
+        BallisticData(range_hexes=300, penetration=18.0, damage_class=7),
+        BallisticData(range_hexes=400, penetration=14.0, damage_class=6)
     ]
 )
 
@@ -5617,6 +6119,197 @@ m16a2_ballistic = WeaponBallisticData(
         RangeData(range_hexes=40, value=1), RangeData(range_hexes=70, value=1),
         RangeData(range_hexes=100, value=2), RangeData(range_hexes=200, value=5),
         RangeData(range_hexes=300, value=7), RangeData(range_hexes=400, value=11)
+    ]
+)
+
+# M4A1 ballistic data (14.5" barrel)
+# Between XM177 and M16A2 in accuracy; slightly higher TOF than M16A2 due to shorter barrel
+m4a1_ballistic = WeaponBallisticData(
+    minimum_arc=[
+        RangeData(range_hexes=10, value=0.4), RangeData(range_hexes=20, value=0.8),
+        RangeData(range_hexes=40, value=2.0), RangeData(range_hexes=70, value=3.0),
+        RangeData(range_hexes=100, value=4.0), RangeData(range_hexes=200, value=8.0),
+        RangeData(range_hexes=300, value=11.0), RangeData(range_hexes=400, value=15.0)
+    ],
+    ballistic_accuracy=[
+        RangeData(range_hexes=10, value=61), RangeData(range_hexes=20, value=52),
+        RangeData(range_hexes=40, value=43), RangeData(range_hexes=70, value=36),
+        RangeData(range_hexes=100, value=31), RangeData(range_hexes=200, value=21),
+        RangeData(range_hexes=300, value=16), RangeData(range_hexes=400, value=12)
+    ],
+    time_of_flight=[
+        RangeData(range_hexes=10, value=0), RangeData(range_hexes=20, value=0),
+        RangeData(range_hexes=40, value=1), RangeData(range_hexes=70, value=1),
+        RangeData(range_hexes=100, value=2), RangeData(range_hexes=200, value=5),
+        RangeData(range_hexes=300, value=8), RangeData(range_hexes=400, value=11)
+    ]
+)
+
+# Mk 18 CQBR ballistic data (10.3" barrel)
+# Shortest barrel of the group, lower accuracy and higher TOF at range
+mk18_ballistic = WeaponBallisticData(
+    minimum_arc=[
+        RangeData(range_hexes=10, value=0.5), RangeData(range_hexes=20, value=0.9),
+        RangeData(range_hexes=40, value=2.0), RangeData(range_hexes=70, value=3.0),
+        RangeData(range_hexes=100, value=5.0), RangeData(range_hexes=200, value=9.0),
+        RangeData(range_hexes=300, value=13.0), RangeData(range_hexes=400, value=17.0)
+    ],
+    ballistic_accuracy=[
+        RangeData(range_hexes=10, value=59), RangeData(range_hexes=20, value=50),
+        RangeData(range_hexes=40, value=41), RangeData(range_hexes=70, value=33),
+        RangeData(range_hexes=100, value=28), RangeData(range_hexes=200, value=18),
+        RangeData(range_hexes=300, value=13), RangeData(range_hexes=400, value=9)
+    ],
+    time_of_flight=[
+        RangeData(range_hexes=10, value=0), RangeData(range_hexes=20, value=0),
+        RangeData(range_hexes=40, value=1), RangeData(range_hexes=70, value=2),
+        RangeData(range_hexes=100, value=2), RangeData(range_hexes=200, value=6),
+        RangeData(range_hexes=300, value=9), RangeData(range_hexes=400, value=13)
+    ]
+)
+
+# HK416 ballistic data (14.5" barrel, gas piston)
+# Same barrel length as M4A1, very similar ballistics
+hk416_ballistic = WeaponBallisticData(
+    minimum_arc=[
+        RangeData(range_hexes=10, value=0.4), RangeData(range_hexes=20, value=0.8),
+        RangeData(range_hexes=40, value=2.0), RangeData(range_hexes=70, value=3.0),
+        RangeData(range_hexes=100, value=4.0), RangeData(range_hexes=200, value=8.0),
+        RangeData(range_hexes=300, value=11.0), RangeData(range_hexes=400, value=15.0)
+    ],
+    ballistic_accuracy=[
+        RangeData(range_hexes=10, value=61), RangeData(range_hexes=20, value=52),
+        RangeData(range_hexes=40, value=43), RangeData(range_hexes=70, value=36),
+        RangeData(range_hexes=100, value=31), RangeData(range_hexes=200, value=21),
+        RangeData(range_hexes=300, value=16), RangeData(range_hexes=400, value=12)
+    ],
+    time_of_flight=[
+        RangeData(range_hexes=10, value=0), RangeData(range_hexes=20, value=0),
+        RangeData(range_hexes=40, value=1), RangeData(range_hexes=70, value=1),
+        RangeData(range_hexes=100, value=2), RangeData(range_hexes=200, value=5),
+        RangeData(range_hexes=300, value=8), RangeData(range_hexes=400, value=11)
+    ]
+)
+
+# SR-16 ballistic data (16" barrel)
+# Longer barrel than M4A1, better accuracy, close to M16A2
+# Very accurate match-grade platform
+sr16_ballistic = WeaponBallisticData(
+    minimum_arc=[
+        RangeData(range_hexes=10, value=0.4), RangeData(range_hexes=20, value=0.8),
+        RangeData(range_hexes=40, value=2.0), RangeData(range_hexes=70, value=3.0),
+        RangeData(range_hexes=100, value=4.0), RangeData(range_hexes=200, value=8.0),
+        RangeData(range_hexes=300, value=11.0), RangeData(range_hexes=400, value=15.0)
+    ],
+    ballistic_accuracy=[
+        RangeData(range_hexes=10, value=62), RangeData(range_hexes=20, value=53),
+        RangeData(range_hexes=40, value=44), RangeData(range_hexes=70, value=37),
+        RangeData(range_hexes=100, value=32), RangeData(range_hexes=200, value=22),
+        RangeData(range_hexes=300, value=17), RangeData(range_hexes=400, value=13)
+    ],
+    time_of_flight=[
+        RangeData(range_hexes=10, value=0), RangeData(range_hexes=20, value=0),
+        RangeData(range_hexes=40, value=1), RangeData(range_hexes=70, value=1),
+        RangeData(range_hexes=100, value=2), RangeData(range_hexes=200, value=5),
+        RangeData(range_hexes=300, value=7), RangeData(range_hexes=400, value=11)
+    ]
+)
+
+# SR-25 ballistic data (20" barrel, 7.62 NATO, match-grade semi-auto DMR)
+# Very high accuracy — built-in optics, match barrel
+# Between M14 and M40A1 in accuracy, with scope bonuses like SVD/M40A1
+sr25_ballistic = WeaponBallisticData(
+    ballistic_accuracy=[
+        RangeData(range_hexes=10, value=67), RangeData(range_hexes=20, value=58),
+        RangeData(range_hexes=40, value=49), RangeData(range_hexes=70, value=42),
+        RangeData(range_hexes=100, value=37), RangeData(range_hexes=200, value=27),
+        RangeData(range_hexes=300, value=21), RangeData(range_hexes=400, value=17)
+    ],
+    time_of_flight=[
+        RangeData(range_hexes=10, value=0), RangeData(range_hexes=20, value=0),
+        RangeData(range_hexes=40, value=1), RangeData(range_hexes=70, value=2),
+        RangeData(range_hexes=100, value=2), RangeData(range_hexes=200, value=5),
+        RangeData(range_hexes=300, value=8), RangeData(range_hexes=400, value=11)
+    ]
+)
+
+# Mk 12 SPR ballistic data (18" barrel, 5.56 NATO, match-grade DMR)
+# Built-in optics, match-grade barrel — higher accuracy than standard M16A2
+mk12_ballistic = WeaponBallisticData(
+    ballistic_accuracy=[
+        RangeData(range_hexes=10, value=65), RangeData(range_hexes=20, value=56),
+        RangeData(range_hexes=40, value=47), RangeData(range_hexes=70, value=40),
+        RangeData(range_hexes=100, value=35), RangeData(range_hexes=200, value=25),
+        RangeData(range_hexes=300, value=19), RangeData(range_hexes=400, value=15)
+    ],
+    time_of_flight=[
+        RangeData(range_hexes=10, value=0), RangeData(range_hexes=20, value=0),
+        RangeData(range_hexes=40, value=1), RangeData(range_hexes=70, value=1),
+        RangeData(range_hexes=100, value=2), RangeData(range_hexes=200, value=5),
+        RangeData(range_hexes=300, value=7), RangeData(range_hexes=400, value=11)
+    ]
+)
+
+# HK417 ballistic data (16.5" barrel, 7.62 NATO, gas piston DMR)
+# Shorter barrel than SR-25, slightly lower accuracy at range
+# With optics — elevated accuracy base
+hk417_ballistic = WeaponBallisticData(
+    ballistic_accuracy=[
+        RangeData(range_hexes=10, value=65), RangeData(range_hexes=20, value=56),
+        RangeData(range_hexes=40, value=47), RangeData(range_hexes=70, value=40),
+        RangeData(range_hexes=100, value=35), RangeData(range_hexes=200, value=25),
+        RangeData(range_hexes=300, value=19), RangeData(range_hexes=400, value=15)
+    ],
+    time_of_flight=[
+        RangeData(range_hexes=10, value=0), RangeData(range_hexes=20, value=0),
+        RangeData(range_hexes=40, value=1), RangeData(range_hexes=70, value=2),
+        RangeData(range_hexes=100, value=2), RangeData(range_hexes=200, value=5),
+        RangeData(range_hexes=300, value=8), RangeData(range_hexes=400, value=12)
+    ]
+)
+
+mrad_ballistic = WeaponBallisticData(
+    ballistic_accuracy=[
+        RangeData(range_hexes=10, value=72), RangeData(range_hexes=20, value=64),
+        RangeData(range_hexes=40, value=55), RangeData(range_hexes=70, value=48),
+        RangeData(range_hexes=100, value=43), RangeData(range_hexes=200, value=34),
+        RangeData(range_hexes=300, value=28), RangeData(range_hexes=400, value=24)
+    ],
+    time_of_flight=[
+        RangeData(range_hexes=10, value=0), RangeData(range_hexes=20, value=0),
+        RangeData(range_hexes=40, value=1), RangeData(range_hexes=70, value=1),
+        RangeData(range_hexes=100, value=2), RangeData(range_hexes=200, value=4),
+        RangeData(range_hexes=300, value=7), RangeData(range_hexes=400, value=10)
+    ]
+)
+
+m107_ballistic = WeaponBallisticData(
+    ballistic_accuracy=[
+        RangeData(range_hexes=10, value=71), RangeData(range_hexes=20, value=63),
+        RangeData(range_hexes=40, value=54), RangeData(range_hexes=70, value=47),
+        RangeData(range_hexes=100, value=42), RangeData(range_hexes=200, value=33),
+        RangeData(range_hexes=300, value=27), RangeData(range_hexes=400, value=23)
+    ],
+    time_of_flight=[
+        RangeData(range_hexes=10, value=0), RangeData(range_hexes=20, value=0),
+        RangeData(range_hexes=40, value=1), RangeData(range_hexes=70, value=1),
+        RangeData(range_hexes=100, value=2), RangeData(range_hexes=200, value=4),
+        RangeData(range_hexes=300, value=7), RangeData(range_hexes=400, value=10)
+    ]
+)
+
+m2010_ballistic = WeaponBallisticData(
+    ballistic_accuracy=[
+        RangeData(range_hexes=10, value=70), RangeData(range_hexes=20, value=61),
+        RangeData(range_hexes=40, value=52), RangeData(range_hexes=70, value=45),
+        RangeData(range_hexes=100, value=40), RangeData(range_hexes=200, value=31),
+        RangeData(range_hexes=300, value=25), RangeData(range_hexes=400, value=21)
+    ],
+    time_of_flight=[
+        RangeData(range_hexes=10, value=0), RangeData(range_hexes=20, value=0),
+        RangeData(range_hexes=40, value=1), RangeData(range_hexes=70, value=1),
+        RangeData(range_hexes=100, value=2), RangeData(range_hexes=200, value=5),
+        RangeData(range_hexes=300, value=7), RangeData(range_hexes=400, value=10)
     ]
 )
 
@@ -9212,6 +9905,260 @@ m72_a2_law = Weapon(
 )
 
 
+# ============================================================================
+# Modern Carbines and Rifles
+# ============================================================================
+
+m4a1 = Weapon(
+    name="M4A1",
+    weight=7.5,
+    description="Standard US military carbine derived from the M16A2. Features a 14.5 inch barrel, telescoping stock, and full auto capability. Widely issued to US forces from the 1990s onward.",
+    caliber=Caliber.CAL_556_NATO,
+    weapon_type=WeaponType.CARBINE,
+    country=Country.USA,
+    length_deployed=33.0,
+    length_folded=30.0,
+    reload_time=8,
+    self_loading_action=True,
+    full_auto=True,
+    full_auto_rof=7,
+    ammo_capacity=30,
+    ammo_weight=1.0,
+    ammo_feed_device=AmmoFeedDevice.MAGAZINE,
+    knock_down=4,
+    sustained_auto_burst=3,
+    aim_time_modifiers={1: -22, 2: -12, 3: -9, 4: -7, 5: -5, 6: -4, 7: -3, 8: -2, 9: -1, 10: 0},
+    ammunition_types=[ammo_556nato_m4a1_fmj, ammo_556nato_m4a1_jhp, ammo_556nato_m4a1_ap],
+    ballistic_data=m4a1_ballistic,
+)
+
+mk18 = Weapon(
+    name="Mk 18 CQBR",
+    weight=6.7,
+    description="Close Quarters Battle Receiver variant with a 10.3 inch barrel. Used by US Navy SEALs and USSOCOM units for CQB operations. Based on the M4A1 upper receiver.",
+    caliber=Caliber.CAL_556_NATO,
+    weapon_type=WeaponType.CARBINE,
+    country=Country.USA,
+    length_deployed=30.0,
+    length_folded=26.0,
+    reload_time=8,
+    self_loading_action=True,
+    full_auto=True,
+    full_auto_rof=7,
+    ammo_capacity=30,
+    ammo_weight=1.0,
+    ammo_feed_device=AmmoFeedDevice.MAGAZINE,
+    knock_down=4,
+    sustained_auto_burst=3,
+    aim_time_modifiers={1: -21, 2: -11, 3: -8, 4: -6, 5: -5, 6: -4, 7: -3, 8: -2, 9: -1},
+    ammunition_types=[ammo_556nato_mk18_fmj, ammo_556nato_mk18_jhp, ammo_556nato_mk18_ap],
+    ballistic_data=mk18_ballistic,
+)
+
+hk416 = Weapon(
+    name="Heckler & Koch HK416",
+    weight=8.6,
+    description="Gas piston operated assault rifle developed by Heckler & Koch as an improved M4/M16. Adopted by numerous NATO forces including France (as HK416F) and Norway. Known for exceptional reliability.",
+    caliber=Caliber.CAL_556_NATO,
+    weapon_type=WeaponType.ASSAULT_RIFLE,
+    country=Country.GERMANY,
+    length_deployed=37.0,
+    length_folded=33.0,
+    reload_time=8,
+    self_loading_action=True,
+    full_auto=True,
+    full_auto_rof=7,
+    ammo_capacity=30,
+    ammo_weight=1.0,
+    ammo_feed_device=AmmoFeedDevice.MAGAZINE,
+    knock_down=4,
+    sustained_auto_burst=3,
+    aim_time_modifiers={1: -22, 2: -12, 3: -9, 4: -7, 5: -5, 6: -4, 7: -3, 8: -2, 9: -1, 10: 0},
+    ammunition_types=[ammo_556nato_hk416_fmj, ammo_556nato_hk416_jhp, ammo_556nato_hk416_ap],
+    ballistic_data=hk416_ballistic,
+)
+
+sr16 = Weapon(
+    name="Knight's Armament SR-16",
+    weight=8.4,
+    description="Premium 5.56mm rifle built by Knight's Armament Company with a 16 inch barrel. Features match-grade accuracy and is used by US special operations forces. E3 variant features ambidextrous controls.",
+    caliber=Caliber.CAL_556_NATO,
+    weapon_type=WeaponType.ASSAULT_RIFLE,
+    country=Country.USA,
+    length_deployed=37.0,
+    reload_time=8,
+    self_loading_action=True,
+    full_auto=True,
+    full_auto_rof=7,
+    ammo_capacity=30,
+    ammo_weight=1.0,
+    ammo_feed_device=AmmoFeedDevice.MAGAZINE,
+    knock_down=4,
+    sustained_auto_burst=3,
+    aim_time_modifiers={1: -22, 2: -12, 3: -9, 4: -7, 5: -6, 6: -5, 7: -4, 8: -3, 9: -2, 10: -1, 11: 0},
+    ammunition_types=[ammo_556nato_sr16_fmj, ammo_556nato_sr16_jhp, ammo_556nato_sr16_ap],
+    ballistic_data=sr16_ballistic,
+)
+
+sr25 = Weapon(
+    name="Knight's Armament SR-25 / M110 SASS",
+    weight=15.2,
+    description="Semi-automatic sniper system in 7.62mm NATO with a 20 inch match-grade barrel and Leupold scope. Adopted by the US Army as the M110 Semi-Automatic Sniper System (SASS). Exceptional accuracy for a semi-automatic platform.",
+    caliber=Caliber.CAL_762_NATO,
+    weapon_type=WeaponType.SNIPER_RIFLE,
+    country=Country.USA,
+    length_deployed=40.0,
+    reload_time=8,
+    self_loading_action=True,
+    full_auto=False,
+    ammo_capacity=20,
+    ammo_weight=1.4,
+    ammo_feed_device=AmmoFeedDevice.MAGAZINE,
+    knock_down=10,
+    sustained_auto_burst=5,
+    aim_time_modifiers={1: -23, 2: -13, 3: -7, 4: -5, 5: -4, 6: -2, 7: 0, 8: 1, 9: 2, 10: 3, 11: 4},
+    ammunition_types=[ammo_762nato_sr25_fmj, ammo_762nato_sr25_jhp, ammo_762nato_sr25_ap],
+    ballistic_data=sr25_ballistic,
+    built_in_optics=True,
+)
+
+mk12_spr = Weapon(
+    name="Mk 12 Special Purpose Rifle",
+    weight=12.0,
+    description="5.56mm NATO designated marksman rifle with an 18 inch match-grade stainless steel barrel and Leupold TS-30A2 scope. Used by US Navy SEALs, MARSOC, and Army special operations. Fires Mk 262 77-grain match ammunition for enhanced range.",
+    caliber=Caliber.CAL_556_NATO,
+    weapon_type=WeaponType.SNIPER_RIFLE,
+    country=Country.USA,
+    length_deployed=39.5,
+    reload_time=8,
+    self_loading_action=True,
+    full_auto=False,
+    ammo_capacity=20,
+    ammo_weight=1.0,
+    ammo_feed_device=AmmoFeedDevice.MAGAZINE,
+    knock_down=4,
+    sustained_auto_burst=3,
+    aim_time_modifiers={1: -23, 2: -13, 3: -7, 4: -5, 5: -4, 6: -2, 7: 0, 8: 1, 9: 2, 10: 3, 11: 4},
+    ammunition_types=[ammo_556nato_mk12_fmj, ammo_556nato_mk12_jhp, ammo_556nato_mk12_ap],
+    ballistic_data=mk12_ballistic,
+    built_in_optics=True,
+)
+
+hk417 = Weapon(
+    name="Heckler & Koch HK417 / M110A1 CSASS",
+    weight=13.2,
+    description="7.62mm NATO gas piston operated sniper rifle developed by Heckler & Koch. Features a 16.5 inch barrel with select-fire capability. Adopted by the US Army as the M110A1 Compact Semi-Automatic Sniper System (CSASS), replacing the M110. Related to the HK416 but scaled up for 7.62mm.",
+    caliber=Caliber.CAL_762_NATO,
+    weapon_type=WeaponType.SNIPER_RIFLE,
+    country=Country.GERMANY,
+    length_deployed=39.0,
+    length_folded=35.0,
+    reload_time=8,
+    self_loading_action=True,
+    full_auto=True,
+    full_auto_rof=5,
+    ammo_capacity=20,
+    ammo_weight=1.4,
+    ammo_feed_device=AmmoFeedDevice.MAGAZINE,
+    knock_down=10,
+    sustained_auto_burst=5,
+    aim_time_modifiers={1: -23, 2: -13, 3: -7, 4: -5, 5: -4, 6: -2, 7: 0, 8: 1, 9: 2, 10: 3, 11: 4},
+    ammunition_types=[ammo_762nato_hk417_fmj, ammo_762nato_hk417_jhp, ammo_762nato_hk417_ap],
+    ballistic_data=hk417_ballistic,
+    built_in_optics=True,
+)
+
+# Barrett M107
+# .50 BMG semi-auto anti-materiel rifle
+# Real specs: 29" barrel, 57" OAL, 30.9 lbs empty (~32.5 lbs with loaded 10-rd mag)
+# MV 2799 fps, semi-auto only, 10-round detachable box magazine
+# Leupold 4.5-14x50 scope, integral bipod, muzzle brake
+barrett_m107 = Weapon(
+    name="Barrett M107",
+    weight=32.5,
+    description="Semi-automatic .50 BMG anti-materiel rifle with a 29 inch barrel and Leupold scope. Used by the US military for long-range sniping, EOD, and anti-materiel roles. Features a detachable 10-round magazine and integral bipod with muzzle brake.",
+    caliber=Caliber.CAL_50_BMG,
+    weapon_type=WeaponType.SNIPER_RIFLE,
+    country=Country.USA,
+    length_deployed=57.0,
+    reload_time=10,
+    self_loading_action=True,
+    full_auto=False,
+    ammo_capacity=10,
+    ammo_weight=2.4,
+    ammo_feed_device=AmmoFeedDevice.MAGAZINE,
+    knock_down=45,
+    sustained_auto_burst=5,
+    aim_time_modifiers={1: -32, 2: -22, 3: -14, 4: -10, 5: -8, 6: -6, 7: -4, 8: -2, 9: 0, 10: 1, 12: 3},
+    ammunition_types=[ammo_50bmg_m107_fmj, ammo_50bmg_m107_jhp, ammo_50bmg_m107_ap],
+    ballistic_data=m107_ballistic,
+    built_in_optics=True,
+    built_in_bipod=True,
+)
+
+# Barrett MRAD / Mk 22 ASR (Advanced Sniper Rifle)
+# .338 Norma Magnum bolt-action multi-caliber precision rifle
+# Real specs: 27" barrel (.338 NM config), 49.5" OAL, 14.8 lbs empty (~16.5 lbs loaded)
+# Bolt-action, 10-round detachable box magazine, folding stock
+# Leupold Mark 5HD scope, Harris bipod
+# Adopted by USSOCOM as Mk 22 ASR to replace M40A5/Mk 13/M2010
+barrett_mrad = Weapon(
+    name="Barrett MRAD / Mk 22 ASR",
+    weight=16.5,
+    description="Multi-caliber bolt-action precision rifle in .338 Norma Magnum adopted by USSOCOM as the Mk 22 Advanced Sniper Rifle. Features a 27 inch barrel, folding stock, and Leupold Mark 5HD scope. Replaces the M2010, M40A5, and Mk 13 in US service.",
+    caliber=Caliber.CAL_338_NORMA_MAG,
+    weapon_type=WeaponType.SNIPER_RIFLE,
+    country=Country.USA,
+    length_deployed=49.5,
+    length_folded=40.0,
+    reload_time=14,
+    self_loading_action=False,
+    full_auto=False,
+    actions_to_cycle=3,
+    ammo_capacity=10,
+    ammo_weight=1.1,
+    ammo_feed_device=AmmoFeedDevice.MAGAZINE,
+    knock_down=16,
+    sustained_auto_burst=5,
+    aim_time_modifiers={1: -27, 2: -17, 3: -9, 4: -7, 5: -5, 6: -3, 7: -1, 8: 0, 9: 1, 10: 2, 12: 5},
+    ammunition_types=[ammo_338nm_mrad_fmj, ammo_338nm_mrad_jhp, ammo_338nm_mrad_ap],
+    ballistic_data=mrad_ballistic,
+    built_in_optics=True,
+    built_in_bipod=True,
+)
+
+# M2010 Enhanced Sniper Rifle (ESR)
+# .300 Win Mag bolt-action sniper rifle (Remington 700 action in AICS chassis)
+# Real specs: 24" barrel, 46.5" OAL, 15.6 lbs empty (~17 lbs loaded with scope)
+# Bolt-action, 5-round detachable box magazine
+# Leupold Mark 4 6.5-20x50 scope, Harris bipod, suppressor-ready
+# Replaced M24 SWS in US Army service (2010–2021, then replaced by Mk 22)
+m2010_esr = Weapon(
+    name="M2010 Enhanced Sniper Rifle",
+    weight=17.0,
+    description="Bolt-action .300 Winchester Magnum sniper rifle based on the Remington 700 action in an aluminum chassis. Replaced the M24 SWS in US Army service. Features a 24 inch barrel, Leupold Mark 4 scope, folding stock, and integral suppressor capability.",
+    caliber=Caliber.CAL_300_WIN_MAG,
+    weapon_type=WeaponType.SNIPER_RIFLE,
+    country=Country.USA,
+    length_deployed=46.5,
+    length_folded=38.0,
+    reload_time=14,
+    self_loading_action=False,
+    full_auto=False,
+    actions_to_cycle=3,
+    ammo_capacity=5,
+    ammo_weight=0.9,
+    ammo_feed_device=AmmoFeedDevice.MAGAZINE,
+    knock_down=13,
+    sustained_auto_burst=5,
+    aim_time_modifiers={1: -26, 2: -16, 3: -8, 4: -6, 5: -4, 6: -3, 7: -1, 8: 0, 9: 1, 10: 2, 12: 5},
+    ammunition_types=[ammo_300wm_m2010_fmj, ammo_300wm_m2010_jhp, ammo_300wm_m2010_ap],
+    ballistic_data=m2010_ballistic,
+    built_in_optics=True,
+    built_in_bipod=True,
+)
+
+
 WEAPONS_LIST = [
     fn_mk1,
     type_51,
@@ -9323,5 +10270,15 @@ WEAPONS_LIST = [
     rpg_18,
     rpg_7v,
     law_80,
-    m72_a2_law
+    m72_a2_law,
+    m4a1,
+    mk18,
+    hk416,
+    sr16,
+    sr25,
+    mk12_spr,
+    hk417,
+    barrett_m107,
+    barrett_mrad,
+    m2010_esr,
 ]
