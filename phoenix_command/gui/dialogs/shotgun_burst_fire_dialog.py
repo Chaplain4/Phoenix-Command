@@ -940,6 +940,10 @@ class ShotgunBurstFireDialog(QDialog):
             )
             for result in results:
                 main_window._log_shot_result(result)
+            # Send detailed logs
+            detail_parts = [r.log for r in results if r.log]
+            if detail_parts:
+                main_window.combat_log.append_detailed("\n".join(detail_parts))
             if hasattr(main_window, 'combat_zone'):
                 main_window.combat_zone.refresh_cards()
             if hasattr(main_window, 'stats_display') and hasattr(main_window, 'character_list'):

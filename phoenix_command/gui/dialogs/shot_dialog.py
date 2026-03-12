@@ -310,6 +310,10 @@ class ShotDialog(QDialog):
                             main_window.combat_log.append_system(f"{shooter.name} fires shotgun {weapon.name}")
                         for result in dialog.last_results:
                             main_window._log_shot_result(result)
+                        # Send detailed logs
+                        detail_parts = [r.log for r in dialog.last_results if r.log]
+                        if detail_parts:
+                            main_window.combat_log.append_detailed("\n".join(detail_parts))
                 return
         
         if self.current_step == 1:
@@ -420,6 +424,8 @@ class ShotDialog(QDialog):
         if main_window and hasattr(main_window, 'combat_log'):
             main_window.combat_log.append_system(f"{shooter.name} shoots {weapon.name} at {target.name}")
             main_window._log_shot_result(result)
+            if result.log:
+                main_window.combat_log.append_detailed(result.log)
             if hasattr(main_window, 'combat_zone'):
                 main_window.combat_zone.refresh_cards()
             if hasattr(main_window, 'stats_display') and hasattr(main_window, 'character_list'):

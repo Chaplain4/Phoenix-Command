@@ -4,8 +4,8 @@ Draws a human body outline with highlighted hit zones, armor coverage,
 and support for front/rear views and target orientations.
 """
 
-from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
-                              QLabel, QComboBox, QToolTip, QSizePolicy)
+from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout,
+                              QLabel, QToolTip, QSizePolicy)
 from PyQt6.QtGui import (QPainter, QColor, QPen, QBrush, QPolygonF, QPainterPath,
                           QFont)
 from PyQt6.QtCore import Qt, QPointF, QRectF, pyqtSignal
@@ -77,7 +77,7 @@ class _BodyCanvas(QWidget):
         super().__init__(parent)
         self.setMouseTracking(True)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        self.setMinimumSize(200, 300)
+        self.setMinimumSize(160, 240)
 
         self._is_front: bool = True
         self._exposure: TargetExposure = TargetExposure.STANDING_EXPOSED
@@ -87,6 +87,8 @@ class _BodyCanvas(QWidget):
         self._zone_damage: dict[int, int] = {}
         # armor per zone (zone index → protection factor)
         self._zone_armor: dict[int, float] = {}
+        # armor blunt per zone (zone index → blunt protection factor)
+        self._zone_armor_bpf: dict[int, float] = {}
         # hit counts per zone
         self._zone_hits: dict[int, int] = {}
 
@@ -112,15 +114,18 @@ class _BodyCanvas(QWidget):
 
     def set_zone_data(self, zone_damage: dict[int, int],
                       zone_armor: dict[int, float],
-                      zone_hits: dict[int, int]):
+                      zone_hits: dict[int, int],
+                      zone_armor_bpf: dict[int, float] | None = None):
         self._zone_damage = zone_damage
         self._zone_armor = zone_armor
+        self._zone_armor_bpf = zone_armor_bpf or {}
         self._zone_hits = zone_hits
         self.update()
 
     def clear_data(self):
         self._zone_damage.clear()
         self._zone_armor.clear()
+        self._zone_armor_bpf.clear()
         self._zone_hits.clear()
         self.update()
 
@@ -188,7 +193,7 @@ class _BodyCanvas(QWidget):
         rect = self._get_draw_rect()
 
         # Background
-        painter.fillRect(self.rect(), QColor(30, 30, 30))
+        painter.fillRect(self.rect(), QColor(245, 245, 245))
 
         # Draw body outline
         self._draw_body_outline(painter, rect)
@@ -207,10 +212,10 @@ class _BodyCanvas(QWidget):
 
     def _draw_body_outline(self, painter: QPainter, rect: QRectF):
         """Draw a subtle body silhouette outline."""
-        outline_color = QColor(80, 80, 80)
+        outline_color = QColor(180, 180, 180)
         pen = QPen(outline_color, 1.5)
         painter.setPen(pen)
-        painter.setBrush(QBrush(QColor(50, 50, 50)))
+        painter.setBrush(QBrush(QColor(225, 225, 225)))
 
         # Collect all zone polygons to form an outline
         for zone in BODY_ZONES:
@@ -235,13 +240,13 @@ class _BodyCanvas(QWidget):
 
         # Border
         if hits > 0:
-            border_color = QColor(255, 255, 255, 200)
+            border_color = QColor(40, 40, 40, 220)
             pen_width = 2.0
         elif is_hovered:
-            border_color = QColor(200, 200, 200, 180)
+            border_color = QColor(80, 80, 80, 180)
             pen_width = 1.5
         else:
-            border_color = QColor(100, 100, 100, 120)
+            border_color = QColor(160, 160, 160, 140)
             pen_width = 0.8
 
         painter.setPen(QPen(border_color, pen_width))
@@ -257,7 +262,7 @@ class _BodyCanvas(QWidget):
         # Hit count label
         if hits > 0:
             center = polygon.boundingRect().center()
-            painter.setPen(QPen(QColor(255, 255, 255, 230)))
+            painter.setPen(QPen(QColor(30, 30, 30, 230)))
             font = painter.font()
             font.setPointSize(7)
             font.setBold(True)
@@ -270,24 +275,17 @@ class _BodyCanvas(QWidget):
 
     def _draw_labels(self, painter: QPainter, rect: QRectF):
         """Draw view / orientation label."""
-        painter.setPen(QPen(QColor(180, 180, 180)))
+        painter.setPen(QPen(QColor(80, 80, 80)))
         font = QFont()
         font.setPointSize(9)
         font.setBold(True)
         painter.setFont(font)
 
-        view_text = "FRONT" if self._is_front else "REAR"
-        painter.drawText(
-            QRectF(rect.x(), rect.y() - 20, rect.width(), 18),
-            Qt.AlignmentFlag.AlignCenter,
-            f"{view_text} • {self._exposure.name}"
-        )
-
         # Left/Right labels
         font.setPointSize(7)
         font.setBold(False)
         painter.setFont(font)
-        painter.setPen(QPen(QColor(120, 120, 120)))
+        painter.setPen(QPen(QColor(100, 100, 100)))
         if self._is_front:
             painter.drawText(QRectF(rect.x() - 5, rect.y() + rect.height() * 0.15, 30, 14),
                              Qt.AlignmentFlag.AlignCenter, "R")
@@ -323,12 +321,14 @@ class _BodyCanvas(QWidget):
             zone = BODY_ZONES[self._hovered_zone_idx]
             damage = self._zone_damage.get(self._hovered_zone_idx, 0)
             armor = self._zone_armor.get(self._hovered_zone_idx, 0)
+            armor_bpf = self._zone_armor_bpf.get(self._hovered_zone_idx, 0)
             hits = self._zone_hits.get(self._hovered_zone_idx, 0)
             tip = f"<b>{zone.name}</b><br>"
             tip += f"Hits: {hits}<br>"
             tip += f"Total damage: {damage}<br>"
-            if armor > 0:
-                tip += f"Armor PF: {armor:.0f}"
+            if armor > 0 or armor_bpf > 0:
+                tip += f"Ballistic PF: {armor:.0f}<br>"
+                tip += f"Blunt PF: {armor_bpf:.0f}"
             QToolTip.showText(event.globalPosition().toPoint(), tip, self)
         else:
             QToolTip.hideText()
@@ -343,7 +343,7 @@ class _BodyCanvas(QWidget):
 # ═══════════════════════════════════════════════════════════════════════
 
 class BodyDiagramWidget(QWidget):
-    """Complete body diagram widget with controls and canvas."""
+    """Complete body diagram widget with canvas (fixed: standing exposed / front)."""
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -357,37 +357,17 @@ class BodyDiagramWidget(QWidget):
 
         # Title
         title = QLabel("Body Diagram")
-        title.setStyleSheet("font-weight: bold; font-size: 12px; color: #ecf0f1;")
+        title.setStyleSheet("font-weight: bold; font-size: 12px;")
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(title)
 
-        # Controls
-        controls = QHBoxLayout()
-        controls.setSpacing(4)
-
-        self._view_btn = QPushButton("Rear ▸")
-        self._view_btn.setMaximumWidth(80)
-        self._view_btn.setToolTip("Toggle front / rear view")
-        self._view_btn.clicked.connect(self._toggle_view)
-        controls.addWidget(self._view_btn)
-
-        self._exposure_combo = QComboBox()
-        self._exposure_combo.setMaximumWidth(180)
-        for exp in TargetExposure:
-            self._exposure_combo.addItem(exp.name.replace("_", " ").title(), exp)
-        self._exposure_combo.setCurrentIndex(2)  # STANDING_EXPOSED
-        self._exposure_combo.currentIndexChanged.connect(self._on_exposure_changed)
-        controls.addWidget(self._exposure_combo)
-
-        layout.addLayout(controls)
-
-        # Canvas
+        # Canvas (always front / standing exposed)
         self._canvas = _BodyCanvas()
         layout.addWidget(self._canvas, stretch=1)
 
         # Info label
         self._info_label = QLabel("")
-        self._info_label.setStyleSheet("color: #bdc3c7; font-size: 10px;")
+        self._info_label.setStyleSheet("font-size: 10px;")
         self._info_label.setWordWrap(True)
         self._info_label.setMaximumHeight(40)
         layout.addWidget(self._info_label)
@@ -404,19 +384,17 @@ class BodyDiagramWidget(QWidget):
         self._add_legend_item(legend_layout, QColor(52, 152, 219, 100), "Armor", pattern=True)
         layout.addLayout(legend_layout)
 
-        self._is_front = True
-
     def _add_legend_item(self, layout: QHBoxLayout, color: QColor, text: str,
                           pattern: bool = False):
         """Add a small color swatch + label to the legend."""
         swatch = QWidget()
         swatch.setFixedSize(12, 12)
         style = f"background-color: rgba({color.red()},{color.green()},{color.blue()},{color.alpha()});"
-        style += "border: 1px solid #555;"
+        style += "border: 1px solid #999;"
         swatch.setStyleSheet(style)
         layout.addWidget(swatch)
         lbl = QLabel(text)
-        lbl.setStyleSheet("color: #aaa; font-size: 9px;")
+        lbl.setStyleSheet("font-size: 9px;")
         layout.addWidget(lbl)
 
     # ── public API ─────────────────────────────────────────────────────
@@ -446,6 +424,7 @@ class BodyDiagramWidget(QWidget):
         zone_damage: dict[int, int] = {}
         zone_hits: dict[int, int] = {}
         zone_armor: dict[int, float] = {}
+        zone_armor_bpf: dict[int, float] = {}
 
         # Process hit history
         if hasattr(self._character, 'hit_history'):
@@ -459,30 +438,20 @@ class BodyDiagramWidget(QWidget):
                 zone_damage[idx] = zone_damage.get(idx, 0) + dr.damage
                 zone_hits[idx] = zone_hits.get(idx, 0) + 1
 
-        # Process armor
+        # Process armor (front only)
         armor_prot = self._character.armor_protection
-        for (loc, is_front_armor), (pf, _bpf) in armor_prot.items():
-            # Match armor side with current view
-            if is_front_armor != self._is_front:
+        for (loc, is_front_armor), (pf, bpf) in armor_prot.items():
+            if not is_front_armor:
                 continue
             zone = LOCATION_TO_ZONE.get(loc)
             if zone is None:
                 continue
             idx = BODY_ZONES.index(zone)
             zone_armor[idx] = max(zone_armor.get(idx, 0), pf)
+            zone_armor_bpf[idx] = max(zone_armor_bpf.get(idx, 0), bpf)
 
-        self._canvas.set_zone_data(zone_damage, zone_armor, zone_hits)
+        self._canvas.set_zone_data(zone_damage, zone_armor, zone_hits, zone_armor_bpf)
 
-    def _toggle_view(self):
-        self._is_front = not self._is_front
-        self._canvas.set_view(self._is_front)
-        self._view_btn.setText("Rear ▸" if self._is_front else "◂ Front")
-        self._update_from_character()
-
-    def _on_exposure_changed(self, index):
-        exposure = self._exposure_combo.currentData()
-        if exposure:
-            self._canvas.set_exposure(exposure)
 
     def _on_zone_hovered(self, zone: Optional[BodyZone]):
         if zone is None:

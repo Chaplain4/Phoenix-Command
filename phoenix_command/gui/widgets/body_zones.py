@@ -58,7 +58,28 @@ HAND_LEFT_POLY = [(0.19, 0.45), (0.27, 0.45), (0.27, 0.50), (0.19, 0.50)]
 HAND_RIGHT_POLY = _mirror_x(HAND_LEFT_POLY)
 
 # ────────── TORSO ──────────
+# П-shaped torso glance: top bar + left/right pillars wrapping around the torso
+TORSO_GLANCE_POLY = [
+    (0.34, 0.16),   # outer top-left
+    (0.66, 0.16),   # outer top-right
+    (0.66, 0.42),   # outer bottom-right (right pillar bottom)
+    (0.62, 0.42),   # inner bottom-right
+    (0.62, 0.20),   # inner top-right
+    (0.38, 0.20),   # inner top-left
+    (0.38, 0.42),   # inner bottom-left
+    (0.34, 0.42),   # outer bottom-left (left pillar bottom)
+]
+
 CHEST_POLY = [(0.38, 0.16), (0.62, 0.16), (0.62, 0.28), (0.38, 0.28)]
+
+# ────────── WEAPON (simple rectangle held near right-side hand) ──────────
+WEAPON_CRITICAL_FRONT_POLY = [
+    (0.82, 0.16),   # top-left
+    (0.86, 0.16),   # top-right
+    (0.86, 0.62),   # bottom-right
+    (0.82, 0.62),   # bottom-left
+]
+WEAPON_CRITICAL_REAR_POLY = _mirror_x(WEAPON_CRITICAL_FRONT_POLY)
 
 BASE_OF_NECK_POLY = [(0.44, 0.15), (0.56, 0.15), (0.56, 0.18), (0.44, 0.18)]
 
@@ -292,10 +313,9 @@ BODY_ZONES: list[BodyZone] = [
         name="Torso Glance",
         locations=[
             AdvancedHitLocation.TORSO_GLANCE,
-            AdvancedHitLocation.WEAPON_CRITICAL,
         ],
-        front_polygon=CHEST_POLY,
-        rear_polygon=CHEST_POLY,
+        front_polygon=TORSO_GLANCE_POLY,
+        rear_polygon=TORSO_GLANCE_POLY,
     ),
     BodyZone(
         name="Base of Neck",
@@ -493,6 +513,16 @@ BODY_ZONES: list[BodyZone] = [
         front_polygon=FOOT_RIGHT_POLY,
         rear_polygon=FOOT_LEFT_POLY,
         side="right",
+    ),
+
+    # ── WEAPON CRITICAL ──
+    BodyZone(
+        name="Weapon Critical",
+        locations=[
+            AdvancedHitLocation.WEAPON_CRITICAL,
+        ],
+        front_polygon=WEAPON_CRITICAL_FRONT_POLY,
+        rear_polygon=WEAPON_CRITICAL_REAR_POLY,
     ),
 ]
 

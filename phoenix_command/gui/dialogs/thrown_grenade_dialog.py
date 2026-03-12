@@ -355,6 +355,13 @@ class ThrownGrenadeDialog(QDialog):
                     f"({'long' if result.is_long else 'short'}) "
                     f"(Roll: {result.roll} vs {result.odds}%)"
                 )
+            # Send detailed log
+            detail = (
+                f"Thrown Grenade: {grenade.name}\n"
+                f"EAL: {result.eal}, Odds: {result.odds}%, Roll: {result.roll}\n"
+                f"Hit: {result.hit}, Scatter: {result.scatter_hexes} hexes, Long: {result.is_long}"
+            )
+            main_window.combat_log.append_detailed(detail)
             if hasattr(main_window, 'combat_zone'):
                 main_window.combat_zone.refresh_cards()
 

@@ -434,6 +434,27 @@ class AutoGrenadeLauncherDialog(QDialog):
                 main_window.combat_log.append_hit(
                     f"{len(results)} grenades on target: {direct} direct hit(s), {scattered} scattered"
                 )
+            # Send detailed log
+            detail_lines = [f"AGL Burst: {weapon.name} ({ammo.name})"]
+            first = results[0]
+            if len(results) == 1 and first.elevation_failed:
+                detail_lines.append(
+                    f"Burst MISSED elevation check\n"
+                    f"EAL={first.eal}, Odds={first.odds}%, Roll={first.roll}\n"
+                    f"Scatter: {first.scatter_hexes} hexes ({'long' if first.is_long else 'short'})"
+                )
+            else:
+                detail_lines.append(f"EAL={first.eal}, Elevation Odds={first.odds}%")
+                detail_lines.append(f"Grenades on target: {len(results)}")
+                for i, r in enumerate(results):
+                    if r.hit:
+                        detail_lines.append(f"Grenade {i+1}: Direct HIT (Roll: {r.roll})")
+                    else:
+                        detail_lines.append(
+                            f"Grenade {i+1}: Scatter {r.scatter_hexes} hexes "
+                            f"({'long' if r.is_long else 'short'}) (Roll: {r.roll})"
+                        )
+            main_window.combat_log.append_detailed("\n".join(detail_lines))
             if hasattr(main_window, 'combat_zone'):
                 main_window.combat_zone.refresh_cards()
 

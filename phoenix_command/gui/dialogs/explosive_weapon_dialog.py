@@ -373,6 +373,14 @@ class ExplosiveWeaponDialog(QDialog):
                     f"({'long' if explosive_result.is_long else 'short'}) "
                     f"(Roll: {explosive_result.roll} vs {explosive_result.odds}%)"
                 )
+            # Send detailed log
+            detail = (
+                f"Explosive Weapon: {weapon.name} ({ammo.name})\n"
+                f"EAL: {explosive_result.eal}, Odds: {explosive_result.odds}%, Roll: {explosive_result.roll}\n"
+                f"Hit: {explosive_result.hit}, Scatter: {explosive_result.scatter_hexes} hexes, "
+                f"Long: {explosive_result.is_long}"
+            )
+            main_window.combat_log.append_detailed(detail)
             if hasattr(main_window, 'combat_zone'):
                 main_window.combat_zone.refresh_cards()
 

@@ -1,14 +1,14 @@
 """Main window for Phoenix Command GUI."""
 
-from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-                              QSplitter, QMenuBar, QMenu, QStatusBar, QLabel)
 from PyQt6.QtCore import Qt
-from phoenix_command.models.character import Character
-from phoenix_command.gui.widgets.combat_log import CombatLogWidget
-from phoenix_command.gui.widgets.stats_display import StatsDisplayWidget
-from phoenix_command.gui.widgets.combat_zone import CombatZoneWidget
-from phoenix_command.gui.widgets.character_list import CharacterListWidget
+from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
+                             QSplitter)
+
 from phoenix_command.gui.widgets.body_diagram import BodyDiagramWidget
+from phoenix_command.gui.widgets.character_list import CharacterListWidget
+from phoenix_command.gui.widgets.combat_log import CombatLogWidget
+from phoenix_command.gui.widgets.combat_zone import CombatZoneWidget
+from phoenix_command.gui.widgets.stats_display import StatsDisplayWidget
 
 
 class MainWindow(QMainWindow):
@@ -18,11 +18,11 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.characters = []
         self.setWindowTitle("Phoenix Command")
-        self.setGeometry(100, 100, 1400, 900)
 
         self._create_menu_bar()
         self._create_central_widget()
         self._create_status_bar()
+        self.showMaximized()
 
     def _create_menu_bar(self):
         """Create menu bar."""
@@ -95,7 +95,7 @@ class MainWindow(QMainWindow):
         details_layout.addWidget(self.stats_display)
         self.body_diagram = BodyDiagramWidget()
         details_layout.addWidget(self.body_diagram, stretch=1)
-        details_widget.setMaximumWidth(350)
+        details_widget.setMaximumWidth(300)
         main_splitter.addWidget(details_widget)
 
         main_splitter.setStretchFactor(0, 1)

@@ -393,10 +393,14 @@ class ExplosionDamageDialog(QDialog):
 
         if main_window and hasattr(main_window, 'combat_log'):
             main_window.combat_log.append_system(
-                f"Explosion ({ammo.name}) – {len(targets)} target(s)"
+                f"Explosion ({ammo.name}) \u2013 {len(targets)} target(s)"
             )
             for result in results:
                 main_window._log_shot_result(result)
+            # Send detailed log (ShotResult has .log field)
+            detail_parts = [r.log for r in results if r.log]
+            if detail_parts:
+                main_window.combat_log.append_detailed("\n".join(detail_parts))
             if hasattr(main_window, 'combat_zone'):
                 main_window.combat_zone.refresh_cards()
             if hasattr(main_window, 'stats_display') and hasattr(main_window, 'character_list'):
@@ -426,7 +430,7 @@ class ExplosionDamageDialog(QDialog):
             target_name = result.target.name if result.target else "Unknown"
             if result.hit and result.damage_result:
                 dr = result.damage_result
-                text += f"<b>{target_name}</b> – {dr.location.name}: "
+                text += f"<b>{target_name}</b> \u2013 {dr.location.name}: "
                 text += f"{dr.damage} damage, {dr.shock} shock<br>"
                 if dr.pierced_organs:
                     text += f"&nbsp;&nbsp;Pierced: {', '.join(dr.pierced_organs)}<br>"
@@ -446,6 +450,7 @@ class ExplosionDamageDialog(QDialog):
     def _show_log(self):
         if not self.last_results:
             return
+        # ShotResult objects — use the .log field from the first result
         log_content = self.last_results[0].log or "No log available"
 
         dialog = QDialog(self)

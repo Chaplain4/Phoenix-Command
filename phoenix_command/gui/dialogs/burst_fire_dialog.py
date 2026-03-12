@@ -596,6 +596,10 @@ class BurstFireDialog(QDialog):
             main_window.combat_log.append_system(f"{shooter.name} fires burst from {weapon.name} at {target_names}")
             for result in results:
                 main_window._log_shot_result(result)
+            # Send detailed logs
+            detail_parts = [r.log for r in results if r.log]
+            if detail_parts:
+                main_window.combat_log.append_detailed("\n".join(detail_parts))
             if hasattr(main_window, 'combat_zone'):
                 main_window.combat_zone.refresh_cards()
             # Обновляем отображение характеристик
