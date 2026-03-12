@@ -17,7 +17,7 @@ from phoenix_command.models.character import Character
 from phoenix_command.models.enums import (TargetExposure, SituationStanceModifier4B,
                                           VisibilityModifier4C, TargetOrientation,
                                           BlastModifier)
-from phoenix_command.models.gear import AmmoType
+from phoenix_command.models.gear import AmmoType, Grenade
 from phoenix_command.models.hit_result_advanced import ShotParameters
 from phoenix_command.simulations.combat_simulator import CombatSimulator
 
@@ -214,22 +214,29 @@ class ExplosionDamageDialog(QDialog):
     # ── Ammo helpers ──────────────────────────────────────────────────────
 
     def _populate_ammo_combo(self):
-        """Collect all explosive ammo from all characters' equipment."""
+        """Collect all explosive ammo and grenades from characters' equipment."""
         self.ammo_combo.clear()
         seen = set()
+
         for char in self.characters:
             for item in char.equipment:
                 if isinstance(item, AmmoType) and item.explosive_data and id(item) not in seen:
                     seen.add(id(item))
-                    self.ammo_combo.addItem(f"{item.name} ({char.name})", item)
+                    self.ammo_combo.addItem(f"[Ammo] {item.name} ({char.name})", item)
+                elif isinstance(item, Grenade) and item.explosive_data and id(item) not in seen:
+                    seen.add(id(item))
+                    self.ammo_combo.addItem(f"[Grenade] {item.name} ({char.name})", item)
+
 
     def _on_ammo_changed(self):
-        ammo: AmmoType | None = self.ammo_combo.currentData()
-        if not ammo or not ammo.explosive_data:
+        ammo = self.ammo_combo.currentData()
+        if not ammo or not hasattr(ammo, 'explosive_data') or not ammo.explosive_data:
             self.ammo_info_label.setText("No explosive data")
             return
 
         lines = []
+        if isinstance(ammo, Grenade):
+            lines.append(f"Type: {ammo.grenade_type.name}, Country: {ammo.country.name}")
         for ed in ammo.explosive_data:
             rng = "contact" if ed.range_hexes is None else f"{ed.range_hexes} hex"
             lines.append(

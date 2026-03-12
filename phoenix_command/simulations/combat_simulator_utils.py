@@ -5,7 +5,7 @@ from typing import Optional, List
 
 from phoenix_command.models.character import Character
 from phoenix_command.models.enums import ShotType, TargetExposure, AccuracyModifiers, IncapacitationEffect, SituationStanceModifier4B, BlastModifier, AdvancedHitLocation
-from phoenix_command.models.gear import Weapon, AmmoType, BallisticData, Armor
+from phoenix_command.models.gear import Weapon, AmmoType, BallisticData, Armor, Grenade
 from phoenix_command.models.hit_result_advanced import ShotParameters, ShotResult, TargetGroup, BurstElevationResult, DamageResult
 from phoenix_command.tables.advanced_damage_tables.advanced_damage_calculator import AdvancedDamageCalculator
 from phoenix_command.tables.advanced_damage_tables.table_1_get_hit_location import Table1AdvancedDamageHitLocation
@@ -384,11 +384,11 @@ class CombatSimulatorUtils:
         if not penetrated:
             blunt_damage = Table9ABluntDamage.get_blunt_damage(location, blunt_pf, pen)
             log.append(f"  Blunt damage: {blunt_damage}")
-            target.apply_damage(blunt_damage)
             damage_result = AdvancedDamageCalculator.calculate_damage(
                 location=location, dc=0, epen=0.0, is_front=is_front_shot
             )
             damage_result.damage = blunt_damage
+            target.apply_damage(blunt_damage, damage_result)
         else:
             epen = max(0.0, epen)
             if total_protection > epen:
@@ -400,8 +400,8 @@ class CombatSimulatorUtils:
             log.append(f"  Damage: {damage_result.damage}, Shock: {damage_result.shock}")
             if damage_result.pierced_organs:
                 log.append(f"  Pierced organs: {damage_result.pierced_organs}")
-            target.apply_damage(damage_result.damage)
-        
+            target.apply_damage(damage_result.damage, damage_result)
+
         log.append(f"  Target total PD: {target.physical_damage_total}")
 
         incap_effect = CombatSimulatorUtils.determine_incapacitation(
@@ -707,7 +707,7 @@ class CombatSimulatorUtils:
     @staticmethod
     def process_shrapnel_hits(
         target: Character,
-        ammo: AmmoType,
+        ammo: AmmoType | Grenade,
         range_from_burst: int,
         exposure: TargetExposure,
         shot_params: ShotParameters,
@@ -770,8 +770,8 @@ class CombatSimulatorUtils:
 
             if not penetrated:
                 blunt_damage = Table9ABluntDamage.get_blunt_damage(location, blunt_pf, pen)
-                target.apply_damage(blunt_damage)
                 damage_result = DamageResult(location=location, damage=blunt_damage)
+                target.apply_damage(blunt_damage, damage_result)
                 hit_log.append(f"  Blunt damage: {blunt_damage}")
             else:
                 epen = max(0.0, epen)
@@ -779,7 +779,7 @@ class CombatSimulatorUtils:
                 damage_result = AdvancedDamageCalculator.calculate_damage(
                     location=location, dc=effective_dc, epen=epen, is_front=is_front_shot
                 )
-                target.apply_damage(damage_result.damage)
+                target.apply_damage(damage_result.damage, damage_result)
                 hit_log.append(f"  Damage: {damage_result.damage}, Shock: {damage_result.shock}")
 
             incap_effect = CombatSimulatorUtils.determine_incapacitation(
@@ -845,13 +845,13 @@ class CombatSimulatorUtils:
             return None
 
         log.append(f"  Concussion damage: {concussion_damage}")
-        target.apply_damage(concussion_damage)
 
         damage_result = DamageResult(
             location=AdvancedHitLocation.MISS,
             damage=concussion_damage,
             shock=0
         )
+        target.apply_damage(concussion_damage, damage_result)
 
         incap_effect = CombatSimulatorUtils.determine_incapacitation(
             target, target.physical_damage_total, 0, log

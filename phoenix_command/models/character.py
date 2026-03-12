@@ -1,9 +1,13 @@
 """Character model for Phoenix Command."""
 
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
 from phoenix_command.models.gear import Gear, Armor
 from phoenix_command.models.enums import AdvancedHitLocation
 from phoenix_command.tables.core.table1_character_generation import Table1CharacterGeneration
+
+if TYPE_CHECKING:
+    from phoenix_command.models.hit_result_advanced import DamageResult
 
 
 @dataclass(eq=False)
@@ -20,6 +24,7 @@ class Character:
     physical_damage_total: int = 0
     equipment: list[Gear] = field(default_factory=list)
     name: str = "Unnamed"
+    hit_history: list['DamageResult'] = field(default_factory=list)
     @property
     def encumbrance(self) -> float:
         """Total weight of all carried equipment."""
@@ -93,6 +98,8 @@ class Character:
         """Remove equipment from character."""
         self.equipment.remove(gear)
     
-    def apply_damage(self, damage: int) -> None:
-        """Apply physical damage to character."""
+    def apply_damage(self, damage: int, damage_result: 'DamageResult | None' = None) -> None:
+        """Apply physical damage to character and optionally record the hit."""
         self.physical_damage_total += damage
+        if damage_result is not None:
+            self.hit_history.append(damage_result)

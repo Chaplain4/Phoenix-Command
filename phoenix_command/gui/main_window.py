@@ -8,6 +8,7 @@ from phoenix_command.gui.widgets.combat_log import CombatLogWidget
 from phoenix_command.gui.widgets.stats_display import StatsDisplayWidget
 from phoenix_command.gui.widgets.combat_zone import CombatZoneWidget
 from phoenix_command.gui.widgets.character_list import CharacterListWidget
+from phoenix_command.gui.widgets.body_diagram import BodyDiagramWidget
 
 
 class MainWindow(QMainWindow):
@@ -92,7 +93,9 @@ class MainWindow(QMainWindow):
         details_layout = QVBoxLayout(details_widget)
         self.stats_display = StatsDisplayWidget()
         details_layout.addWidget(self.stats_display)
-        details_widget.setMaximumWidth(300)
+        self.body_diagram = BodyDiagramWidget()
+        details_layout.addWidget(self.body_diagram, stretch=1)
+        details_widget.setMaximumWidth(350)
         main_splitter.addWidget(details_widget)
 
         main_splitter.setStretchFactor(0, 1)
@@ -126,8 +129,10 @@ class MainWindow(QMainWindow):
         """Display character details when selected."""
         if 0 <= index < len(self.characters):
             self.stats_display.set_character(self.characters[index])
+            self.body_diagram.set_character(self.characters[index])
         else:
             self.stats_display.clear()
+            self.body_diagram.clear()
 
     def _edit_character(self):
         """Edit selected character stats."""
@@ -267,3 +272,5 @@ class MainWindow(QMainWindow):
                 self.combat_log.append_hit(f"{target_name} - Hit")
         else:
             self.combat_log.append_miss(f"{target_name} - Miss (Roll: {result.roll} vs {result.odds}%)")
+        # Refresh body diagram for the currently selected character
+        self.body_diagram.refresh()

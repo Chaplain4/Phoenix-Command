@@ -97,7 +97,7 @@ class CharacterDialog(QDialog):
             status_layout = QFormLayout(status_group)
 
             self.pd_spin = QSpinBox()
-            self.pd_spin.setRange(0, 999)
+            self.pd_spin.setRange(0, 9999999)
             self.pd_spin.setValue(0)
             self.pd_spin.valueChanged.connect(self._update_status_display)
             status_layout.addRow("Physical Damage:", self.pd_spin)

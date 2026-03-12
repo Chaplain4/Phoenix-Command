@@ -5,7 +5,7 @@ from typing import Optional, List
 
 from phoenix_command.models.character import Character
 from phoenix_command.models.enums import ShotType, TargetExposure, ExplosiveTarget, SituationStanceModifier4B, BlastModifier
-from phoenix_command.models.gear import Weapon, AmmoType
+from phoenix_command.models.gear import Weapon, AmmoType, Grenade
 from phoenix_command.models.hit_result_advanced import ShotParameters, ShotResult, TargetGroup, ExplosiveShotResult
 from phoenix_command.simulations.combat_simulator_utils import CombatSimulatorUtils
 from phoenix_command.tables.advanced_rules.effective_min_arc import EffectiveMinimumArc
@@ -594,7 +594,7 @@ class CombatSimulator:
 
     @staticmethod
     def explosion_damage(
-        ammo: AmmoType,
+        ammo: AmmoType | Grenade,
         targets: List[Character],
         ranges_from_burst: List[int],
         exposures: List[TargetExposure],
