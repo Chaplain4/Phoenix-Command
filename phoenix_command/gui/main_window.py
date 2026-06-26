@@ -1,14 +1,30 @@
 """Main window for Phoenix Command GUI."""
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-                             QSplitter)
+from PyQt6.QtWidgets import (
+    QMainWindow,
+    QWidget,
+    QVBoxLayout,
+    QHBoxLayout,
+    QSplitter,
+    QMessageBox,
+    QFileDialog,
+)
 
 from phoenix_command.gui.widgets.body_diagram import BodyDiagramWidget
 from phoenix_command.gui.widgets.character_list import CharacterListWidget
 from phoenix_command.gui.widgets.combat_log import CombatLogWidget
 from phoenix_command.gui.widgets.combat_zone import CombatZoneWidget
 from phoenix_command.gui.widgets.stats_display import StatsDisplayWidget
+from phoenix_command.session.bridge import GameStateBridge
+from phoenix_command.session.persistence import load_game_state, save_game_state
+from phoenix_command.session.game_state import GameState
+from phoenix_command.session.publisher import GameStatePublisher
+from phoenix_command.session.sync_protocol import (
+    MessageType,
+    SyncMessage,
+    apply_message_to_state,
+)
 
 
 class MainWindow(QMainWindow):
@@ -18,6 +34,15 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.characters = []
         self.setWindowTitle("Phoenix Command")
+
+        self._session_role: str | None = None  # "host", "guest", or None
+        self._p2p_host = None
+        self._p2p_guest = None
+        self._relay_client = None
+        self._game_bridge = GameStateBridge()
+        self._publisher: GameStatePublisher | None = None
+        self._host_dialog = None
+        self._join_dialog = None
 
         self._create_menu_bar()
         self._create_central_widget()
@@ -29,36 +54,49 @@ class MainWindow(QMainWindow):
         menubar = self.menuBar()
 
         file_menu = menubar.addMenu("&File")
-        file_menu.addAction("&New Session")
-        file_menu.addAction("&Load Session")
-        file_menu.addAction("&Save Session")
+        self._new_session_action = file_menu.addAction("&New Session")
+        self._new_session_action.triggered.connect(self._new_session)
+        self._load_session_action = file_menu.addAction("&Load Session")
+        self._load_session_action.triggered.connect(self._load_session)
+        self._save_session_action = file_menu.addAction("&Save Session")
+        self._save_session_action.triggered.connect(self._save_session)
+        file_menu.addSeparator()
+        self._host_session_action = file_menu.addAction("&Host Session...")
+        self._host_session_action.triggered.connect(self._host_session)
+        self._join_session_action = file_menu.addAction("&Join Session...")
+        self._join_session_action.triggered.connect(self._join_session)
+        self._disconnect_action = file_menu.addAction("&Disconnect")
+        self._disconnect_action.triggered.connect(self._disconnect_session)
+        self._disconnect_action.setEnabled(False)
         file_menu.addSeparator()
         file_menu.addAction("E&xit", self.close)
 
-        char_menu = menubar.addMenu("&Characters")
-        add_char_action = char_menu.addAction("&Add Character")
-        add_char_action.triggered.connect(self._add_character)
-        edit_char_action = char_menu.addAction("&Edit Character")
-        edit_char_action.triggered.connect(self._edit_character)
-        equip_action = char_menu.addAction("Manage &Equipment")
-        equip_action.triggered.connect(self._manage_equipment)
-        char_menu.addSeparator()
-        char_menu.addAction("&Import Template")
+        self.char_menu = menubar.addMenu("&Characters")
+        self._add_char_action = self.char_menu.addAction("&Add Character")
+        self._add_char_action.triggered.connect(self._add_character)
+        self._edit_char_action = self.char_menu.addAction("&Edit Character")
+        self._edit_char_action.triggered.connect(self._edit_character)
+        self._remove_char_action = self.char_menu.addAction("&Remove Character")
+        self._remove_char_action.triggered.connect(self._remove_character)
+        self._equip_action = self.char_menu.addAction("Manage &Equipment")
+        self._equip_action.triggered.connect(self._manage_equipment)
+        self.char_menu.addSeparator()
+        self.char_menu.addAction("&Import Template")
 
-        combat_menu = menubar.addMenu("C&ombat")
-        shot_action = combat_menu.addAction("&Single Shot")
+        self.combat_menu = menubar.addMenu("C&ombat")
+        shot_action = self.combat_menu.addAction("&Single Shot")
         shot_action.triggered.connect(self._single_shot)
-        three_rb_action = combat_menu.addAction("&Three Round Burst")
+        three_rb_action = self.combat_menu.addAction("&Three Round Burst")
         three_rb_action.triggered.connect(self._three_round_burst)
-        burst_action = combat_menu.addAction("&Burst Fire")
+        burst_action = self.combat_menu.addAction("&Burst Fire")
         burst_action.triggered.connect(self._burst_fire)
-        combat_menu.addSeparator()
-        thrown_grenade_action = combat_menu.addAction("Thrown &Grenade")
+        self.combat_menu.addSeparator()
+        thrown_grenade_action = self.combat_menu.addAction("Thrown &Grenade")
         thrown_grenade_action.triggered.connect(self._thrown_grenade)
-        explosion_action = combat_menu.addAction("&Explosion Damage")
+        explosion_action = self.combat_menu.addAction("&Explosion Damage")
         explosion_action.triggered.connect(self._explosion_damage)
-        combat_menu.addSeparator()
-        combat_menu.addAction("Combat &History")
+        self.combat_menu.addSeparator()
+        self.combat_menu.addAction("Combat &History")
 
         help_menu = menubar.addMenu("&Help")
         help_menu.addAction("&Documentation")
@@ -108,6 +146,200 @@ class MainWindow(QMainWindow):
         """Create status bar."""
         self.statusBar().showMessage("Ready")
 
+    def _set_guest_mode(self, guest: bool) -> None:
+        """Enable or disable editing when connected as guest."""
+        self._add_char_action.setEnabled(not guest)
+        self._edit_char_action.setEnabled(not guest)
+        self._remove_char_action.setEnabled(not guest)
+        self._equip_action.setEnabled(not guest)
+        self.combat_menu.setEnabled(not guest)
+        self.character_list.setDragEnabled(not guest)
+        self._host_session_action.setEnabled(not guest)
+        self._join_session_action.setEnabled(not guest)
+        self._new_session_action.setEnabled(not guest)
+
+    def _notify_game_state_changed(self, domain: str = "combat", immediate: bool = False) -> None:
+        if self._session_role == "host" and self._publisher:
+            self._publisher.notify_changed(domain=domain, immediate=immediate)
+
+    def _broadcast_sync_message(self, message: SyncMessage) -> None:
+        if self._p2p_host:
+            self._p2p_host.broadcast_message(message)
+        if self._relay_client:
+            self._relay_client.send_message(message)
+
+    def _on_sync_message_received(self, message: SyncMessage) -> None:
+        if self._session_role == "host":
+            if message.type == MessageType.REQUEST_STATE and self._publisher:
+                full = self._publisher.publish_now()
+                self._broadcast_sync_message(full)
+            return
+
+        if self._session_role == "guest":
+            new_state = apply_message_to_state(self._game_bridge.state, message)
+            self._game_bridge.apply_remote_state(new_state, self)
+            self.statusBar().showMessage(
+                f"Guest: synced revision {new_state.revision}"
+            )
+
+    def _new_session(self) -> None:
+        if self._session_role:
+            QMessageBox.warning(
+                self, "Session Active", "Disconnect before starting a new session."
+            )
+            return
+        self.characters.clear()
+        self.combat_zone.clear_all()
+        self.combat_log.clear()
+        self._game_bridge = GameStateBridge()
+        self._refresh_character_list()
+        self.stats_display.clear()
+        self.body_diagram.clear()
+        self.statusBar().showMessage("New session")
+
+    def _save_session(self) -> None:
+        from phoenix_command.gui.dialogs.session_dialog import SaveLoadSessionDialog
+
+        dialog = SaveLoadSessionDialog("Save Session", "session.json", parent=self)
+        if not dialog.exec():
+            return
+        self._game_bridge.capture_from_window(self)
+        save_game_state(dialog.file_path, self._game_bridge.state)
+        self.statusBar().showMessage(f"Session saved: {dialog.file_path}")
+
+    def _load_session(self) -> None:
+        path, _ = QFileDialog.getOpenFileName(
+            self, "Load Session", "", "JSON (*.json)"
+        )
+        if not path:
+            return
+        try:
+            state = load_game_state(path)
+            self._game_bridge.apply_remote_state(state, self)
+            self.statusBar().showMessage(f"Session loaded: {path}")
+            self._notify_game_state_changed(immediate=True)
+        except Exception as exc:
+            QMessageBox.critical(self, "Load Failed", str(exc))
+
+    def _host_session(self) -> None:
+        if self._session_role:
+            QMessageBox.warning(self, "Session Active", "Disconnect first.")
+            return
+
+        from phoenix_command.gui.dialogs.session_dialog import HostSessionDialog
+        from phoenix_command.session.p2p_host import P2PSessionHost
+
+        self._host_dialog = HostSessionDialog(parent=self)
+        self._p2p_host = P2PSessionHost(parent=self)
+        self._publisher = GameStatePublisher(self._broadcast_sync_message)
+        self._publisher.attach(self, self._game_bridge)
+
+        self._p2p_host.invite_ready.connect(self._on_invite_ready)
+        self._p2p_host.guest_connected.connect(self._on_guest_connected)
+        self._p2p_host.connection_failed.connect(self._on_connection_failed)
+        self._p2p_host.ice_state_changed.connect(self._on_ice_state)
+        self._p2p_host.set_message_handler(self._on_sync_message_received)
+        self._host_dialog.answer_submitted.connect(self._on_host_answer_submitted)
+
+        self._session_role = "host"
+        self._disconnect_action.setEnabled(True)
+        self._p2p_host.start()
+        self._host_dialog.show()
+
+    def _on_invite_ready(self, code: str) -> None:
+        if self._host_dialog:
+            self._host_dialog.set_invite_code(code)
+        self.statusBar().showMessage("Host: invite ready — send via Discord")
+
+    def _on_guest_connected(self, guest_id: str) -> None:
+        if self._host_dialog:
+            self._host_dialog.set_status(f"Guest connected ({guest_id})")
+        if self._publisher:
+            full = self._publisher.publish_now()
+            self._broadcast_sync_message(full)
+        self.statusBar().showMessage(f"Host: guest {guest_id} connected")
+
+    def _on_host_answer_submitted(self, answer: str) -> None:
+        if self._p2p_host:
+            self._p2p_host.submit_answer(answer)
+
+    def _join_session(self) -> None:
+        if self._session_role:
+            QMessageBox.warning(self, "Session Active", "Disconnect first.")
+            return
+
+        from phoenix_command.gui.dialogs.session_dialog import JoinSessionDialog
+        from phoenix_command.session.p2p_guest import P2PSessionGuest
+
+        dialog = JoinSessionDialog(parent=self)
+        if not dialog.exec():
+            return
+
+        self._join_dialog = dialog
+        self._p2p_guest = P2PSessionGuest(parent=self)
+        self._p2p_guest.answer_ready.connect(self._on_answer_ready)
+        self._p2p_guest.connected.connect(self._on_guest_connected_to_host)
+        self._p2p_guest.disconnected.connect(self._on_guest_disconnected)
+        self._p2p_guest.connection_failed.connect(self._on_connection_failed)
+        self._p2p_guest.state_received.connect(self._on_guest_state_received)
+        self._p2p_guest.ice_state_changed.connect(self._on_ice_state)
+        self._p2p_guest.set_message_handler(self._on_sync_message_received)
+
+        self._session_role = "guest"
+        self._set_guest_mode(True)
+        self._disconnect_action.setEnabled(True)
+        self._p2p_guest.start()
+        self._p2p_guest.connect_with_invite(dialog.invite_code)
+        dialog.show()
+
+    def _on_answer_ready(self, code: str) -> None:
+        if self._join_dialog:
+            self._join_dialog.set_answer_code(code)
+        self.statusBar().showMessage("Guest: send answer code to host via Discord")
+
+    def _on_guest_connected_to_host(self) -> None:
+        self.statusBar().showMessage("Guest: connected to host")
+
+    def _on_guest_disconnected(self) -> None:
+        self.statusBar().showMessage("Guest: disconnected")
+
+    def _on_guest_state_received(self, message: SyncMessage) -> None:
+        self._on_sync_message_received(message)
+
+    def _on_connection_failed(self, error: str) -> None:
+        QMessageBox.critical(self, "Connection Failed", error)
+        self._disconnect_session()
+
+    def _on_ice_state(self, state: str) -> None:
+        role = self._session_role or "local"
+        self.statusBar().showMessage(f"{role.title()}: ICE {state}")
+
+    def _disconnect_session(self) -> None:
+        if self._p2p_host:
+            self._p2p_host.stop_session()
+            self._p2p_host = None
+        if self._p2p_guest:
+            self._p2p_guest.stop_session()
+            self._p2p_guest = None
+        if self._relay_client:
+            self._relay_client.stop_session()
+            self._relay_client = None
+        self._publisher = None
+        self._session_role = None
+        self._set_guest_mode(False)
+        self._disconnect_action.setEnabled(False)
+        if self._host_dialog:
+            self._host_dialog.close()
+            self._host_dialog = None
+        if self._join_dialog:
+            self._join_dialog.close()
+            self._join_dialog = None
+        self.statusBar().showMessage("Disconnected")
+
+    def closeEvent(self, event) -> None:
+        self._disconnect_session()
+        super().closeEvent(event)
+
     def _add_character(self):
         """Open character creation dialog."""
         from phoenix_command.gui.dialogs.character_dialog import CharacterDialog
@@ -118,6 +350,7 @@ class MainWindow(QMainWindow):
                 self.characters.append(character)
                 self._refresh_character_list()
                 self.statusBar().showMessage(f"Added character: {character.name}")
+                self._notify_game_state_changed()
 
     def _refresh_character_list(self):
         """Refresh character list display."""
@@ -133,6 +366,7 @@ class MainWindow(QMainWindow):
         else:
             self.stats_display.clear()
             self.body_diagram.clear()
+        self._notify_game_state_changed()
 
     def _edit_character(self):
         """Edit selected character stats."""
@@ -150,6 +384,39 @@ class MainWindow(QMainWindow):
             self._on_character_selected(current_row)
             self.combat_zone.refresh_cards()
             self.statusBar().showMessage(f"Updated character: {char.name}")
+            self._notify_game_state_changed()
+
+    def _remove_character(self):
+        """Remove selected character from the session."""
+        current_row = self.character_list.currentRow()
+        if current_row < 0:
+            self.statusBar().showMessage("No character selected")
+            return
+
+        char = self.characters[current_row]
+        reply = QMessageBox.question(
+            self,
+            "Remove Character",
+            f"Remove {char.name} from the session?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+
+        self.combat_zone.remove_character(char.name)
+        del self.characters[current_row]
+        self._refresh_character_list()
+
+        if self.characters:
+            new_row = min(current_row, len(self.characters) - 1)
+            self.character_list.setCurrentRow(new_row)
+        else:
+            self.stats_display.clear()
+            self.body_diagram.clear()
+
+        self.statusBar().showMessage(f"Removed character: {char.name}")
+        self._notify_game_state_changed()
 
     def _manage_equipment(self):
         """Open equipment management dialog."""
@@ -164,6 +431,12 @@ class MainWindow(QMainWindow):
         dialog.exec()
         self._on_character_selected(current_row)
         self.statusBar().showMessage(f"Equipment updated for {char.name}")
+        self._notify_game_state_changed()
+
+    def _after_combat_dialog(self) -> None:
+        self.body_diagram.refresh()
+        self.combat_zone.refresh_cards()
+        self._notify_game_state_changed()
 
     def _single_shot(self):
         """Open single shot dialog."""
@@ -173,7 +446,8 @@ class MainWindow(QMainWindow):
 
         from phoenix_command.gui.dialogs.shot_dialog import ShotDialog
         dialog = ShotDialog(characters=self.characters, parent=self)
-        dialog.exec()
+        if dialog.exec():
+            self._after_combat_dialog()
 
     def _three_round_burst(self):
         """Open three round burst dialog."""
@@ -197,7 +471,8 @@ class MainWindow(QMainWindow):
 
         from phoenix_command.gui.dialogs.three_round_burst_dialog import ThreeRoundBurstDialog
         dialog = ThreeRoundBurstDialog(characters=self.characters, parent=self)
-        dialog.exec()
+        if dialog.exec():
+            self._after_combat_dialog()
 
     def _burst_fire(self):
         """Open burst fire dialog."""
@@ -221,7 +496,8 @@ class MainWindow(QMainWindow):
 
         from phoenix_command.gui.dialogs.burst_fire_dialog import BurstFireDialog
         dialog = BurstFireDialog(characters=self.characters, parent=self)
-        dialog.exec()
+        if dialog.exec():
+            self._after_combat_dialog()
 
     def _explosion_damage(self):
         """Open explosion damage dialog."""
@@ -231,7 +507,8 @@ class MainWindow(QMainWindow):
 
         from phoenix_command.gui.dialogs.explosion_damage_dialog import ExplosionDamageDialog
         dialog = ExplosionDamageDialog(characters=self.characters, parent=self)
-        dialog.exec()
+        if dialog.exec():
+            self._after_combat_dialog()
 
     def _thrown_grenade(self):
         """Open thrown grenade dialog."""
@@ -255,7 +532,8 @@ class MainWindow(QMainWindow):
 
         from phoenix_command.gui.dialogs.thrown_grenade_dialog import ThrownGrenadeDialog
         dialog = ThrownGrenadeDialog(characters=self.characters, parent=self)
-        dialog.exec()
+        if dialog.exec():
+            self._after_combat_dialog()
 
     def _log_shot_result(self, result):
         """Log shot result to combat log."""
@@ -272,5 +550,5 @@ class MainWindow(QMainWindow):
                 self.combat_log.append_hit(f"{target_name} - Hit")
         else:
             self.combat_log.append_miss(f"{target_name} - Miss (Roll: {result.roll} vs {result.odds}%)")
-        # Refresh body diagram for the currently selected character
         self.body_diagram.refresh()
+        self._notify_game_state_changed()

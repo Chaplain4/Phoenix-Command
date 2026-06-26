@@ -56,6 +56,12 @@ class DropZone(QWidget):
         parent = self.parent()
         if isinstance(parent, CombatZoneWidget):
             parent.add_target_zone()
+        self._notify_session()
+
+    def _notify_session(self) -> None:
+        main_window = self.window()
+        if hasattr(main_window, "_notify_game_state_changed"):
+            main_window._notify_game_state_changed()
     
     def refresh(self):
         """Refresh card display."""
@@ -168,6 +174,18 @@ class CombatZoneWidget(QWidget):
         elif action.text() == "Thrown Grenade" and hasattr(main_window, '_thrown_grenade'):
             main_window._thrown_grenade()
 
+    def remove_character(self, name: str) -> None:
+        """Remove a character from shooter/target zones by name."""
+        if self.shooter_zone.character and self.shooter_zone.character.name == name:
+            self.shooter_zone.clear()
+        for zone in self.target_zones:
+            if zone.character and zone.character.name == name:
+                zone.clear()
+        while len(self.target_zones) > 1 and not self.target_zones[-1].character:
+            zone = self.target_zones.pop()
+            self.targets_layout.removeWidget(zone)
+            zone.deleteLater()
+
     def clear_all(self):
         self.shooter_zone.clear()
         for zone in self.target_zones:
@@ -176,6 +194,9 @@ class CombatZoneWidget(QWidget):
             zone = self.target_zones.pop()
             self.targets_layout.removeWidget(zone)
             zone.deleteLater()
+        main_window = self.window()
+        if hasattr(main_window, "_notify_game_state_changed"):
+            main_window._notify_game_state_changed()
     
     def add_target_zone(self):
         if not self.target_zones or self.target_zones[-1].character:

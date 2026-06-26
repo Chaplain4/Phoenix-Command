@@ -9,6 +9,8 @@ class CombatLogWidget(QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self._log_entries: list = []
+        self._detailed_lines: list[str] = []
         self._setup_ui()
 
     def _setup_ui(self):
@@ -49,6 +51,14 @@ class CombatLogWidget(QWidget):
 
     def _append_colored(self, message: str, color: str):
         """Append message with specified color to the normal log tab."""
+        category = {
+            "#27ae60": "hit",
+            "#c0392b": "critical",
+            "#d68910": "miss",
+            "#2471a3": "system",
+        }.get(color, "system")
+        from phoenix_command.session.domains.combat_state import CombatLogEntry
+        self._log_entries.append(CombatLogEntry(message=message, category=category))
         self._log_text.moveCursor(QTextCursor.MoveOperation.End)
         self._log_text.insertHtml(f'<span style="color: {color};">{message}</span><br>')
         self._log_text.moveCursor(QTextCursor.MoveOperation.End)
@@ -61,13 +71,45 @@ class CombatLogWidget(QWidget):
             return
         self._detailed_text.moveCursor(QTextCursor.MoveOperation.End)
         separator = "\u2500" * 60
-        self._detailed_text.insertPlainText(f"\n{separator}\n{text}\n")
+        block = f"\n{separator}\n{text}\n"
+        self._detailed_lines.append(block)
+        self._detailed_text.insertPlainText(block)
         self._detailed_text.moveCursor(QTextCursor.MoveOperation.End)
 
     # ── Utility ───────────────────────────────────────────────────────────
 
     def clear(self):
         """Clear both tabs."""
+        self._log_entries.clear()
+        self._detailed_lines.clear()
         self._log_text.clear()
         self._detailed_text.clear()
+
+    def get_log_entries(self):
+        """Return serializable combat log entries."""
+        return list(self._log_entries)
+
+    def get_detailed_lines(self) -> list[str]:
+        return list(self._detailed_lines)
+
+    def set_log_entries(self, entries, detailed_lines: list[str] | None = None) -> None:
+        """Restore log from GameState."""
+        self.clear()
+        color_map = {
+            "hit": "#27ae60",
+            "critical": "#c0392b",
+            "miss": "#d68910",
+            "system": "#2471a3",
+        }
+        for entry in entries:
+            self._log_entries.append(entry)
+            color = color_map.get(entry.category, "#2471a3")
+            self._log_text.moveCursor(QTextCursor.MoveOperation.End)
+            self._log_text.insertHtml(
+                f'<span style="color: {color};">{entry.message}</span><br>'
+            )
+        if detailed_lines:
+            for line in detailed_lines:
+                self._detailed_lines.append(line)
+                self._detailed_text.insertPlainText(line)
 

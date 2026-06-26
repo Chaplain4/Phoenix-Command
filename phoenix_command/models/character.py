@@ -1,5 +1,6 @@
 """Character model for Phoenix Command."""
 
+import copy
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 from phoenix_command.models.gear import Gear, Armor
@@ -91,8 +92,8 @@ class Character:
         return Table1CharacterGeneration.get_defensive_alm(self.intelligence_skill_factor)
     
     def add_gear(self, gear: Gear) -> None:
-        """Add equipment to character."""
-        self.equipment.append(gear)
+        """Add equipment to character (deep copy to avoid mutating database templates)."""
+        self.equipment.append(copy.deepcopy(gear))
     
     def remove_gear(self, gear: Gear) -> None:
         """Remove equipment from character."""
