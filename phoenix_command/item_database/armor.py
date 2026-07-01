@@ -349,11 +349,143 @@ vest_6b23_1 = Armor(
 helmet_ssh_68 = Armor(
     name="SSh-68 Steel Helmet",
     weight=3.0,
-    description="Soviet steel combat helmet. NIJ II / GOST 3.",
+    description="Soviet steel combat helmet widely used during the Soviet-Afghan War. NIJ II / GOST 3.",
     protection={
         **{(loc, is_front): ArmorProtectionData(layers=[
             ArmorLayer(ArmorMaterial.STEEL, protection_factor=4, blunt_protection_factor=2),
         ]) for loc in helmet_locs for is_front in [True, False]}
+    }
+)
+
+# --- Vietnam War ---
+
+helmet_m1 = Armor(
+    name="M1 Steel Helmet",
+    weight=3.0,
+    description="US M1 steel pot helmet standard in Vietnam. NIJ II / GOST 3.",
+    protection={
+        **{(loc, is_front): ArmorProtectionData(layers=[
+            ArmorLayer(ArmorMaterial.STEEL, protection_factor=4, blunt_protection_factor=2),
+        ]) for loc in helmet_locs for is_front in [True, False]}
+    }
+)
+
+vest_m69 = Armor(
+    name="M69 Fragmentation Vest",
+    weight=8.0,
+    description="US M-1969 nylon fragmentation vest. NIJ I / GOST 2.",
+    protection={
+        **{(loc, True): ArmorProtectionData(layers=[
+            ArmorLayer(ArmorMaterial.KEVLAR, protection_factor=4, blunt_protection_factor=1),
+        ]) for loc in iotv_front_vital},
+        **{(loc, True): ArmorProtectionData(layers=[
+            ArmorLayer(ArmorMaterial.KEVLAR, protection_factor=4, blunt_protection_factor=1),
+        ]) for loc in iotv_front_soft},
+        **{(loc, False): ArmorProtectionData(layers=[
+            ArmorLayer(ArmorMaterial.KEVLAR, protection_factor=4, blunt_protection_factor=1),
+        ]) for loc in iotv_back_vital},
+        **{(loc, False): ArmorProtectionData(layers=[
+            ArmorLayer(ArmorMaterial.KEVLAR, protection_factor=4, blunt_protection_factor=1),
+        ]) for loc in iotv_back_soft},
+    }
+)
+
+vest_m1955 = Armor(
+    name="M1955 Fragmentation Vest",
+    weight=7.0,
+    description="Early US nylon fragmentation vest used in early Vietnam. NIJ I / GOST 1.",
+    protection={
+        **{(loc, True): ArmorProtectionData(layers=[
+            ArmorLayer(ArmorMaterial.KEVLAR, protection_factor=2, blunt_protection_factor=1),
+        ]) for loc in iotv_front_vital},
+        **{(loc, True): ArmorProtectionData(layers=[
+            ArmorLayer(ArmorMaterial.KEVLAR, protection_factor=2, blunt_protection_factor=1),
+        ]) for loc in iotv_front_soft},
+        **{(loc, False): ArmorProtectionData(layers=[
+            ArmorLayer(ArmorMaterial.KEVLAR, protection_factor=2, blunt_protection_factor=1),
+        ]) for loc in iotv_back_vital},
+        **{(loc, False): ArmorProtectionData(layers=[
+            ArmorLayer(ArmorMaterial.KEVLAR, protection_factor=2, blunt_protection_factor=1),
+        ]) for loc in iotv_back_soft},
+    }
+)
+
+# --- Soviet-Afghan War ---
+
+vest_6b2 = Armor(
+    name="6B2 Vest (w/ TT-02 plates)",
+    weight=18.0,
+    description="Soviet body armor with titanium TT-02 plates, issued during the Afghan War. NIJ III / GOST 4.",
+    protection={
+        **{(loc, True): ArmorProtectionData(layers=[
+            ArmorLayer(ArmorMaterial.KEVLAR, protection_factor=4, blunt_protection_factor=1),
+            ArmorLayer(ArmorMaterial.TITANIUM, protection_factor=13, blunt_protection_factor=3),
+        ]) for loc in iotv_front_vital},
+        **{(loc, True): ArmorProtectionData(layers=[
+            ArmorLayer(ArmorMaterial.KEVLAR, protection_factor=4, blunt_protection_factor=1),
+        ]) for loc in iotv_front_soft},
+        **{(loc, False): ArmorProtectionData(layers=[
+            ArmorLayer(ArmorMaterial.KEVLAR, protection_factor=4, blunt_protection_factor=1),
+            ArmorLayer(ArmorMaterial.TITANIUM, protection_factor=13, blunt_protection_factor=3),
+        ]) for loc in iotv_back_vital},
+        **{(loc, False): ArmorProtectionData(layers=[
+            ArmorLayer(ArmorMaterial.KEVLAR, protection_factor=4, blunt_protection_factor=1),
+        ]) for loc in iotv_back_soft},
+    }
+)
+
+vest_6b3 = Armor(
+    name="6B3 Vest (w/ TT-02M plates)",
+    weight=22.0,
+    description="Improved Soviet body armor with titanium TT-02M plates, Afghan War era. NIJ III / GOST 5.",
+    protection={
+        **{(loc, True): ArmorProtectionData(layers=[
+            ArmorLayer(ArmorMaterial.KEVLAR, protection_factor=4, blunt_protection_factor=1),
+            ArmorLayer(ArmorMaterial.TITANIUM, protection_factor=15, blunt_protection_factor=3),
+        ]) for loc in iotv_front_vital},
+        **{(loc, True): ArmorProtectionData(layers=[
+            ArmorLayer(ArmorMaterial.KEVLAR, protection_factor=4, blunt_protection_factor=1),
+        ]) for loc in iotv_front_soft},
+        **{(loc, False): ArmorProtectionData(layers=[
+            ArmorLayer(ArmorMaterial.KEVLAR, protection_factor=4, blunt_protection_factor=1),
+            ArmorLayer(ArmorMaterial.TITANIUM, protection_factor=15, blunt_protection_factor=3),
+        ]) for loc in iotv_back_vital},
+        **{(loc, False): ArmorProtectionData(layers=[
+            ArmorLayer(ArmorMaterial.KEVLAR, protection_factor=4, blunt_protection_factor=1),
+        ]) for loc in iotv_back_soft},
+    }
+)
+
+# --- US Late Cold War / Early Interventions ---
+
+helmet_pasgt = Armor(
+    name="PASGT Helmet",
+    weight=3.5,
+    description="US PASGT (M81) Kevlar helmet used from the 1980s onward. NIJ III / GOST 3.",
+    protection={
+        **{(loc, is_front): ArmorProtectionData(layers=[
+            ArmorLayer(ArmorMaterial.UHMWPE, protection_factor=4, blunt_protection_factor=3),
+        ]) for loc in helmet_locs for is_front in [True, False]}
+    }
+)
+
+vest_pasgt = Armor(
+    name="PASGT Vest",
+    weight=10.0,
+    description="US PASGT Kevlar vest without rifle plates. NIJ IIIA / GOST 2.",
+    protection={
+        **{(loc, True): ArmorProtectionData(layers=[
+            ArmorLayer(ArmorMaterial.KEVLAR, protection_factor=4, blunt_protection_factor=1),
+        ]) for loc in iotv_front_vital},
+        **{(loc, True): ArmorProtectionData(layers=[
+            ArmorLayer(ArmorMaterial.KEVLAR, protection_factor=4, blunt_protection_factor=1),
+        ]) for loc in iotv_front_soft},
+        **{(loc, False): ArmorProtectionData(layers=[
+            ArmorLayer(ArmorMaterial.KEVLAR, protection_factor=4, blunt_protection_factor=1),
+        ]) for loc in iotv_back_vital},
+        **{(loc, False): ArmorProtectionData(layers=[
+            ArmorLayer(ArmorMaterial.KEVLAR, protection_factor=4, blunt_protection_factor=1),
+        ]) for loc in iotv_back_soft},
     }
 )
 
@@ -414,6 +546,13 @@ armor = [
     helmet_6b47,
     vest_6b23_1,
     helmet_ssh_68,
+    helmet_m1,
+    vest_m69,
+    vest_m1955,
+    vest_6b2,
+    vest_6b3,
+    helmet_pasgt,
+    vest_pasgt,
     vest_spectra,
     helmet_hbh,
 ]

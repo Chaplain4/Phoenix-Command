@@ -9,12 +9,14 @@ from PyQt6.QtWidgets import (
     QSplitter,
     QMessageBox,
     QFileDialog,
+    QTabWidget,
 )
 
 from phoenix_command.gui.widgets.body_diagram import BodyDiagramWidget
 from phoenix_command.gui.widgets.character_list import CharacterListWidget
 from phoenix_command.gui.widgets.combat_log import CombatLogWidget
 from phoenix_command.gui.widgets.combat_zone import CombatZoneWidget
+from phoenix_command.gui.widgets.hex_map_view import HexMapView
 from phoenix_command.gui.widgets.stats_display import StatsDisplayWidget
 from phoenix_command.session.bridge import GameStateBridge
 from phoenix_command.session.persistence import load_game_state, save_game_state
@@ -98,6 +100,16 @@ class MainWindow(QMainWindow):
         self.combat_menu.addSeparator()
         self.combat_menu.addAction("Combat &History")
 
+        self.map_menu = menubar.addMenu("&Map")
+        self._new_map_action = self.map_menu.addAction("&New Map")
+        self._new_map_action.triggered.connect(self._new_map)
+        self._manage_layers_action = self.map_menu.addAction("&Manage Layers...")
+        self._manage_layers_action.triggered.connect(self._manage_layers)
+        self._action_catalog_action = self.map_menu.addAction("&Action Catalog...")
+        self._action_catalog_action.triggered.connect(self._show_action_catalog)
+        self._custom_barrier_action = self.map_menu.addAction("&Custom Barrier Material...")
+        self._custom_barrier_action.triggered.connect(self._add_custom_barrier)
+
         help_menu = menubar.addMenu("&Help")
         help_menu.addAction("&Documentation")
         help_menu.addAction("&About")
@@ -119,8 +131,13 @@ class MainWindow(QMainWindow):
 
         center_splitter = QSplitter(Qt.Orientation.Vertical)
 
+        self._center_tabs = QTabWidget()
         self.combat_zone = CombatZoneWidget()
-        center_splitter.addWidget(self.combat_zone)
+        self.hex_map_view = HexMapView()
+        self.hex_map_view.map_changed.connect(self._on_map_changed)
+        self._center_tabs.addTab(self.combat_zone, "Combat")
+        self._center_tabs.addTab(self.hex_map_view, "Map")
+        center_splitter.addWidget(self._center_tabs)
 
         self.combat_log = CombatLogWidget()
         center_splitter.addWidget(self.combat_log)
@@ -153,6 +170,11 @@ class MainWindow(QMainWindow):
         self._remove_char_action.setEnabled(not guest)
         self._equip_action.setEnabled(not guest)
         self.combat_menu.setEnabled(not guest)
+        self._new_map_action.setEnabled(not guest)
+        self._manage_layers_action.setEnabled(not guest)
+        self._action_catalog_action.setEnabled(not guest)
+        self._custom_barrier_action.setEnabled(not guest)
+        self.hex_map_view.set_editable(not guest)
         self.character_list.setDragEnabled(not guest)
         self._host_session_action.setEnabled(not guest)
         self._join_session_action.setEnabled(not guest)
@@ -192,6 +214,7 @@ class MainWindow(QMainWindow):
         self.combat_zone.clear_all()
         self.combat_log.clear()
         self._game_bridge = GameStateBridge()
+        self.hex_map_view.new_map()
         self._refresh_character_list()
         self.stats_display.clear()
         self.body_diagram.clear()
@@ -340,6 +363,37 @@ class MainWindow(QMainWindow):
         self._disconnect_session()
         super().closeEvent(event)
 
+    def _on_map_changed(self) -> None:
+        self._notify_game_state_changed(domain="map")
+
+    def _new_map(self) -> None:
+        self.hex_map_view.new_map()
+        self._notify_game_state_changed(domain="map")
+
+    def _manage_layers(self) -> None:
+        from phoenix_command.gui.dialogs.map_dialogs import MapLayerManagerDialog
+        dialog = MapLayerManagerDialog(self.hex_map_view.get_map_state(), parent=self)
+        dialog.exec()
+        self.hex_map_view.set_map_state(self.hex_map_view.get_map_state())
+        self._notify_game_state_changed(domain="map")
+
+    def _show_action_catalog(self) -> None:
+        from phoenix_command.gui.dialogs.map_dialogs import ActionCatalogDialog
+        dialog = ActionCatalogDialog(self._game_bridge.state.meta.actions, parent=self)
+        dialog.exec()
+        self._notify_game_state_changed(domain="meta")
+
+    def _add_custom_barrier(self) -> None:
+        from phoenix_command.gui.dialogs.map_dialogs import CustomBarrierDialog
+        dialog = CustomBarrierDialog(parent=self)
+        if not dialog.exec():
+            return
+        material = dialog.get_material()
+        map_state = self.hex_map_view.get_map_state()
+        map_state.custom_barriers[material.id] = material
+        self.hex_map_view.set_map_state(map_state)
+        self._notify_game_state_changed(domain="map")
+
     def _add_character(self):
         """Open character creation dialog."""
         from phoenix_command.gui.dialogs.character_dialog import CharacterDialog
@@ -348,6 +402,7 @@ class MainWindow(QMainWindow):
             character = dialog.get_character()
             if character:
                 self.characters.append(character)
+                self.hex_map_view.set_character_names([c.name for c in self.characters])
                 self._refresh_character_list()
                 self.statusBar().showMessage(f"Added character: {character.name}")
                 self._notify_game_state_changed()
@@ -406,6 +461,7 @@ class MainWindow(QMainWindow):
 
         self.combat_zone.remove_character(char.name)
         del self.characters[current_row]
+        self.hex_map_view.set_character_names([c.name for c in self.characters])
         self._refresh_character_list()
 
         if self.characters:

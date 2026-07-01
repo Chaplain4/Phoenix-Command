@@ -5,6 +5,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from phoenix_command.session.domains.combat_state import CombatLogEntry, CombatState, CombatZoneState
+from phoenix_command.session.domains.map_state import MapState
+from phoenix_command.session.domains.token_state import TokenState
 from phoenix_command.session.game_state import GameState
 from phoenix_command.session.serialization import character_from_dict, character_to_dict
 
@@ -36,6 +38,11 @@ class GameStateBridge:
         combat.combat_log = list(window.combat_log.get_log_entries())
         combat.detailed_log = list(window.combat_log.get_detailed_lines())
         self.state.combat = combat
+
+        if hasattr(window, "hex_map_view"):
+            self.state.map = window.hex_map_view.get_map_state()
+            self.state.tokens = window.hex_map_view.get_token_state()
+
         return self.state
 
     def apply_to_window(self, window: "MainWindow") -> None:
@@ -67,6 +74,15 @@ class GameStateBridge:
                     break
         window.combat_log.set_log_entries(combat.combat_log, combat.detailed_log)
         window.combat_zone.refresh_cards()
+
+        if hasattr(window, "hex_map_view"):
+            window.hex_map_view.set_character_names([c.name for c in window.characters])
+            if self.state.map is not None:
+                window.hex_map_view.set_map_state(self.state.map)
+            else:
+                window.hex_map_view.new_map()
+            if self.state.tokens is not None:
+                window.hex_map_view.set_token_state(self.state.tokens)
 
     def apply_remote_state(self, state: GameState, window: "MainWindow") -> None:
         self.state = state

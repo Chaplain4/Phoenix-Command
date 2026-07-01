@@ -9,6 +9,7 @@ from phoenix_command.session.sync_protocol import (
     chunk_payload,
     decode_message,
     encode_message,
+    MessageType,
 )
 
 
