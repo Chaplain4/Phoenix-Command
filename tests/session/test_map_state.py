@@ -8,6 +8,7 @@ from phoenix_command.session.domains.map_state import (
     BackgroundImage,
     CustomBarrierMaterial,
     HexGridConfig,
+    LayerStair,
     MapLayer,
     MapState,
     Obstacle,
@@ -78,6 +79,23 @@ def test_token_state_round_trip():
     restored = TokenState.from_dict(state.to_dict())
     assert restored.placements["t1"].q == 3
     assert restored.placements["t1"].image_b64
+
+
+def test_token_facing_legacy_migration():
+    legacy = {"token_id": "t1", "facing": 3}
+    tok = TokenPlacement.from_dict(legacy)
+    assert tok.facing == 6
+
+    modern = {"token_id": "t2", "facing": 3, "facing_resolution": 12}
+    tok2 = TokenPlacement.from_dict(modern)
+    assert tok2.facing == 3
+
+
+def test_token_facing_round_trip():
+    token = TokenPlacement(token_id="t1", facing=7)
+    restored = TokenPlacement.from_dict(token.to_dict())
+    assert restored.facing == 7
+    assert token.to_dict()["facing_resolution"] == 12
 
 
 def test_full_state_with_map_and_tokens():
@@ -152,3 +170,49 @@ def test_wall_resolved_pf_override():
 def test_obstacle_resolved_pf():
     obs = Obstacle(material="common_furniture", thickness=1.0)
     assert obs.resolved_pf() == pytest.approx(1.0)
+
+
+def test_background_image_extended_round_trip():
+    bg = BackgroundImage(
+        data_b64="abc",
+        fit_mode="stretch_grid",
+        scale_x=1.5,
+        scale_y=2.0,
+        rotation=45.0,
+    )
+    restored = BackgroundImage.from_dict(bg.to_dict())
+    assert restored.fit_mode == "stretch_grid"
+    assert restored.scale_x == 1.5
+    assert restored.scale_y == 2.0
+    assert restored.rotation == 45.0
+
+
+def test_background_image_legacy_scale():
+    data = {"data_b64": "x", "scale": 2.5}
+    bg = BackgroundImage.from_dict(data)
+    assert bg.scale_x == 2.5
+    assert bg.scale_y == 2.5
+    assert bg.fit_mode == "manual"
+
+
+def test_layer_stair_round_trip():
+    stair = LayerStair(target_layer_id="layer-b", label="Upstairs")
+    layer = MapLayer()
+    layer.stairs["0,0"] = stair
+    restored = MapLayer.from_dict(layer.to_dict())
+    assert restored.stairs["0,0"].target_layer_id == "layer-b"
+    assert restored.stairs["0,0"].label == "Upstairs"
+
+
+def test_map_state_hide_inactive_layers():
+    state = MapState(hide_inactive_layers=True)
+    state.ensure_default_layer()
+    restored = MapState.from_dict(state.to_dict())
+    assert restored.hide_inactive_layers is True
+
+
+def test_map_state_legacy_hide_inactive_default():
+    layer = MapLayer()
+    data = {"grid": {}, "layers": [layer.to_dict()], "active_layer_id": layer.id}
+    state = MapState.from_dict(data)
+    assert state.hide_inactive_layers is False

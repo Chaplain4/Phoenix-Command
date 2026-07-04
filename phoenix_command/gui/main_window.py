@@ -19,7 +19,15 @@ from phoenix_command.gui.widgets.combat_zone import CombatZoneWidget
 from phoenix_command.gui.widgets.hex_map_view import HexMapView
 from phoenix_command.gui.widgets.stats_display import StatsDisplayWidget
 from phoenix_command.session.bridge import GameStateBridge
-from phoenix_command.session.persistence import load_game_state, save_game_state
+from phoenix_command.session.persistence import (
+    default_character_filename,
+    load_character_file,
+    load_map_file,
+    load_game_state,
+    save_character_file,
+    save_map_file,
+    save_game_state,
+)
 from phoenix_command.session.game_state import GameState
 from phoenix_command.session.publisher import GameStatePublisher
 from phoenix_command.session.sync_protocol import (
@@ -58,10 +66,10 @@ class MainWindow(QMainWindow):
         file_menu = menubar.addMenu("&File")
         self._new_session_action = file_menu.addAction("&New Session")
         self._new_session_action.triggered.connect(self._new_session)
-        self._load_session_action = file_menu.addAction("&Load Session")
-        self._load_session_action.triggered.connect(self._load_session)
         self._save_session_action = file_menu.addAction("&Save Session")
         self._save_session_action.triggered.connect(self._save_session)
+        self._load_session_action = file_menu.addAction("&Load Session")
+        self._load_session_action.triggered.connect(self._load_session)
         file_menu.addSeparator()
         self._host_session_action = file_menu.addAction("&Host Session...")
         self._host_session_action.triggered.connect(self._host_session)
@@ -83,6 +91,11 @@ class MainWindow(QMainWindow):
         self._equip_action = self.char_menu.addAction("Manage &Equipment")
         self._equip_action.triggered.connect(self._manage_equipment)
         self.char_menu.addSeparator()
+        self._save_char_action = self.char_menu.addAction("&Save Character...")
+        self._save_char_action.triggered.connect(self._save_character)
+        self._load_char_action = self.char_menu.addAction("&Load Character...")
+        self._load_char_action.triggered.connect(self._load_character)
+        self.char_menu.addSeparator()
         self.char_menu.addAction("&Import Template")
 
         self.combat_menu = menubar.addMenu("C&ombat")
@@ -103,6 +116,11 @@ class MainWindow(QMainWindow):
         self.map_menu = menubar.addMenu("&Map")
         self._new_map_action = self.map_menu.addAction("&New Map")
         self._new_map_action.triggered.connect(self._new_map)
+        self._save_map_action = self.map_menu.addAction("&Save Map...")
+        self._save_map_action.triggered.connect(self._save_map)
+        self._load_map_action = self.map_menu.addAction("&Load Map...")
+        self._load_map_action.triggered.connect(self._load_map)
+        self.map_menu.addSeparator()
         self._manage_layers_action = self.map_menu.addAction("&Manage Layers...")
         self._manage_layers_action.triggered.connect(self._manage_layers)
         self._action_catalog_action = self.map_menu.addAction("&Action Catalog...")
@@ -169,8 +187,12 @@ class MainWindow(QMainWindow):
         self._edit_char_action.setEnabled(not guest)
         self._remove_char_action.setEnabled(not guest)
         self._equip_action.setEnabled(not guest)
+        self._save_char_action.setEnabled(not guest)
+        self._load_char_action.setEnabled(not guest)
         self.combat_menu.setEnabled(not guest)
         self._new_map_action.setEnabled(not guest)
+        self._save_map_action.setEnabled(not guest)
+        self._load_map_action.setEnabled(not guest)
         self._manage_layers_action.setEnabled(not guest)
         self._action_catalog_action.setEnabled(not guest)
         self._custom_barrier_action.setEnabled(not guest)
@@ -369,6 +391,100 @@ class MainWindow(QMainWindow):
     def _new_map(self) -> None:
         self.hex_map_view.new_map()
         self._notify_game_state_changed(domain="map")
+
+    def _save_map(self) -> None:
+        path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Save Map",
+            "map.json",
+            "Phoenix Command Map (*.json)",
+        )
+        if not path:
+            return
+        try:
+            save_map_file(
+                path,
+                self.hex_map_view.get_map_state(),
+                self.hex_map_view.get_token_state(),
+            )
+            self._game_bridge.state.map = self.hex_map_view.get_map_state()
+            self._game_bridge.state.tokens = self.hex_map_view.get_token_state()
+            self.statusBar().showMessage(f"Map saved: {path}")
+        except Exception as exc:
+            QMessageBox.critical(self, "Save Map Failed", str(exc))
+
+    def _load_map(self) -> None:
+        path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Load Map",
+            "",
+            "Phoenix Command Map (*.json)",
+        )
+        if not path:
+            return
+        try:
+            map_state, token_state = load_map_file(path)
+            self.hex_map_view.set_map_state(map_state)
+            self.hex_map_view.set_token_state(token_state)
+            self.hex_map_view.set_character_names([c.name for c in self.characters])
+            self._game_bridge.state.map = map_state
+            self._game_bridge.state.tokens = token_state
+            self._notify_game_state_changed(domain="map")
+            self.statusBar().showMessage(f"Map loaded: {path}")
+        except Exception as exc:
+            QMessageBox.critical(self, "Load Map Failed", str(exc))
+
+    def _save_character(self) -> None:
+        current_row = self.character_list.currentRow()
+        if current_row < 0:
+            self.statusBar().showMessage("No character selected")
+            return
+        char = self.characters[current_row]
+        path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Save Character",
+            default_character_filename(char),
+            "Phoenix Command Character (*.json)",
+        )
+        if not path:
+            return
+        try:
+            save_character_file(path, char)
+            self.statusBar().showMessage(f"Character saved: {path}")
+        except Exception as exc:
+            QMessageBox.critical(self, "Save Character Failed", str(exc))
+
+    def _load_character(self) -> None:
+        path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Load Character",
+            "",
+            "Phoenix Command Character (*.json)",
+        )
+        if not path:
+            return
+        try:
+            character = load_character_file(path)
+            existing = {c.name for c in self.characters}
+            if character.name in existing:
+                reply = QMessageBox.question(
+                    self,
+                    "Duplicate Name",
+                    f"A character named '{character.name}' already exists. Add anyway?",
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                    QMessageBox.StandardButton.No,
+                )
+                if reply != QMessageBox.StandardButton.Yes:
+                    return
+            self.characters.append(character)
+            self.hex_map_view.set_character_names([c.name for c in self.characters])
+            self._refresh_character_list()
+            self.character_list.setCurrentRow(len(self.characters) - 1)
+            self._game_bridge.capture_from_window(self)
+            self._notify_game_state_changed()
+            self.statusBar().showMessage(f"Character loaded: {character.name}")
+        except Exception as exc:
+            QMessageBox.critical(self, "Load Character Failed", str(exc))
 
     def _manage_layers(self) -> None:
         from phoenix_command.gui.dialogs.map_dialogs import MapLayerManagerDialog

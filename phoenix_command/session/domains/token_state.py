@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+FACING_RESOLUTION = 12
+
 
 @dataclass
 class TokenPlacement:
@@ -14,12 +16,12 @@ class TokenPlacement:
     layer_id: str = ""
     q: int = 0
     r: int = 0
-    facing: int = 0
+    facing: int = 0  # 0-11: every 30° (even=side, odd=corner on flat-top grid)
     status_markers: list[str] = field(default_factory=list)
     image_b64: str = ""
     image_mime: str = "image/png"
     label: str = ""
-    size: float = 1.0  # diameter in hexes
+    size: float = 0.35  # diameter in hexes
 
     def to_dict(self) -> dict:
         return {
@@ -29,6 +31,7 @@ class TokenPlacement:
             "q": self.q,
             "r": self.r,
             "facing": self.facing,
+            "facing_resolution": FACING_RESOLUTION,
             "status_markers": list(self.status_markers),
             "image_b64": self.image_b64,
             "image_mime": self.image_mime,
@@ -38,13 +41,16 @@ class TokenPlacement:
 
     @classmethod
     def from_dict(cls, data: dict) -> "TokenPlacement":
+        facing = int(data.get("facing", 0))
+        if data.get("facing_resolution") != FACING_RESOLUTION and facing <= 5:
+            facing *= 2
         return cls(
             token_id=data.get("token_id", ""),
             character_name=data.get("character_name"),
             layer_id=data.get("layer_id", ""),
             q=int(data.get("q", 0)),
             r=int(data.get("r", 0)),
-            facing=int(data.get("facing", 0)),
+            facing=facing,
             status_markers=list(data.get("status_markers", [])),
             image_b64=data.get("image_b64", ""),
             image_mime=data.get("image_mime", "image/png"),

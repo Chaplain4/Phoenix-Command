@@ -6,8 +6,19 @@ import base64
 from enum import Enum
 
 from PyQt6.QtCore import QPointF, Qt, pyqtSignal
-from PyQt6.QtGui import QBrush, QColor, QFont, QPainter, QPen, QPixmap, QPolygonF, QWheelEvent
+from PyQt6.QtGui import (
+    QBrush,
+    QColor,
+    QFont,
+    QPainter,
+    QPen,
+    QPixmap,
+    QPolygonF,
+    QTransform,
+    QWheelEvent,
+)
 from PyQt6.QtWidgets import (
+    QCheckBox,
     QComboBox,
     QGraphicsEllipseItem,
     QGraphicsItem,
@@ -19,6 +30,7 @@ from PyQt6.QtWidgets import (
     QGraphicsTextItem,
     QGraphicsView,
     QLabel,
+    QMenu,
     QPushButton,
     QVBoxLayout,
     QWidget,
@@ -32,11 +44,15 @@ from phoenix_command.gui.dialogs.map_dialogs import (
     MapSizeDialog,
     MapTerrainPaletteDialog,
     MapWallDialog,
+    StairDialog,
     TokenDialog,
 )
 from phoenix_command.gui.utils.hex_geometry import (
+    axial_distance,
     axial_to_pixel,
+    compute_background_layout,
     edge_endpoints,
+    facing_to_degrees,
     hex_corners,
     is_in_bounds,
     iter_offset_rect,
@@ -47,7 +63,14 @@ from phoenix_command.gui.utils.hex_geometry import (
     point_on_edge,
     rect_bounds_pixels,
 )
-from phoenix_command.session.domains.map_state import MapState, Obstacle, Opening, TerrainTile, WallSegment
+from phoenix_command.session.domains.map_state import (
+    LayerStair,
+    MapState,
+    Obstacle,
+    Opening,
+    TerrainTile,
+    WallSegment,
+)
 from phoenix_command.session.domains.token_state import TokenPlacement, TokenState
 from phoenix_command.tables.catalogs.movement_catalog import TERRAIN_PRESETS
 
@@ -65,19 +88,37 @@ class EditMode(str, Enum):
     WINDOW = "window"
     DOOR = "door"
     TOKEN = "token"
+    STAIR = "stair"
+    RULER = "ruler"
     ERASER = "eraser"
 
 
 class TokenGraphicsItem(QGraphicsPixmapItem):
     """Draggable token on the map."""
 
-    def __init__(self, token: TokenPlacement, grid_size: float, on_moved):
+    def __init__(
+        self,
+        token: TokenPlacement,
+        grid_size: float,
+        orientation: str,
+        editable: bool,
+        on_moved,
+        on_edit,
+        on_delete,
+        on_stair,
+    ):
         super().__init__()
         self.token = token
         self._grid_size = grid_size
+        self._orientation = orientation
+        self._editable = editable
         self._on_moved = on_moved
-        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, True)
+        self._on_edit = on_edit
+        self._on_delete = on_delete
+        self._on_stair = on_stair
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, editable)
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, True)
+        self.setAcceptHoverEvents(editable)
         self._load_pixmap()
         self._label = QGraphicsTextItem(token.label or token.character_name or "", self)
         self._label.setDefaultTextColor(QColor("white"))
@@ -85,6 +126,21 @@ class TokenGraphicsItem(QGraphicsPixmapItem):
         font.setPointSize(8)
         self._label.setFont(font)
         self._label.setPos(-20, self._grid_size * token.size)
+        self._facing_arrow = self._make_facing_arrow()
+        self._apply_facing()
+
+    def _make_facing_arrow(self) -> QGraphicsPolygonItem:
+        size = self._grid_size * self.token.size * 0.35
+        tri = QPolygonF([
+            QPointF(0, -size),
+            QPointF(-size * 0.5, 0),
+            QPointF(size * 0.5, 0),
+        ])
+        arrow = QGraphicsPolygonItem(tri, self)
+        arrow.setBrush(QBrush(QColor(255, 220, 0)))
+        arrow.setPen(QPen(QColor(80, 60, 0), 1))
+        arrow.setPos(self.pixmap().width() / 2, self.pixmap().height() / 2)
+        return arrow
 
     def _load_pixmap(self):
         if self.token.image_b64:
@@ -100,10 +156,39 @@ class TokenGraphicsItem(QGraphicsPixmapItem):
             pixmap.fill(QColor("#4a90e2"))
             self.setPixmap(pixmap)
 
+    def _apply_facing(self):
+        self.setTransformOriginPoint(self.boundingRect().center())
+        self.setRotation(facing_to_degrees(self.token.facing, self._orientation))
+        if self._facing_arrow:
+            self._facing_arrow.setPos(self.pixmap().width() / 2, self.pixmap().height() / 2)
+
     def mouseReleaseEvent(self, event):
         super().mouseReleaseEvent(event)
         if self._on_moved:
             self._on_moved(self)
+
+    def mouseDoubleClickEvent(self, event):
+        if self._editable and self._on_edit:
+            self._on_edit(self)
+            event.accept()
+            return
+        super().mouseDoubleClickEvent(event)
+
+    def contextMenuEvent(self, event):
+        if not self._editable:
+            return
+        menu = QMenu()
+        edit_act = menu.addAction("Edit...")
+        delete_act = menu.addAction("Delete")
+        stair_act = menu.addAction("Move via stair...")
+        stair_act.setEnabled(bool(self._on_stair and self._on_stair(self.token, choose_only=True)))
+        action = menu.exec(event.screenPos())
+        if action == edit_act and self._on_edit:
+            self._on_edit(self)
+        elif action == delete_act and self._on_delete:
+            self._on_delete(self)
+        elif action == stair_act and self._on_stair:
+            self._on_stair(self.token, choose_only=False)
 
 
 class HexMapScene(QGraphicsScene):
@@ -115,9 +200,15 @@ class HexMapScene(QGraphicsScene):
         self.token_state = TokenState()
         self._token_items: dict[str, TokenGraphicsItem] = {}
         self._editable = True
+        self.on_token_moved_callback = None
+        self.on_token_edit_callback = None
+        self.on_token_delete_callback = None
+        self.on_token_stair_callback = None
 
     def set_editable(self, editable: bool) -> None:
         self._editable = editable
+        for item in self._token_items.values():
+            item.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, editable)
 
     def set_map_state(self, map_state: MapState) -> None:
         self.map_state = map_state
@@ -135,36 +226,62 @@ class HexMapScene(QGraphicsScene):
         self.token_state = token_state
         self.rebuild()
 
+    def _add_background(self, layer, grid) -> None:
+        if not layer.background or not layer.background.data_b64:
+            return
+        raw = base64.b64decode(layer.background.data_b64)
+        pixmap = QPixmap()
+        pixmap.loadFromData(raw)
+        bg = layer.background
+        dest_w, dest_h, pos_x, pos_y = compute_background_layout(
+            bg.fit_mode,
+            pixmap.width(),
+            pixmap.height(),
+            grid,
+            scale_x=bg.scale_x,
+            scale_y=bg.scale_y,
+            offset_x=bg.offset_x,
+            offset_y=bg.offset_y,
+        )
+        if dest_w <= 0 or dest_h <= 0:
+            return
+        scaled = pixmap.scaled(
+            int(dest_w),
+            int(dest_h),
+            Qt.AspectRatioMode.IgnoreAspectRatio,
+            Qt.TransformationMode.SmoothTransformation,
+        )
+        item = QGraphicsPixmapItem(scaled)
+        item.setPos(pos_x, pos_y)
+        item.setOpacity(bg.opacity)
+        if bg.rotation:
+            center = QPointF(pos_x + dest_w / 2, pos_y + dest_h / 2)
+            transform = QTransform()
+            transform.translate(center.x(), center.y())
+            transform.rotate(bg.rotation)
+            transform.translate(-center.x(), -center.y())
+            item.setTransform(transform)
+        item.setZValue(-100 + layer.elevation)
+        self.addItem(item)
+
     def rebuild(self) -> None:
         self.clear()
         self._token_items.clear()
         grid = self.map_state.grid
         active = self.map_state.get_active_layer()
         custom = self.map_state.custom_barriers
+        hide_inactive = self.map_state.hide_inactive_layers
 
         for layer in sorted(self.map_state.layers, key=lambda layer: layer.elevation):
             if not layer.visible:
+                continue
+            if hide_inactive and layer.id != active.id:
                 continue
             layer_alpha = int(layer.opacity * 255)
             is_active = layer.id == active.id
             terrain_alpha = int(layer.opacity * TERRAIN_ALPHA) if is_active else int(layer.opacity * TERRAIN_ALPHA // 2)
 
-            if layer.background and layer.background.data_b64:
-                raw = base64.b64decode(layer.background.data_b64)
-                pixmap = QPixmap()
-                pixmap.loadFromData(raw)
-                bg = layer.background
-                scaled = pixmap.scaled(
-                    int(pixmap.width() * bg.scale),
-                    int(pixmap.height() * bg.scale),
-                    Qt.AspectRatioMode.KeepAspectRatio,
-                    Qt.TransformationMode.SmoothTransformation,
-                )
-                item = QGraphicsPixmapItem(scaled)
-                item.setPos(bg.offset_x, bg.offset_y)
-                item.setOpacity(bg.opacity)
-                item.setZValue(-100 + layer.elevation)
-                self.addItem(item)
+            self._add_background(layer, grid)
 
             for key, tile in layer.terrain.items():
                 q, r = map(int, key.split(","))
@@ -231,19 +348,58 @@ class HexMapScene(QGraphicsScene):
                     marker.setZValue(layer.elevation + 5)
                     self.addItem(marker)
 
+            for key, stair in layer.stairs.items():
+                q, r = map(int, key.split(","))
+                if not is_in_bounds(q, r, grid):
+                    continue
+                cx, cy = axial_to_pixel(q, r, grid)
+                size = grid.size * 0.45
+                item = QGraphicsPolygonItem(self._stair_polygon(cx, cy, size))
+                item.setBrush(QBrush(QColor(180, 100, 255, layer_alpha)))
+                item.setPen(QPen(QColor(80, 40, 120), 2))
+                target = self.map_state.get_layer(stair.target_layer_id)
+                target_name = target.name if target else stair.target_layer_id
+                tip = stair.label or f"Stair → {target_name}"
+                item.setToolTip(tip)
+                item.setZValue(layer.elevation + 2)
+                self.addItem(item)
+                label = QGraphicsTextItem("⇅")
+                label.setPos(cx - 6, cy - 10)
+                label.setDefaultTextColor(QColor(255, 255, 255))
+                label.setZValue(layer.elevation + 3)
+                self.addItem(label)
+
         for tid, token in self.token_state.placements.items():
             if token.layer_id and token.layer_id != active.id:
                 continue
             if not is_in_bounds(token.q, token.r, grid):
                 continue
             cx, cy = axial_to_pixel(token.q, token.r, grid)
-            item = TokenGraphicsItem(token, grid.size, self._on_token_moved)
+            item = TokenGraphicsItem(
+                token,
+                grid.size,
+                grid.orientation,
+                self._editable,
+                self._on_token_moved,
+                self.on_token_edit_callback,
+                self.on_token_delete_callback,
+                self.on_token_stair_callback,
+            )
             item.setPos(cx - item.pixmap().width() / 2, cy - item.pixmap().height() / 2)
             item.setZValue(1000)
             self.addItem(item)
             self._token_items[tid] = item
 
         self._draw_grid()
+
+    @staticmethod
+    def _stair_polygon(cx: float, cy: float, size: float) -> QPolygonF:
+        return QPolygonF([
+            QPointF(cx - size, cy + size * 0.3),
+            QPointF(cx + size, cy + size * 0.3),
+            QPointF(cx + size * 0.5, cy - size),
+            QPointF(cx - size * 0.5, cy - size),
+        ])
 
     def _draw_grid(self) -> None:
         grid = self.map_state.grid
@@ -269,6 +425,8 @@ class HexMapScene(QGraphicsScene):
         item.setPos(px - item.pixmap().width() / 2, py - item.pixmap().height() / 2)
         if item.token.token_id in self.token_state.placements:
             self.token_state.placements[item.token.token_id] = item.token
+        if self.on_token_moved_callback:
+            self.on_token_moved_callback()
 
 
 class HexMapView(QWidget):
@@ -303,7 +461,17 @@ class HexMapView(QWidget):
         self._panning = False
         self._pan_start = QPointF()
 
+        # Ruler state (transient overlay while LMB held)
+        self._ruler_drag = False
+        self._ruler_start: tuple[int, int] | None = None
+        self._ruler_end: tuple[int, int] | None = None
+        self._ruler_items: list[QGraphicsItem] = []
+
         self._scene = HexMapScene()
+        self._scene.on_token_moved_callback = self._emit_map_changed
+        self._scene.on_token_edit_callback = self._edit_token_item
+        self._scene.on_token_delete_callback = self._delete_token_item
+        self._scene.on_token_stair_callback = self._token_move_via_stair
         self._view = QGraphicsView(self._scene)
         self._view.setRenderHint(QPainter.RenderHint.Antialiasing)
         self._view.setDragMode(QGraphicsView.DragMode.NoDrag)
@@ -317,7 +485,7 @@ class HexMapView(QWidget):
 
         self._scene.map_state.ensure_default_layer()
         self._scene._update_scene_rect()
-        self._scene.rebuild()
+        self._rebuild_scene()
 
     def _setup_toolbar(self) -> None:
         self._toolbar = WrappingToolbar()
@@ -329,6 +497,8 @@ class HexMapView(QWidget):
             ("Window", EditMode.WINDOW),
             ("Door", EditMode.DOOR),
             ("Token", EditMode.TOKEN),
+            ("Stair", EditMode.STAIR),
+            ("Ruler", EditMode.RULER),
             ("Eraser", EditMode.ERASER),
         ]
         self._mode_buttons: dict[EditMode, QPushButton] = {}
@@ -345,6 +515,10 @@ class HexMapView(QWidget):
         self._layer_combo.currentIndexChanged.connect(self._on_layer_changed)
         self._toolbar.add_widget(QLabel("Layer:"))
         self._toolbar.add_widget(self._layer_combo)
+
+        self._hide_inactive_check = QCheckBox("Hide inactive")
+        self._hide_inactive_check.toggled.connect(self._on_hide_inactive_toggled)
+        self._toolbar.add_widget(self._hide_inactive_check)
 
         for label, slot in [
             ("Layers...", self._open_layer_manager),
@@ -433,7 +607,7 @@ class HexMapView(QWidget):
                     self._view.verticalScrollBar().value() - int(delta.y())
                 )
                 return True
-            if self._editable and (self._painting or self._terrain_drag):
+            if self._editable and (self._painting or self._terrain_drag or self._ruler_drag):
                 pos = self._view.mapToScene(event.position().toPoint())
                 return self._on_lmb_move(pos.x(), pos.y())
 
@@ -468,6 +642,17 @@ class HexMapView(QWidget):
             self._place_token(q, r)
             return True
 
+        if self._mode == EditMode.STAIR:
+            self._place_stair(q, r)
+            return True
+
+        if self._mode == EditMode.RULER:
+            self._ruler_drag = True
+            self._ruler_start = (q, r)
+            self._ruler_end = (q, r)
+            self._draw_ruler_overlay()
+            return True
+
         if self._mode in (EditMode.OBSTACLE, EditMode.WALL, EditMode.WINDOW,
                           EditMode.DOOR, EditMode.ERASER):
             self._painting = True
@@ -488,6 +673,13 @@ class HexMapView(QWidget):
             self._show_rubber_band(c0, r0, col, row)
             return True
 
+        if self._ruler_drag and self._ruler_start is not None:
+            q, r = pixel_to_axial(x, y, grid)
+            if is_in_bounds(q, r, grid):
+                self._ruler_end = (q, r)
+            self._draw_ruler_overlay()
+            return True
+
         if self._painting:
             q, r = pixel_to_axial(x, y, grid)
             if is_in_bounds(q, r, grid):
@@ -505,14 +697,21 @@ class HexMapView(QWidget):
             self._terrain_drag = False
             self._terrain_start = None
             self._terrain_end = None
-            self._scene.rebuild()
+            self._rebuild_scene()
             self.map_changed.emit()
+            return True
+
+        if self._ruler_drag:
+            self._ruler_drag = False
+            self._ruler_start = None
+            self._ruler_end = None
+            self._clear_ruler_overlay()
             return True
 
         if self._painting:
             self._painting = False
             if self._dirty:
-                self._scene.rebuild()
+                self._rebuild_scene()
                 self.map_changed.emit()
             self._last_cell = None
             self._last_edge = None
@@ -573,7 +772,7 @@ class HexMapView(QWidget):
             )
             self._last_cell = (q, r)
             self._dirty = True
-            self._scene.rebuild()
+            self._rebuild_scene()
 
         elif self._mode == EditMode.WALL:
             edge = nearest_edge(x, y, q, r, grid)
@@ -589,7 +788,7 @@ class HexMapView(QWidget):
             )
             self._last_edge = edge_key
             self._dirty = True
-            self._scene.rebuild()
+            self._rebuild_scene()
 
         elif self._mode == EditMode.WINDOW:
             edge = nearest_edge(x, y, q, r, grid)
@@ -602,7 +801,7 @@ class HexMapView(QWidget):
             layer.walls[wall_key] = wall
             self._last_edge = edge_key
             self._dirty = True
-            self._scene.rebuild()
+            self._rebuild_scene()
 
         elif self._mode == EditMode.DOOR:
             edge = nearest_edge(x, y, q, r, grid)
@@ -615,18 +814,19 @@ class HexMapView(QWidget):
             layer.walls[wall_key] = wall
             self._last_edge = edge_key
             self._dirty = True
-            self._scene.rebuild()
+            self._rebuild_scene()
 
         elif self._mode == EditMode.ERASER:
             if self._last_cell == (q, r):
                 return
             layer.terrain.pop(key, None)
             layer.obstacles.pop(key, None)
+            layer.stairs.pop(key, None)
             edge = nearest_edge(x, y, q, r, grid)
             layer.walls.pop(f"{q},{r}:{edge}", None)
             self._last_cell = (q, r)
             self._dirty = True
-            self._scene.rebuild()
+            self._rebuild_scene()
 
     def _fill_terrain_rect(self, c0: int, r0: int, c1: int, r1: int) -> None:
         grid = self._scene.map_state.grid
@@ -643,7 +843,11 @@ class HexMapView(QWidget):
     def _place_token(self, q: int, r: int) -> None:
         import uuid
         layer = self._scene.map_state.get_active_layer()
-        dialog = TokenDialog(character_names=self._character_names, parent=self)
+        dialog = TokenDialog(
+            character_names=self._character_names,
+            grid_orientation=self._scene.map_state.grid.orientation,
+            parent=self,
+        )
         dialog._q = q
         dialog._r = r
         dialog._layer_id = layer.id
@@ -653,12 +857,138 @@ class HexMapView(QWidget):
             token.r = r
             token.layer_id = layer.id
             self._scene.token_state.placements[token.token_id] = token
-            self._scene.rebuild()
+            self._rebuild_scene()
             self.map_changed.emit()
+
+    def _place_stair(self, q: int, r: int) -> None:
+        layer = self._scene.map_state.get_active_layer()
+        key = f"{q},{r}"
+        existing = layer.stairs.get(key)
+        dialog = StairDialog(
+            self._scene.map_state,
+            layer.id,
+            q,
+            r,
+            existing=existing,
+            parent=self,
+        )
+        if dialog.exec():
+            layer.stairs[key] = dialog.get_stair()
+            self._rebuild_scene()
+            self.map_changed.emit()
+
+    def _clear_ruler_overlay(self) -> None:
+        for item in self._ruler_items:
+            self._scene.removeItem(item)
+        self._ruler_items.clear()
+
+    def _draw_ruler_overlay(self) -> None:
+        self._clear_ruler_overlay()
+        if not self._ruler_drag or self._ruler_start is None or self._ruler_end is None:
+            return
+        grid = self._scene.map_state.grid
+        q0, r0 = self._ruler_start
+        q1, r1 = self._ruler_end
+        x0, y0 = axial_to_pixel(q0, r0, grid)
+        x1, y1 = axial_to_pixel(q1, r1, grid)
+        dist = axial_distance(q0, r0, q1, r1)
+        meters = dist * grid.meters_per_hex
+        label = f"{dist} hex / {meters:.1f} m"
+
+        line = QGraphicsLineItem(x0, y0, x1, y1)
+        line.setPen(QPen(QColor(255, 200, 0), 2, Qt.PenStyle.DashLine))
+        line.setZValue(2000)
+        self._scene.addItem(line)
+        self._ruler_items.append(line)
+
+        for px, py in ((x0, y0), (x1, y1)):
+            marker = QGraphicsEllipseItem(px - 4, py - 4, 8, 8)
+            marker.setBrush(QBrush(QColor(255, 200, 0)))
+            marker.setPen(QPen(QColor(0, 0, 0), 1))
+            marker.setZValue(2000)
+            self._scene.addItem(marker)
+            self._ruler_items.append(marker)
+
+        mid_x = (x0 + x1) / 2
+        mid_y = (y0 + y1) / 2
+        text = QGraphicsTextItem(label)
+        text.setPos(mid_x + 5, mid_y - 15)
+        text.setDefaultTextColor(QColor(255, 220, 0))
+        text.setZValue(2001)
+        self._scene.addItem(text)
+        self._ruler_items.append(text)
+
+    def _rebuild_scene(self) -> None:
+        self._ruler_items.clear()
+        self._scene.rebuild()
+
+    def _emit_map_changed(self) -> None:
+        self.map_changed.emit()
+
+    def _edit_token_item(self, item: TokenGraphicsItem) -> None:
+        dialog = TokenDialog(
+            token=item.token,
+            character_names=self._character_names,
+            grid_orientation=self._scene.map_state.grid.orientation,
+            parent=self,
+        )
+        if dialog.exec():
+            updated = dialog.get_token()
+            updated.q = item.token.q
+            updated.r = item.token.r
+            updated.layer_id = item.token.layer_id
+            self._scene.token_state.placements[updated.token_id] = updated
+            self._rebuild_scene()
+            self.map_changed.emit()
+
+    def _delete_token_item(self, item: TokenGraphicsItem) -> None:
+        self._scene.token_state.placements.pop(item.token.token_id, None)
+        self._rebuild_scene()
+        self.map_changed.emit()
+
+    def _token_move_via_stair(self, token: TokenPlacement, choose_only: bool = False) -> bool:
+        layer = self._scene.map_state.get_active_layer()
+        key = f"{token.q},{token.r}"
+        stairs = layer.stairs.get(key)
+        if not stairs:
+            return False
+        if choose_only:
+            return True
+
+        stair_list = [stairs]
+        if len(stair_list) == 1:
+            target_id = stair_list[0].target_layer_id
+        else:
+            from PyQt6.QtWidgets import QInputDialog
+            names = []
+            ids = []
+            for s in stair_list:
+                target = self._scene.map_state.get_layer(s.target_layer_id)
+                names.append(target.name if target else s.target_layer_id)
+                ids.append(s.target_layer_id)
+            choice, ok = QInputDialog.getItem(
+                self, "Move via stair", "Select destination:", names, 0, False
+            )
+            if not ok:
+                return True
+            target_id = ids[names.index(choice)]
+
+        token.layer_id = target_id
+        self._scene.map_state.active_layer_id = target_id
+        self._scene.token_state.placements[token.token_id] = token
+        self._refresh_layer_combo()
+        self._rebuild_scene()
+        self.map_changed.emit()
+        return True
 
     # --- Mode / dialogs ---
 
     def _set_mode(self, mode: EditMode) -> None:
+        if self._ruler_drag:
+            self._ruler_drag = False
+            self._ruler_start = None
+            self._ruler_end = None
+            self._clear_ruler_overlay()
         self._mode = mode
         for m, btn in self._mode_buttons.items():
             btn.setChecked(m == mode)
@@ -675,7 +1005,12 @@ class HexMapView(QWidget):
         layer_id = self._layer_combo.itemData(index)
         if layer_id:
             self._scene.map_state.active_layer_id = layer_id
-            self._scene.rebuild()
+            self._rebuild_scene()
+
+    def _on_hide_inactive_toggled(self, checked: bool) -> None:
+        self._scene.map_state.hide_inactive_layers = checked
+        self._rebuild_scene()
+        self.map_changed.emit()
 
     def _refresh_layer_combo(self) -> None:
         self._layer_combo.blockSignals(True)
@@ -693,7 +1028,7 @@ class HexMapView(QWidget):
         dialog.exec()
         self._refresh_layer_combo()
         self._scene._update_scene_rect()
-        self._scene.rebuild()
+        self._rebuild_scene()
         self.map_changed.emit()
 
     def _open_terrain_palette(self) -> None:
@@ -717,7 +1052,7 @@ class HexMapView(QWidget):
         if dialog.exec():
             dialog.apply_to(self._scene.map_state.grid)
             self._scene._update_scene_rect()
-            self._scene.rebuild()
+            self._rebuild_scene()
             self._zoom_fit()
             self.map_changed.emit()
 
@@ -739,6 +1074,9 @@ class HexMapView(QWidget):
         if map_state is None:
             map_state = MapState()
         self._scene.set_map_state(map_state)
+        self._hide_inactive_check.blockSignals(True)
+        self._hide_inactive_check.setChecked(map_state.hide_inactive_layers)
+        self._hide_inactive_check.blockSignals(False)
         self._refresh_layer_combo()
 
     def set_token_state(self, token_state: TokenState | None) -> None:
@@ -750,8 +1088,13 @@ class HexMapView(QWidget):
         self._scene.map_state = MapState()
         self._scene.map_state.ensure_default_layer()
         self._scene.token_state = TokenState()
+        self._ruler_drag = False
+        self._ruler_start = None
+        self._ruler_end = None
+        self._ruler_items.clear()
         self._scene._update_scene_rect()
         self._refresh_layer_combo()
-        self._scene.rebuild()
+        self._hide_inactive_check.setChecked(False)
+        self._rebuild_scene()
         self._zoom_reset()
         self.map_changed.emit()

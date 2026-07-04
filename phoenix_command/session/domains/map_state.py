@@ -71,6 +71,9 @@ class BackgroundImage:
     offset_x: float = 0.0
     offset_y: float = 0.0
     scale: float = 1.0
+    scale_x: float = 1.0
+    scale_y: float = 1.0
+    fit_mode: str = "manual"  # "manual" | "fit_grid" | "stretch_grid"
     rotation: float = 0.0
     opacity: float = 1.0
 
@@ -81,6 +84,9 @@ class BackgroundImage:
             "offset_x": self.offset_x,
             "offset_y": self.offset_y,
             "scale": self.scale,
+            "scale_x": self.scale_x,
+            "scale_y": self.scale_y,
+            "fit_mode": self.fit_mode,
             "rotation": self.rotation,
             "opacity": self.opacity,
         }
@@ -89,14 +95,41 @@ class BackgroundImage:
     def from_dict(cls, data: dict | None) -> "BackgroundImage | None":
         if not data:
             return None
+        legacy_scale = float(data.get("scale", 1.0))
+        scale_x = float(data["scale_x"]) if "scale_x" in data else legacy_scale
+        scale_y = float(data["scale_y"]) if "scale_y" in data else legacy_scale
         return cls(
             data_b64=data.get("data_b64", ""),
             mime=data.get("mime", "image/png"),
             offset_x=float(data.get("offset_x", 0.0)),
             offset_y=float(data.get("offset_y", 0.0)),
-            scale=float(data.get("scale", 1.0)),
+            scale=legacy_scale,
+            scale_x=scale_x,
+            scale_y=scale_y,
+            fit_mode=data.get("fit_mode", "manual"),
             rotation=float(data.get("rotation", 0.0)),
             opacity=float(data.get("opacity", 1.0)),
+        )
+
+
+@dataclass
+class LayerStair:
+    """Link from a hex cell to another map layer (stairs/ladder)."""
+
+    target_layer_id: str
+    label: str = ""
+
+    def to_dict(self) -> dict:
+        return {
+            "target_layer_id": self.target_layer_id,
+            "label": self.label,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "LayerStair":
+        return cls(
+            target_layer_id=data.get("target_layer_id", ""),
+            label=data.get("label", ""),
         )
 
 
@@ -293,6 +326,7 @@ class MapLayer:
     terrain: dict[str, TerrainTile] = field(default_factory=dict)
     obstacles: dict[str, Obstacle] = field(default_factory=dict)
     walls: dict[str, WallSegment] = field(default_factory=dict)
+    stairs: dict[str, LayerStair] = field(default_factory=dict)
     visible: bool = True
     opacity: float = 1.0
 
@@ -306,6 +340,7 @@ class MapLayer:
             "terrain": {k: v.to_dict() for k, v in self.terrain.items()},
             "obstacles": {k: v.to_dict() for k, v in self.obstacles.items()},
             "walls": {k: v.to_dict() for k, v in self.walls.items()},
+            "stairs": {k: v.to_dict() for k, v in self.stairs.items()},
             "visible": self.visible,
             "opacity": self.opacity,
         }
@@ -327,6 +362,9 @@ class MapLayer:
             walls={
                 k: WallSegment.from_dict(v) for k, v in data.get("walls", {}).items()
             },
+            stairs={
+                k: LayerStair.from_dict(v) for k, v in data.get("stairs", {}).items()
+            },
             visible=bool(data.get("visible", True)),
             opacity=float(data.get("opacity", 1.0)),
         )
@@ -339,6 +377,7 @@ class MapState:
     grid: HexGridConfig = field(default_factory=HexGridConfig)
     layers: list[MapLayer] = field(default_factory=list)
     active_layer_id: str = ""
+    hide_inactive_layers: bool = False
     custom_barriers: dict[str, CustomBarrierMaterial] = field(default_factory=dict)
     # Legacy fields for backward compatibility
     width: int = 0
@@ -375,6 +414,7 @@ class MapState:
             "grid": self.grid.to_dict(),
             "layers": [layer.to_dict() for layer in self.layers],
             "active_layer_id": self.active_layer_id,
+            "hide_inactive_layers": self.hide_inactive_layers,
             "custom_barriers": {
                 k: v.to_dict() for k, v in self.custom_barriers.items()
             },
@@ -392,6 +432,7 @@ class MapState:
                 grid=HexGridConfig.from_dict(data.get("grid", {})),
                 layers=layers,
                 active_layer_id=data.get("active_layer_id", ""),
+                hide_inactive_layers=bool(data.get("hide_inactive_layers", False)),
                 custom_barriers=custom,
             )
             state.ensure_default_layer()

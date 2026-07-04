@@ -32,6 +32,7 @@ from phoenix_command.session.domains.map_state import (
     BackgroundImage,
     CustomBarrierMaterial,
     HexGridConfig,
+    LayerStair,
     MapLayer,
     MapState,
     Obstacle,
@@ -48,6 +49,7 @@ from phoenix_command.tables.catalogs.barrier_catalog import (
     resolve_protection_factor,
 )
 from phoenix_command.tables.catalogs.movement_catalog import TERRAIN_PRESETS
+from phoenix_command.gui.utils.hex_geometry import compute_background_layout, facing_labels
 
 
 def load_image_as_b64(path: str) -> tuple[str, str]:
@@ -123,6 +125,13 @@ class MapSizeDialog(QDialog):
             self.orientation_combo.setCurrentIndex(idx)
         layout.addRow("Orientation:", self.orientation_combo)
 
+        self.meters_spin = QDoubleSpinBox()
+        self.meters_spin.setRange(0.1, 100.0)
+        self.meters_spin.setSingleStep(0.5)
+        self.meters_spin.setValue(grid.meters_per_hex)
+        self.meters_spin.setSuffix(" m")
+        layout.addRow("Meters per hex:", self.meters_spin)
+
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
@@ -132,6 +141,199 @@ class MapSizeDialog(QDialog):
         grid.cols = self.cols_spin.value()
         grid.rows = self.rows_spin.value()
         grid.orientation = self.orientation_combo.currentData()
+        grid.meters_per_hex = self.meters_spin.value()
+
+
+class BackgroundPropertiesDialog(QDialog):
+    """Configure layer background image placement."""
+
+    def __init__(self, layer: MapLayer, grid: HexGridConfig, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle(f"Background — {layer.name}")
+        self._layer = layer
+        self._grid = grid
+        if layer.background is None:
+            layer.background = BackgroundImage()
+        self._bg = layer.background
+
+        layout = QFormLayout(self)
+
+        self.image_label = QLabel("No image" if not self._bg.data_b64 else "Image loaded")
+        layout.addRow("Image:", self.image_label)
+
+        btn_row = QHBoxLayout()
+        load_btn = QPushButton("Load...")
+        load_btn.clicked.connect(self._load_image)
+        btn_row.addWidget(load_btn)
+        clear_btn = QPushButton("Clear")
+        clear_btn.clicked.connect(self._clear_image)
+        btn_row.addWidget(clear_btn)
+        layout.addRow(btn_row)
+
+        self.fit_combo = QComboBox()
+        self.fit_combo.addItem("Manual", "manual")
+        self.fit_combo.addItem("Fit to grid", "fit_grid")
+        self.fit_combo.addItem("Stretch to grid", "stretch_grid")
+        idx = self.fit_combo.findData(self._bg.fit_mode)
+        if idx >= 0:
+            self.fit_combo.setCurrentIndex(idx)
+        self.fit_combo.currentIndexChanged.connect(self._on_fit_mode_changed)
+        layout.addRow("Fit mode:", self.fit_combo)
+
+        self.offset_x_spin = QDoubleSpinBox()
+        self.offset_x_spin.setRange(-10000, 10000)
+        self.offset_x_spin.setValue(self._bg.offset_x)
+        layout.addRow("Offset X:", self.offset_x_spin)
+
+        self.offset_y_spin = QDoubleSpinBox()
+        self.offset_y_spin.setRange(-10000, 10000)
+        self.offset_y_spin.setValue(self._bg.offset_y)
+        layout.addRow("Offset Y:", self.offset_y_spin)
+
+        self.scale_x_spin = QDoubleSpinBox()
+        self.scale_x_spin.setRange(0.01, 100.0)
+        self.scale_x_spin.setSingleStep(0.1)
+        self.scale_x_spin.setValue(self._bg.scale_x)
+        layout.addRow("Scale X:", self.scale_x_spin)
+
+        self.scale_y_spin = QDoubleSpinBox()
+        self.scale_y_spin.setRange(0.01, 100.0)
+        self.scale_y_spin.setSingleStep(0.1)
+        self.scale_y_spin.setValue(self._bg.scale_y)
+        layout.addRow("Scale Y:", self.scale_y_spin)
+
+        self.rotation_spin = QDoubleSpinBox()
+        self.rotation_spin.setRange(-360, 360)
+        self.rotation_spin.setValue(self._bg.rotation)
+        layout.addRow("Rotation (°):", self.rotation_spin)
+
+        self.opacity_spin = QDoubleSpinBox()
+        self.opacity_spin.setRange(0.0, 1.0)
+        self.opacity_spin.setSingleStep(0.05)
+        self.opacity_spin.setValue(self._bg.opacity)
+        layout.addRow("Opacity:", self.opacity_spin)
+
+        apply_fit_btn = QPushButton("Apply fit/stretch to grid")
+        apply_fit_btn.clicked.connect(self._apply_fit_to_grid)
+        layout.addRow(apply_fit_btn)
+
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        layout.addRow(buttons)
+
+        self._on_fit_mode_changed()
+
+    def _on_fit_mode_changed(self) -> None:
+        manual = self.fit_combo.currentData() == "manual"
+        for spin in (self.offset_x_spin, self.offset_y_spin, self.scale_x_spin, self.scale_y_spin):
+            spin.setEnabled(manual)
+
+    def _load_image(self) -> None:
+        path, _ = QFileDialog.getOpenFileName(
+            self, "Load Background", "", "Images (*.png *.jpg *.jpeg *.bmp *.gif *.webp)"
+        )
+        if not path:
+            return
+        self._bg.data_b64, self._bg.mime = load_image_as_b64(path)
+        self.image_label.setText(Path(path).name)
+
+    def _clear_image(self) -> None:
+        self._bg.data_b64 = ""
+        self.image_label.setText("No image")
+
+    def _apply_fit_to_grid(self) -> None:
+        if not self._bg.data_b64:
+            QMessageBox.warning(self, "Background", "Load an image first.")
+            return
+        raw = base64.b64decode(self._bg.data_b64)
+        from PyQt6.QtGui import QPixmap
+        pixmap = QPixmap()
+        pixmap.loadFromData(raw)
+        fit_mode = self.fit_combo.currentData()
+        dest_w, dest_h, pos_x, pos_y = compute_background_layout(
+            fit_mode, pixmap.width(), pixmap.height(), self._grid
+        )
+        if fit_mode == "manual":
+            return
+        self._bg.fit_mode = fit_mode
+        self._bg.offset_x = pos_x
+        self._bg.offset_y = pos_y
+        if pixmap.width() > 0 and pixmap.height() > 0:
+            self._bg.scale_x = dest_w / pixmap.width()
+            self._bg.scale_y = dest_h / pixmap.height()
+        self._bg.scale = self._bg.scale_x
+        self.offset_x_spin.setValue(self._bg.offset_x)
+        self.offset_y_spin.setValue(self._bg.offset_y)
+        self.scale_x_spin.setValue(self._bg.scale_x)
+        self.scale_y_spin.setValue(self._bg.scale_y)
+
+    def accept(self) -> None:
+        self._bg.fit_mode = self.fit_combo.currentData()
+        self._bg.offset_x = self.offset_x_spin.value()
+        self._bg.offset_y = self.offset_y_spin.value()
+        self._bg.scale_x = self.scale_x_spin.value()
+        self._bg.scale_y = self.scale_y_spin.value()
+        self._bg.scale = self._bg.scale_x
+        self._bg.rotation = self.rotation_spin.value()
+        self._bg.opacity = self.opacity_spin.value()
+        super().accept()
+
+
+class StairDialog(QDialog):
+    """Place a stair link to another layer."""
+
+    def __init__(
+        self,
+        map_state: MapState,
+        source_layer_id: str,
+        q: int,
+        r: int,
+        existing: LayerStair | None = None,
+        parent=None,
+    ):
+        super().__init__(parent)
+        self.setWindowTitle("Stair / Ladder")
+        self._map_state = map_state
+        self._source_layer_id = source_layer_id
+        self._q = q
+        self._r = r
+        layout = QFormLayout(self)
+
+        layout.addRow("Cell:", QLabel(f"({q}, {r})"))
+
+        self.target_combo = QComboBox()
+        for layer in map_state.layers:
+            if layer.id == source_layer_id:
+                continue
+            self.target_combo.addItem(
+                f"{layer.name} (elev {layer.elevation})", layer.id
+            )
+        if existing:
+            idx = self.target_combo.findData(existing.target_layer_id)
+            if idx >= 0:
+                self.target_combo.setCurrentIndex(idx)
+        layout.addRow("Target layer:", self.target_combo)
+
+        self.label_edit = QLineEdit(existing.label if existing else "")
+        layout.addRow("Label:", self.label_edit)
+
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        buttons.accepted.connect(self._on_accept)
+        buttons.rejected.connect(self.reject)
+        layout.addRow(buttons)
+
+    def _on_accept(self) -> None:
+        if self.target_combo.count() == 0:
+            QMessageBox.warning(self, "Stair", "Add another layer first.")
+            return
+        self.accept()
+
+    def get_stair(self) -> LayerStair:
+        return LayerStair(
+            target_layer_id=self.target_combo.currentData(),
+            label=self.label_edit.text(),
+        )
 
 
 class MapObstacleDialog(QDialog):
@@ -294,9 +496,15 @@ class MapLayerManagerDialog(QDialog):
         layout = QVBoxLayout(self)
 
         self.list_widget = QListWidget()
+        self.list_widget.currentRowChanged.connect(self._on_layer_selected)
         for layer in map_state.layers:
-            self.list_widget.addItem(f"{layer.name} ({layer.kind}, elev {layer.elevation})")
+            vis = "" if layer.visible else " [hidden]"
+            self.list_widget.addItem(f"{layer.name} ({layer.kind}, elev {layer.elevation}){vis}")
         layout.addWidget(self.list_widget)
+
+        self.visible_check = QCheckBox("Layer visible")
+        self.visible_check.toggled.connect(self._on_visible_toggled)
+        layout.addWidget(self.visible_check)
 
         btn_row = QHBoxLayout()
         add_btn = QPushButton("Add Layer")
@@ -305,8 +513,8 @@ class MapLayerManagerDialog(QDialog):
         rename_btn = QPushButton("Rename")
         rename_btn.clicked.connect(self._rename_layer)
         btn_row.addWidget(rename_btn)
-        bg_btn = QPushButton("Load Background")
-        bg_btn.clicked.connect(self._load_background)
+        bg_btn = QPushButton("Background...")
+        bg_btn.clicked.connect(self._edit_background)
         btn_row.addWidget(bg_btn)
         remove_btn = QPushButton("Remove")
         remove_btn.clicked.connect(self._remove_layer)
@@ -318,11 +526,34 @@ class MapLayerManagerDialog(QDialog):
         buttons.accepted.connect(self.accept)
         layout.addWidget(buttons)
 
-    def _current_layer(self) -> MapLayer | None:
-        row = self.list_widget.currentRow()
+        if map_state.layers:
+            self.list_widget.setCurrentRow(0)
+
+    def _on_layer_selected(self, row: int) -> None:
+        layer = self._layer_at(row)
+        if layer is None:
+            return
+        self.visible_check.blockSignals(True)
+        self.visible_check.setChecked(layer.visible)
+        self.visible_check.blockSignals(False)
+
+    def _on_visible_toggled(self, checked: bool) -> None:
+        layer = self._current_layer()
+        if layer:
+            layer.visible = checked
+            row = self.list_widget.currentRow()
+            vis = "" if layer.visible else " [hidden]"
+            self.list_widget.currentItem().setText(
+                f"{layer.name} ({layer.kind}, elev {layer.elevation}){vis}"
+            )
+
+    def _layer_at(self, row: int) -> MapLayer | None:
         if 0 <= row < len(self._map_state.layers):
             return self._map_state.layers[row]
         return None
+
+    def _current_layer(self) -> MapLayer | None:
+        return self._layer_at(self.list_widget.currentRow())
 
     def _add_layer(self):
         name, ok = QInputDialog.getText(self, "New Layer", "Layer name:", text="New Layer")
@@ -331,6 +562,7 @@ class MapLayerManagerDialog(QDialog):
         layer = MapLayer(name=name, kind="floor", elevation=len(self._map_state.layers))
         self._map_state.layers.append(layer)
         self.list_widget.addItem(f"{layer.name} ({layer.kind}, elev {layer.elevation})")
+        self.list_widget.setCurrentRow(self.list_widget.count() - 1)
 
     def _rename_layer(self):
         layer = self._current_layer()
@@ -339,20 +571,17 @@ class MapLayerManagerDialog(QDialog):
         name, ok = QInputDialog.getText(self, "Rename Layer", "Layer name:", text=layer.name)
         if ok and name:
             layer.name = name
-            self.list_widget.currentItem().setText(f"{layer.name} ({layer.kind}, elev {layer.elevation})")
+            vis = "" if layer.visible else " [hidden]"
+            self.list_widget.currentItem().setText(
+                f"{layer.name} ({layer.kind}, elev {layer.elevation}){vis}"
+            )
 
-    def _load_background(self):
+    def _edit_background(self):
         layer = self._current_layer()
         if not layer:
             return
-        path, _ = QFileDialog.getOpenFileName(
-            self, "Load Background", "", "Images (*.png *.jpg *.jpeg *.bmp *.gif *.webp)"
-        )
-        if not path:
-            return
-        data_b64, mime = load_image_as_b64(path)
-        layer.background = BackgroundImage(data_b64=data_b64, mime=mime)
-        QMessageBox.information(self, "Background", f"Background loaded for layer '{layer.name}'")
+        dialog = BackgroundPropertiesDialog(layer, self._map_state.grid, parent=self)
+        dialog.exec()
 
     def _remove_layer(self):
         layer = self._current_layer()
@@ -369,6 +598,7 @@ class TokenDialog(QDialog):
         self,
         token: TokenPlacement | None = None,
         character_names: list[str] | None = None,
+        grid_orientation: str = "flat",
         parent=None,
     ):
         super().__init__(parent)
@@ -390,15 +620,18 @@ class TokenDialog(QDialog):
         layout.addRow("Character:", self.char_combo)
 
         self.size_spin = QDoubleSpinBox()
-        self.size_spin.setRange(0.3, 3.0)
-        self.size_spin.setSingleStep(0.1)
-        self.size_spin.setValue(tok.size)
+        self.size_spin.setRange(0.15, 1.0)
+        self.size_spin.setSingleStep(0.05)
+        self.size_spin.setValue(tok.size if tok.size else 0.35)
         layout.addRow("Size (hexes):", self.size_spin)
 
-        self.facing_spin = QSpinBox()
-        self.facing_spin.setRange(0, 5)
-        self.facing_spin.setValue(tok.facing)
-        layout.addRow("Facing (0-5):", self.facing_spin)
+        self.facing_combo = QComboBox()
+        for label, value in facing_labels(grid_orientation):
+            self.facing_combo.addItem(label, value)
+        idx = self.facing_combo.findData(tok.facing % 12)
+        if idx >= 0:
+            self.facing_combo.setCurrentIndex(idx)
+        layout.addRow("Facing:", self.facing_combo)
 
         self._image_b64 = tok.image_b64
         self._image_mime = tok.image_mime
@@ -434,7 +667,7 @@ class TokenDialog(QDialog):
             layer_id=self._layer_id,
             q=self._q,
             r=self._r,
-            facing=self.facing_spin.value(),
+            facing=self.facing_combo.currentData(),
             image_b64=self._image_b64,
             image_mime=self._image_mime,
             label=self.label_edit.text(),

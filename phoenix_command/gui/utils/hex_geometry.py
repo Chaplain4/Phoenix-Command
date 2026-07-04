@@ -174,3 +174,88 @@ def nearest_edge(
             best_dist = dist
             best_edge = edge
     return best_edge
+
+
+def axial_distance(q1: int, r1: int, q2: int, r2: int) -> int:
+    """Hex distance in axial coordinates."""
+    dq = q1 - q2
+    dr = r1 - r2
+    ds = -dq - dr
+    return (abs(dq) + abs(dr) + abs(ds)) // 2
+
+
+def facing_to_degrees(facing: int, orientation: str) -> float:
+    """Convert hex facing (0-11) to rotation degrees; 30° per step."""
+    del orientation  # same screen angles; hex grid orientation affects labels only
+    return float((facing % 12) * 30)
+
+
+def facing_labels(orientation: str) -> list[tuple[str, int]]:
+    """Human-readable labels for facing 0-11 (even=side midpoint, odd=corner)."""
+    if orientation == "flat":
+        return [
+            ("Corner E", 0),
+            ("Side E-SE", 1),
+            ("Corner SE", 2),
+            ("Side SE-SW", 3),
+            ("Corner SW", 4),
+            ("Side SW-W", 5),
+            ("Corner W", 6),
+            ("Side W-NW", 7),
+            ("Corner NW", 8),
+            ("Side NW-NE", 9),
+            ("Corner NE", 10),
+            ("Side NE-E", 11),
+        ]
+    return [
+        ("Side E", 0),
+        ("Corner NE", 1),
+        ("Side SE", 2),
+        ("Corner S", 3),
+        ("Side SW", 4),
+        ("Corner SW", 5),
+        ("Side W", 6),
+        ("Corner NW", 7),
+        ("Side NW", 8),
+        ("Corner N", 9),
+        ("Side NE", 10),
+        ("Corner NW", 11),
+    ]
+
+
+def background_target_rect(grid: "HexGridConfig") -> tuple[float, float, float, float]:
+    """Return (x, y, width, height) bounding box of the map grid in pixels."""
+    min_x, min_y, max_x, max_y = rect_bounds_pixels(grid)
+    return min_x, min_y, max_x - min_x, max_y - min_y
+
+
+def compute_background_layout(
+    fit_mode: str,
+    native_w: int,
+    native_h: int,
+    grid: "HexGridConfig",
+    scale_x: float = 1.0,
+    scale_y: float = 1.0,
+    offset_x: float = 0.0,
+    offset_y: float = 0.0,
+) -> tuple[float, float, float, float]:
+    """Return (dest_w, dest_h, pos_x, pos_y) for background placement."""
+    bx, by, bw, bh = background_target_rect(grid)
+    if native_w <= 0 or native_h <= 0:
+        return 0.0, 0.0, bx, by
+
+    if fit_mode == "stretch_grid":
+        return bw, bh, bx, by
+
+    if fit_mode == "fit_grid":
+        scale = min(bw / native_w, bh / native_h)
+        dest_w = native_w * scale
+        dest_h = native_h * scale
+        pos_x = bx + (bw - dest_w) / 2.0
+        pos_y = by + (bh - dest_h) / 2.0
+        return dest_w, dest_h, pos_x, pos_y
+
+    # manual
+    dest_w = native_w * scale_x
+    dest_h = native_h * scale_y
+    return dest_w, dest_h, offset_x, offset_y
