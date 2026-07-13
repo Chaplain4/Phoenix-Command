@@ -15,14 +15,25 @@ from phoenix_command.simulations.combat_simulator import CombatSimulator
 class ShotDialog(QDialog):
     """Dialog for single shot simulation."""
     
-    def __init__(self, characters: list[Character], parent=None):
+    def __init__(
+        self,
+        characters: list[Character],
+        parent=None,
+        map_context=None,
+        default_shooter_name: str | None = None,
+        default_target_name: str | None = None,
+    ):
         super().__init__(parent)
         self.characters = characters
+        self._map_context = map_context
+        self._default_shooter_name = default_shooter_name
+        self._default_target_name = default_target_name
         self.setWindowTitle("Single Shot")
         self.setMinimumSize(700, 600)
         self.current_step = 0
         
         self._setup_ui()
+        self._apply_map_context()
     
     def _setup_ui(self):
         """Setup UI components."""
@@ -62,6 +73,41 @@ class ShotDialog(QDialog):
         
         self._update_step_label()
         self._on_shooter_changed()
+
+    def _apply_map_context(self) -> None:
+        """Prefill shot parameters from tactical map context."""
+        if not self._map_context:
+            return
+        ctx = self._map_context
+        if self._default_shooter_name:
+            idx = self.shooter_combo.findText(self._default_shooter_name)
+            if idx >= 0:
+                self.shooter_combo.setCurrentIndex(idx)
+        if self._default_target_name:
+            idx = self.target_combo.findText(self._default_target_name)
+            if idx >= 0:
+                self.target_combo.setCurrentIndex(idx)
+        self.range_spin.setValue(ctx.range_rule_hexes)
+        exp_idx = self.exposure_combo.findData(ctx.target_exposure)
+        if exp_idx >= 0:
+            self.exposure_combo.setCurrentIndex(exp_idx)
+        self.aim_spin.setValue(ctx.shot_params.aim_time_ac)
+        self.front_check.setChecked(ctx.is_front_shot)
+        orient_idx = self.target_orient_combo.findData(ctx.shot_params.target_orientation)
+        if orient_idx >= 0:
+            self.target_orient_combo.setCurrentIndex(orient_idx)
+        self.shooter_speed_spin.setValue(int(ctx.shot_params.shooter_speed_hex_per_impulse))
+        self.target_speed_spin.setValue(int(ctx.shot_params.target_speed_hex_per_impulse))
+        for i in range(self.stance_list.count()):
+            item = self.stance_list.item(i)
+            mod = SituationStanceModifier4B[item.text()]
+            if mod in ctx.shot_params.situation_stance_modifiers:
+                item.setSelected(True)
+        for i in range(self.visibility_list.count()):
+            item = self.visibility_list.item(i)
+            mod = VisibilityModifier4C[item.text()]
+            if mod in ctx.shot_params.visibility_modifiers:
+                item.setSelected(True)
     
     def _create_shooter_step(self):
         """Step 1: Shooter & Weapon selection."""

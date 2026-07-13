@@ -30,6 +30,7 @@ class ShotParameters:
     target_speed_hex_per_impulse: float = 0.0
     reflexive_duck_shooter: bool = False
     reflexive_duck_target: bool = False
+    custom_eal_modifiers: List[tuple] = field(default_factory=list)  # (label, alm)
 
 
 @dataclass

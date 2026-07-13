@@ -28,6 +28,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from phoenix_command.models.enums import VisibilityModifier4C
 from phoenix_command.session.domains.map_state import (
     BackgroundImage,
     CustomBarrierMaterial,
@@ -599,6 +600,8 @@ class TokenDialog(QDialog):
         token: TokenPlacement | None = None,
         character_names: list[str] | None = None,
         grid_orientation: str = "flat",
+        player_options: list[tuple[str, str]] | None = None,
+        side_options: list[tuple[str, str]] | None = None,
         parent=None,
     ):
         super().__init__(parent)
@@ -618,6 +621,28 @@ class TokenDialog(QDialog):
             if idx >= 0:
                 self.char_combo.setCurrentIndex(idx)
         layout.addRow("Character:", self.char_combo)
+
+        self.side_edit = QLineEdit(tok.side_id)
+        layout.addRow("Side ID:", self.side_edit)
+        if side_options:
+            self.side_combo = QComboBox()
+            self.side_combo.addItem("(custom)", "")
+            for sid, sname in side_options:
+                self.side_combo.addItem(sname, sid)
+            self.side_combo.currentIndexChanged.connect(
+                lambda _i: self.side_edit.setText(self.side_combo.currentData() or self.side_edit.text())
+            )
+            layout.addRow("Side preset:", self.side_combo)
+
+        self.control_combo = QComboBox()
+        self.control_combo.addItem("(host only)", None)
+        for pid, pname in player_options or []:
+            self.control_combo.addItem(pname, pid)
+        if tok.controlled_by:
+            idx = self.control_combo.findData(tok.controlled_by)
+            if idx >= 0:
+                self.control_combo.setCurrentIndex(idx)
+        layout.addRow("Controlled by:", self.control_combo)
 
         self.size_spin = QDoubleSpinBox()
         self.size_spin.setRange(0.15, 1.0)
@@ -672,6 +697,8 @@ class TokenDialog(QDialog):
             image_mime=self._image_mime,
             label=self.label_edit.text(),
             size=self.size_spin.value(),
+            side_id=self.side_edit.text(),
+            controlled_by=self.control_combo.currentData(),
         )
 
 
@@ -743,3 +770,24 @@ class CustomBarrierDialog(QDialog):
             name=self.name_edit.text(),
             protection_factor=self.pf_spin.value(),
         )
+
+
+class ConditionPaletteDialog(QDialog):
+    """Select visibility condition for hex condition brush."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Hex Conditions (Table 4C)")
+        layout = QFormLayout(self)
+        self.visibility_combo = QComboBox()
+        self.visibility_combo.addItem("(clear)", "")
+        for vis in VisibilityModifier4C:
+            self.visibility_combo.addItem(vis.name, vis.name)
+        layout.addRow("Visibility modifier:", self.visibility_combo)
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        layout.addRow(buttons)
+
+    def visibility_name(self) -> str:
+        return self.visibility_combo.currentData() or ""

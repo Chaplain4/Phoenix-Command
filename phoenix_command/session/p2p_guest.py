@@ -123,12 +123,30 @@ class P2PSessionGuest(QThread):
         except asyncio.TimeoutError:
             logger.warning("ICE gathering timed out")
 
+    def send_message(self, message: SyncMessage) -> None:
+        """Send a message to the host over the data channel."""
+        if self._loop is None or not self._channel:
+            return
+        from phoenix_command.session.sync_protocol import encode_message
+
+        data = encode_message(message)
+
+        async def _send() -> None:
+            if self._channel and self._channel.readyState == "open":
+                self._channel.send(data.decode("utf-8"))
+
+        asyncio.run_coroutine_threadsafe(_send(), self._loop)
+
+    def send_player_hello(self, player_id: str, display_name: str) -> None:
+        from phoenix_command.session.sync_protocol import make_player_hello
+
+        self.send_message(make_player_hello(player_id, display_name))
+
     def _request_state(self) -> None:
-        from phoenix_command.session.sync_protocol import SyncMessage, MessageType
+        from phoenix_command.session.sync_protocol import SyncMessage, MessageType, encode_message
 
         if self._channel and self._channel.readyState == "open":
             msg = SyncMessage(type=MessageType.REQUEST_STATE, since_revision=0)
-            from phoenix_command.session.sync_protocol import encode_message
             self._channel.send(encode_message(msg).decode("utf-8"))
 
     def stop_session(self) -> None:

@@ -34,7 +34,11 @@ from phoenix_command.session.sync_protocol import (
     MessageType,
     SyncMessage,
     apply_message_to_state,
+    make_intent_nack,
+    make_player_intent,
 )
+from phoenix_command.session.domains.player_info import PlayerInfo
+from phoenix_command.simulations.impulse_combat_engine import ImpulseCombatEngine
 
 
 class MainWindow(QMainWindow):
@@ -46,6 +50,7 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Phoenix Command")
 
         self._session_role: str | None = None  # "host", "guest", or None
+        self._player_id: str = "host"
         self._p2p_host = None
         self._p2p_guest = None
         self._relay_client = None
@@ -153,6 +158,12 @@ class MainWindow(QMainWindow):
         self.combat_zone = CombatZoneWidget()
         self.hex_map_view = HexMapView()
         self.hex_map_view.map_changed.connect(self._on_map_changed)
+        self.hex_map_view.combat_action_requested.connect(self._on_combat_action_requested)
+        self.hex_map_view.advance_impulse_requested.connect(self._on_advance_impulse)
+        self.hex_map_view.map_mode_changed.connect(self._on_map_mode_changed)
+        self.hex_map_view.declare_shot_requested.connect(self._on_declare_shot)
+        self.hex_map_view.set_action_provider(self._token_available_actions)
+        self._shot_preview_dialog = None
         self._center_tabs.addTab(self.combat_zone, "Combat")
         self._center_tabs.addTab(self.hex_map_view, "Map")
         center_splitter.addWidget(self._center_tabs)
@@ -197,6 +208,10 @@ class MainWindow(QMainWindow):
         self._action_catalog_action.setEnabled(not guest)
         self._custom_barrier_action.setEnabled(not guest)
         self.hex_map_view.set_editable(not guest)
+        if guest:
+            self.hex_map_view.set_session_context("guest", self._player_id, self._game_bridge.state.meta.players)
+        else:
+            self.hex_map_view.set_session_context(self._session_role, self._player_id, self._game_bridge.state.meta.players)
         self.character_list.setDragEnabled(not guest)
         self._host_session_action.setEnabled(not guest)
         self._join_session_action.setEnabled(not guest)
@@ -217,11 +232,20 @@ class MainWindow(QMainWindow):
             if message.type == MessageType.REQUEST_STATE and self._publisher:
                 full = self._publisher.publish_now()
                 self._broadcast_sync_message(full)
+            elif message.type == MessageType.PLAYER_HELLO and message.payload:
+                self._handle_player_hello(message.payload)
+            elif message.type == MessageType.PLAYER_INTENT and message.payload:
+                self._handle_player_intent(message.payload)
             return
 
         if self._session_role == "guest":
+            if message.type == MessageType.INTENT_NACK and message.payload:
+                reason = message.payload.get("reason", "Action rejected")
+                self.statusBar().showMessage(f"Guest: {reason}")
+                return
             new_state = apply_message_to_state(self._game_bridge.state, message)
             self._game_bridge.apply_remote_state(new_state, self)
+            self._maybe_show_shot_preview()
             self.statusBar().showMessage(
                 f"Guest: synced revision {new_state.revision}"
             )
@@ -275,6 +299,11 @@ class MainWindow(QMainWindow):
         from phoenix_command.session.p2p_host import P2PSessionHost
 
         self._host_dialog = HostSessionDialog(parent=self)
+        host_name = self._host_dialog.display_name
+        self._player_id = "host"
+        meta = self._game_bridge.state.meta
+        meta.host_name = host_name
+        meta.players = [PlayerInfo("host", host_name, is_host=True)]
         self._p2p_host = P2PSessionHost(parent=self)
         self._publisher = GameStatePublisher(self._broadcast_sync_message)
         self._publisher.attach(self, self._game_bridge)
@@ -304,6 +333,59 @@ class MainWindow(QMainWindow):
             self._broadcast_sync_message(full)
         self.statusBar().showMessage(f"Host: guest {guest_id} connected")
 
+    def _handle_player_hello(self, payload: dict) -> None:
+        player_id = payload.get("player_id", f"guest-{len(self._game_bridge.state.meta.players)}")
+        display_name = payload.get("display_name", player_id)
+        meta = self._game_bridge.state.meta
+        if meta.get_player(player_id) is None:
+            meta.players.append(PlayerInfo(player_id, display_name, is_host=False))
+        else:
+            for p in meta.players:
+                if p.player_id == player_id:
+                    p.display_name = display_name
+        meta.connected_guests = [p.display_name for p in meta.players if not p.is_host]
+        self._game_bridge.state.bump_revision()
+        self._notify_game_state_changed(domain="meta", immediate=True)
+
+    def _handle_player_intent(self, payload: dict) -> None:
+        player_id = payload.get("player_id", "")
+        intent_id = payload.get("intent_id", "")
+        token_id = payload.get("token_id", "")
+        action = payload.get("action", "")
+        args = payload.get("args") or {}
+        if action == "open_shot_preview":
+            ok, msg = self._host_open_shot_preview(token_id, player_id)
+            if not ok:
+                self._broadcast_sync_message(make_intent_nack(intent_id, msg))
+            else:
+                self._notify_game_state_changed(domain="impulse_combat", immediate=True)
+            return
+        if action == "update_shot_preview":
+            ok, msg = self._host_update_shot_preview(args.get("preview") or args, player_id)
+            if not ok:
+                self._broadcast_sync_message(make_intent_nack(intent_id, msg))
+            else:
+                self._notify_game_state_changed(domain="impulse_combat", immediate=True)
+            return
+        if action == "confirm_shot":
+            ok, msg = self._host_confirm_shot(player_id)
+            if not ok:
+                self._broadcast_sync_message(make_intent_nack(intent_id, msg))
+            else:
+                self._notify_game_state_changed(immediate=True)
+            return
+        if action == "cancel_shot":
+            self._game_bridge.state.impulse_combat.shot_preview = None
+            self._notify_game_state_changed(domain="impulse_combat", immediate=True)
+            return
+        result = self._apply_combat_action(token_id, action, args, player_id, is_host=False)
+        if not result.success:
+            nack = make_intent_nack(intent_id, result.message)
+            self._broadcast_sync_message(nack)
+        else:
+            self.statusBar().showMessage(result.message)
+            self._notify_game_state_changed(domain="impulse_combat", immediate=True)
+
     def _on_host_answer_submitted(self, answer: str) -> None:
         if self._p2p_host:
             self._p2p_host.submit_answer(answer)
@@ -319,6 +401,9 @@ class MainWindow(QMainWindow):
         dialog = JoinSessionDialog(parent=self)
         if not dialog.exec():
             return
+
+        self._player_id = "guest-0"
+        guest_name = dialog.display_name
 
         self._join_dialog = dialog
         self._p2p_guest = P2PSessionGuest(parent=self)
@@ -344,6 +429,8 @@ class MainWindow(QMainWindow):
 
     def _on_guest_connected_to_host(self) -> None:
         self.statusBar().showMessage("Guest: connected to host")
+        if self._join_dialog and self._p2p_guest:
+            self._p2p_guest.send_player_hello(self._player_id, self._join_dialog.display_name)
 
     def _on_guest_disconnected(self) -> None:
         self.statusBar().showMessage("Guest: disconnected")
@@ -371,6 +458,7 @@ class MainWindow(QMainWindow):
             self._relay_client = None
         self._publisher = None
         self._session_role = None
+        self._player_id = "host"
         self._set_guest_mode(False)
         self._disconnect_action.setEnabled(False)
         if self._host_dialog:
@@ -384,6 +472,602 @@ class MainWindow(QMainWindow):
     def closeEvent(self, event) -> None:
         self._disconnect_session()
         super().closeEvent(event)
+
+    def _characters_by_name(self) -> dict:
+        return {c.name: c for c in self.characters}
+
+    def _combat_engine(self) -> ImpulseCombatEngine:
+        tokens = self.hex_map_view.get_token_state()
+        ic = self.hex_map_view.get_impulse_combat_state()
+        self._game_bridge.state.tokens = tokens
+        self._game_bridge.state.impulse_combat = ic
+        return ImpulseCombatEngine(
+            ic,
+            tokens,
+            self._game_bridge.state.map or self.hex_map_view.get_map_state(),
+            self._characters_by_name(),
+        )
+
+    def _token_available_actions(self, token_id: str):
+        return self._combat_engine().available_actions(token_id)
+
+    def _apply_combat_action(
+        self,
+        token_id: str,
+        action: str,
+        args: dict,
+        player_id: str,
+        is_host: bool,
+    ):
+        engine = self._combat_engine()
+        result = engine.apply_action(token_id, action, args, player_id, is_host)
+        if result.success:
+            self.hex_map_view.set_impulse_combat_state(self._game_bridge.state.impulse_combat)
+            if state := self._game_bridge.state.tokens:
+                self.hex_map_view.set_token_state(state)
+        return result
+
+    def _on_combat_action_requested(self, token_id: str, action: str, args: dict) -> None:
+        if action == "select_weapon":
+            args = dict(args)
+            name = self._prompt_select_weapon(token_id)
+            if not name:
+                return
+            args["weapon_name"] = name
+        if action == "aim":
+            args = dict(args)
+            target_id = self._pick_enemy_token_id(token_id)
+            if target_id:
+                args["target_token_id"] = target_id
+        if self._session_role == "guest":
+            import uuid
+            intent = make_player_intent(self._player_id, str(uuid.uuid4()), token_id, action, args)
+            if self._p2p_guest:
+                self._p2p_guest.send_message(intent)
+            return
+        result = self._apply_combat_action(token_id, action, args, self._player_id, is_host=True)
+        self.statusBar().showMessage(result.message if result.message else "Action applied")
+        if result.success:
+            self._notify_game_state_changed(domain="impulse_combat")
+
+    def _prompt_select_weapon(self, token_id: str) -> str | None:
+        from PyQt6.QtWidgets import QInputDialog
+        tokens = self.hex_map_view.get_token_state()
+        tok = tokens.placements.get(token_id)
+        if not tok or not tok.character_name:
+            return None
+        char = self._characters_by_name().get(tok.character_name)
+        if not char:
+            return None
+        from phoenix_command.models.gear import Weapon
+        names = [i.name for i in char.equipment if isinstance(i, Weapon)]
+        if not names:
+            return None
+        choice, ok = QInputDialog.getItem(self, "Select Weapon", "Weapon:", names, 0, False)
+        return choice if ok else None
+
+    def _pick_enemy_token_id(self, shooter_id: str) -> str | None:
+        tokens = self.hex_map_view.get_token_state()
+        shooter = tokens.placements.get(shooter_id)
+        if not shooter:
+            return None
+        for tid, tok in tokens.placements.items():
+            if tid != shooter_id and tok.character_name and tok.side_id != shooter.side_id:
+                return tid
+        return None
+
+    def _on_advance_impulse(self) -> None:
+        if self._session_role != "host":
+            return
+        engine = self._combat_engine()
+        due = engine.advance_impulse()
+        self.hex_map_view.set_impulse_combat_state(self._game_bridge.state.impulse_combat)
+        for proj in due:
+            self._resolve_pending_projectile(proj)
+        self._notify_game_state_changed(immediate=True)
+
+    def _on_declare_shot(self, shooter_token_id: str) -> None:
+        if self._session_role == "guest":
+            import uuid
+            intent = make_player_intent(
+                self._player_id,
+                str(uuid.uuid4()),
+                shooter_token_id,
+                "open_shot_preview",
+                {},
+            )
+            if self._p2p_guest:
+                self._p2p_guest.send_message(intent)
+            return
+        ok, msg = self._host_open_shot_preview(shooter_token_id, self._player_id)
+        if not ok:
+            self.statusBar().showMessage(msg)
+            return
+        self._notify_game_state_changed(domain="impulse_combat", immediate=True)
+        self._maybe_show_shot_preview()
+
+    def _build_preview_from_tokens(self, shooter_token_id: str, proposed_by: str):
+        import uuid
+        from phoenix_command.models.gear import AmmoType, Weapon
+        from phoenix_command.session.domains.impulse_combat_state import (
+            PendingShotPreview,
+            TokenCombatRuntime,
+        )
+        from phoenix_command.simulations.map_shot_context import build_map_shot_context
+
+        ic = self.hex_map_view.get_impulse_combat_state()
+        tokens = self.hex_map_view.get_token_state()
+        shooter = tokens.placements.get(shooter_token_id)
+        if not shooter or not shooter.character_name:
+            return None, "Shooter token missing character"
+        target_id = self._pick_enemy_token_id(shooter_token_id)
+        if not target_id:
+            return None, "No enemy token found"
+        target = tokens.placements[target_id]
+        shooter_rt = ic.token_runtime.get(shooter_token_id, TokenCombatRuntime())
+        target_rt = ic.token_runtime.get(target_id, TokenCombatRuntime())
+        ctx = build_map_shot_context(
+            shooter, shooter_rt, target, target_rt, self.hex_map_view.get_map_state()
+        )
+        if ctx.los and ctx.los.blocked:
+            return None, "No LOS to target"
+        char = self._characters_by_name().get(shooter.character_name)
+        weapon = None
+        ammo_name = ""
+        tof = 0
+        if char:
+            for item in char.equipment:
+                if isinstance(item, Weapon) and (
+                    not shooter_rt.held_weapon_name or item.name == shooter_rt.held_weapon_name
+                ):
+                    weapon = item
+                    break
+            if weapon is None:
+                for item in char.equipment:
+                    if isinstance(item, Weapon):
+                        weapon = item
+                        break
+            if weapon and weapon.ammunition_types:
+                ammo = weapon.ammunition_types[0]
+                ammo_name = ammo.name if isinstance(ammo, AmmoType) else str(ammo)
+            if weapon and weapon.ballistic_data:
+                tof = int(weapon.ballistic_data.get_time_of_flight(ctx.range_rule_hexes) or 0)
+
+        preview = PendingShotPreview(
+            preview_id=str(uuid.uuid4()),
+            shooter_token_id=shooter_token_id,
+            target_token_id=target_id,
+            proposed_by=proposed_by,
+            status="open",
+            range_hexes=ctx.range_rule_hexes,
+            exposure=ctx.target_exposure.name,
+            orientation=ctx.shot_params.target_orientation.name,
+            stance_mods=[m.name for m in ctx.shot_params.situation_stance_modifiers],
+            visibility_mods=[m.name for m in ctx.shot_params.visibility_modifiers],
+            aim_time_ac=ctx.shot_params.aim_time_ac,
+            fire_mode=shooter_rt.fire_mode,
+            weapon_name=weapon.name if weapon else "",
+            ammo_name=ammo_name,
+            visible_exposures=[e.name for e in ctx.visible_exposures],
+            selected_exposure=ctx.target_exposure.name,
+            tof_impulses=tof,
+            notes=list(ctx.visibility_notes),
+            shooter_speed=ctx.shot_params.shooter_speed_hex_per_impulse,
+            target_speed=ctx.shot_params.target_speed_hex_per_impulse,
+            is_front=ctx.is_front_shot,
+        )
+        return preview, ""
+
+    def _host_open_shot_preview(self, shooter_token_id: str, player_id: str):
+        tokens = self.hex_map_view.get_token_state()
+        tok = tokens.placements.get(shooter_token_id)
+        if not tok:
+            return False, "Token not found"
+        engine = self._combat_engine()
+        if not engine.can_control_token(player_id, tok, is_host=(player_id == "host")):
+            return False, "No control of shooter"
+        preview, err = self._build_preview_from_tokens(shooter_token_id, player_id)
+        if not preview:
+            return False, err
+        self._game_bridge.state.impulse_combat = self.hex_map_view.get_impulse_combat_state()
+        self._game_bridge.state.impulse_combat.shot_preview = preview
+        self.hex_map_view.set_impulse_combat_state(self._game_bridge.state.impulse_combat)
+        return True, ""
+
+    def _can_edit_preview(self, player_id: str) -> bool:
+        preview = self._game_bridge.state.impulse_combat.shot_preview
+        if not preview:
+            return False
+        if player_id == "host" or self._session_role == "host":
+            return True
+        tokens = self.hex_map_view.get_token_state()
+        tok = tokens.placements.get(preview.shooter_token_id)
+        return bool(tok and tok.controlled_by == player_id)
+
+    def _host_update_shot_preview(self, preview_data: dict, player_id: str):
+        from phoenix_command.session.domains.impulse_combat_state import PendingShotPreview
+        if not self._can_edit_preview(player_id):
+            return False, "Cannot edit preview"
+        if isinstance(preview_data, PendingShotPreview):
+            preview = preview_data
+        else:
+            preview = PendingShotPreview.from_dict(preview_data)
+        preview.status = "open"
+        self._game_bridge.state.impulse_combat.shot_preview = preview
+        self.hex_map_view.set_impulse_combat_state(self._game_bridge.state.impulse_combat)
+        return True, ""
+
+    def _host_confirm_shot(self, player_id: str):
+        if not self._can_edit_preview(player_id):
+            return False, "Cannot confirm shot"
+        preview = self._game_bridge.state.impulse_combat.shot_preview
+        if not preview or preview.status != "open":
+            return False, "No open preview"
+        return self._execute_confirmed_preview(preview)
+
+    def _execute_confirmed_preview(self, preview) -> tuple[bool, str]:
+        from phoenix_command.models.enums import (
+            SituationStanceModifier4B,
+            TargetExposure,
+            TargetOrientation,
+            VisibilityModifier4C,
+        )
+        from phoenix_command.models.gear import AmmoType, Weapon
+        from phoenix_command.models.hit_result_advanced import ShotParameters
+        from phoenix_command.simulations.combat_simulator import CombatSimulator
+        from phoenix_command.simulations.map_los import check_los
+
+        tokens = self.hex_map_view.get_token_state()
+        shooter_tok = tokens.placements.get(preview.shooter_token_id)
+        target_tok = tokens.placements.get(preview.target_token_id)
+        if not shooter_tok or not target_tok:
+            return False, "Tokens missing"
+        chars = self._characters_by_name()
+        shooter = chars.get(shooter_tok.character_name or "")
+        target = chars.get(target_tok.character_name or "")
+        if not shooter or not target:
+            return False, "Characters missing"
+
+        weapon = None
+        for item in shooter.equipment:
+            if isinstance(item, Weapon) and item.name == preview.weapon_name:
+                weapon = item
+                break
+        if weapon is None:
+            for item in shooter.equipment:
+                if isinstance(item, Weapon):
+                    weapon = item
+                    break
+        if not weapon:
+            return False, "No weapon"
+
+        ammo = None
+        if preview.ammo_name:
+            for a in weapon.ammunition_types or []:
+                if isinstance(a, AmmoType) and a.name == preview.ammo_name:
+                    ammo = a
+                    break
+        if ammo is None and weapon.ammunition_types:
+            ammo = weapon.ammunition_types[0]
+        if not ammo:
+            return False, "No ammo"
+
+        stance = []
+        for name in preview.stance_mods:
+            try:
+                stance.append(SituationStanceModifier4B[name])
+            except KeyError:
+                pass
+        vis = []
+        for name in preview.visibility_mods:
+            try:
+                vis.append(VisibilityModifier4C[name])
+            except KeyError:
+                pass
+        try:
+            exposure = TargetExposure[preview.selected_exposure or preview.exposure]
+        except KeyError:
+            exposure = TargetExposure.STANDING_EXPOSED
+        try:
+            orientation = TargetOrientation[preview.orientation]
+        except KeyError:
+            orientation = TargetOrientation.FRONT_REAR
+
+        customs = []
+        for entry in preview.custom_eal_modifiers:
+            if isinstance(entry, dict):
+                customs.append((entry.get("label", "custom"), int(entry.get("alm", 0))))
+            elif isinstance(entry, (list, tuple)) and len(entry) >= 2:
+                customs.append((entry[0], int(entry[1])))
+
+        shot_params = ShotParameters(
+            aim_time_ac=preview.aim_time_ac,
+            situation_stance_modifiers=stance or [SituationStanceModifier4B.STANDING],
+            visibility_modifiers=vis or [VisibilityModifier4C.GOOD_VISIBILITY],
+            target_orientation=orientation,
+            shooter_speed_hex_per_impulse=preview.shooter_speed,
+            target_speed_hex_per_impulse=preview.target_speed,
+            custom_eal_modifiers=customs,
+        )
+
+        snapshot = {
+            "range_hexes": preview.range_hexes,
+            "exposure": exposure.name,
+            "is_front": preview.is_front,
+            "weapon_name": weapon.name,
+            "ammo_name": ammo.name if hasattr(ammo, "name") else str(ammo),
+            "fire_mode": preview.fire_mode,
+            "shot_params": {
+                "aim_time_ac": shot_params.aim_time_ac,
+                "stance": [m.name for m in shot_params.situation_stance_modifiers],
+                "visibility": [m.name for m in shot_params.visibility_modifiers],
+                "orientation": shot_params.target_orientation.name,
+                "shooter_speed": shot_params.shooter_speed_hex_per_impulse,
+                "target_speed": shot_params.target_speed_hex_per_impulse,
+                "custom_eal": list(preview.custom_eal_modifiers),
+            },
+            "shooter_name": shooter.name,
+            "target_name": target.name,
+        }
+
+        ic = self._game_bridge.state.impulse_combat
+        ic.shot_preview = None
+        self.hex_map_view.set_impulse_combat_state(ic)
+
+        if preview.tof_impulses and preview.tof_impulses > 0:
+            engine = self._combat_engine()
+            engine.schedule_projectile(
+                preview.shooter_token_id,
+                preview.target_token_id,
+                preview.tof_impulses,
+                snapshot,
+            )
+            self.combat_log.append_system(
+                f"Shot in flight: {shooter.name} → {target.name}, TOF {preview.tof_impulses} impulse(s)"
+            )
+            self.statusBar().showMessage(f"Projectile in flight ({preview.tof_impulses} impulses)")
+            return True, "scheduled"
+
+        # Immediate resolve — check LOS again
+        los = check_los(
+            self.hex_map_view.get_map_state(),
+            shooter_tok,
+            target_tok,
+            ic.token_runtime.get(preview.target_token_id),
+        )
+        if los.blocked:
+            self.combat_log.append_miss(
+                f"Miss: no LOS {shooter.name} → {target.name}"
+            )
+            return True, "miss_no_los"
+
+        result = CombatSimulator.single_shot(
+            shooter, target, weapon, ammo, preview.range_hexes, exposure, shot_params, preview.is_front
+        )
+        self._append_shot_result(result)
+        return True, "resolved"
+
+    def _append_shot_result(self, result) -> None:
+        if result.hit:
+            self.combat_log.append_hit(result.log or "Hit")
+        else:
+            self.combat_log.append_miss(result.log or "Miss")
+        if result.log:
+            self.combat_log.append_detailed(result.log)
+        self.body_diagram.refresh()
+        self.combat_zone.refresh_cards()
+
+    def _resolve_pending_projectile(self, proj) -> None:
+        from phoenix_command.models.enums import (
+            SituationStanceModifier4B,
+            TargetExposure,
+            TargetOrientation,
+            VisibilityModifier4C,
+        )
+        from phoenix_command.models.gear import AmmoType, Weapon
+        from phoenix_command.models.hit_result_advanced import ShotParameters
+        from phoenix_command.simulations.combat_simulator import CombatSimulator
+        from phoenix_command.simulations.map_los import check_los
+
+        snap = proj.shot_snapshot
+        tokens = self.hex_map_view.get_token_state()
+        shooter_tok = tokens.placements.get(proj.shooter_token_id)
+        target_tok = tokens.placements.get(proj.target_token_id)
+        if not shooter_tok or not target_tok:
+            self.combat_log.append_system("In-flight shot: token gone — miss")
+            return
+        ic = self.hex_map_view.get_impulse_combat_state()
+        los = check_los(
+            self.hex_map_view.get_map_state(),
+            shooter_tok,
+            target_tok,
+            ic.token_runtime.get(proj.target_token_id),
+        )
+        if los.blocked:
+            self.combat_log.append_miss(
+                f"In-flight miss (no LOS): {snap.get('shooter_name')} → {snap.get('target_name')}"
+            )
+            return
+        chars = self._characters_by_name()
+        shooter = chars.get(snap.get("shooter_name", ""))
+        target = chars.get(snap.get("target_name", ""))
+        if not shooter or not target:
+            return
+        weapon = next(
+            (i for i in shooter.equipment if isinstance(i, Weapon) and i.name == snap.get("weapon_name")),
+            None,
+        )
+        if not weapon:
+            return
+        ammo = None
+        for a in weapon.ammunition_types or []:
+            if isinstance(a, AmmoType) and a.name == snap.get("ammo_name"):
+                ammo = a
+                break
+        if ammo is None and weapon.ammunition_types:
+            ammo = weapon.ammunition_types[0]
+        sp = snap.get("shot_params", {})
+        stance = [SituationStanceModifier4B[n] for n in sp.get("stance", []) if n in SituationStanceModifier4B.__members__]
+        vis = [VisibilityModifier4C[n] for n in sp.get("visibility", []) if n in VisibilityModifier4C.__members__]
+        customs = []
+        for entry in sp.get("custom_eal", []):
+            if isinstance(entry, dict):
+                customs.append((entry.get("label", "custom"), int(entry.get("alm", 0))))
+        shot_params = ShotParameters(
+            aim_time_ac=int(sp.get("aim_time_ac", 2)),
+            situation_stance_modifiers=stance or [SituationStanceModifier4B.STANDING],
+            visibility_modifiers=vis or [VisibilityModifier4C.GOOD_VISIBILITY],
+            target_orientation=TargetOrientation[sp["orientation"]]
+            if sp.get("orientation") in TargetOrientation.__members__
+            else TargetOrientation.FRONT_REAR,
+            shooter_speed_hex_per_impulse=float(sp.get("shooter_speed", 0)),
+            target_speed_hex_per_impulse=float(sp.get("target_speed", 0)),
+            custom_eal_modifiers=customs,
+        )
+        exposure = TargetExposure[snap["exposure"]] if snap.get("exposure") in TargetExposure.__members__ else TargetExposure.STANDING_EXPOSED
+        result = CombatSimulator.single_shot(
+            shooter,
+            target,
+            weapon,
+            ammo,
+            int(snap.get("range_hexes", 1)),
+            exposure,
+            shot_params,
+            bool(snap.get("is_front", True)),
+        )
+        self._append_shot_result(result)
+
+    def _maybe_show_shot_preview(self) -> None:
+        from phoenix_command.gui.dialogs.map_shot_preview_dialog import MapShotPreviewDialog
+
+        preview = self._game_bridge.state.impulse_combat.shot_preview
+        if not preview or preview.status != "open":
+            if self._shot_preview_dialog:
+                self._shot_preview_dialog.close()
+                self._shot_preview_dialog = None
+            return
+        editable = self._can_edit_preview(self._player_id)
+        if self._shot_preview_dialog is None:
+            self._shot_preview_dialog = MapShotPreviewDialog(preview, editable=editable, parent=self)
+            self._shot_preview_dialog.preview_updated.connect(self._on_preview_edited)
+            self._shot_preview_dialog.confirmed.connect(self._on_preview_confirmed)
+            self._shot_preview_dialog.cancelled.connect(self._on_preview_cancelled)
+            self._shot_preview_dialog.show()
+        else:
+            self._shot_preview_dialog.apply_remote_preview(preview)
+
+    def _on_preview_edited(self, preview) -> None:
+        if self._session_role == "guest":
+            import uuid
+            intent = make_player_intent(
+                self._player_id,
+                str(uuid.uuid4()),
+                preview.shooter_token_id,
+                "update_shot_preview",
+                {"preview": preview.to_dict()},
+            )
+            if self._p2p_guest:
+                self._p2p_guest.send_message(intent)
+            return
+        self._host_update_shot_preview(preview, self._player_id)
+        self._notify_game_state_changed(domain="impulse_combat", immediate=True)
+
+    def _on_preview_confirmed(self, preview) -> None:
+        if self._session_role == "guest":
+            import uuid
+            # Apply local edits first via intent
+            intent_u = make_player_intent(
+                self._player_id,
+                str(uuid.uuid4()),
+                preview.shooter_token_id,
+                "update_shot_preview",
+                {"preview": preview.to_dict()},
+            )
+            intent_c = make_player_intent(
+                self._player_id,
+                str(uuid.uuid4()),
+                preview.shooter_token_id,
+                "confirm_shot",
+                {},
+            )
+            if self._p2p_guest:
+                self._p2p_guest.send_message(intent_u)
+                self._p2p_guest.send_message(intent_c)
+            self._shot_preview_dialog = None
+            return
+        self._game_bridge.state.impulse_combat.shot_preview = preview
+        ok, msg = self._execute_confirmed_preview(preview)
+        self._shot_preview_dialog = None
+        self.statusBar().showMessage(msg if ok else f"Shot failed: {msg}")
+        self._notify_game_state_changed(immediate=True)
+
+    def _on_preview_cancelled(self, preview_id: str) -> None:
+        if self._session_role == "guest":
+            import uuid
+            intent = make_player_intent(
+                self._player_id,
+                str(uuid.uuid4()),
+                "",
+                "cancel_shot",
+                {"preview_id": preview_id},
+            )
+            if self._p2p_guest:
+                self._p2p_guest.send_message(intent)
+            self._shot_preview_dialog = None
+            return
+        self._game_bridge.state.impulse_combat.shot_preview = None
+        self.hex_map_view.set_impulse_combat_state(self._game_bridge.state.impulse_combat)
+        self._shot_preview_dialog = None
+        self._notify_game_state_changed(domain="impulse_combat", immediate=True)
+
+    def _on_map_mode_changed(self, mode: str) -> None:
+        if self._session_role != "host":
+            return
+        ic = self._game_bridge.state.impulse_combat
+        ic.map_mode = mode
+        if mode == "combat":
+            engine = self._combat_engine()
+            engine.ensure_runtime_for_tokens()
+            engine.refill_impulse_ac()
+            if not ic.sides:
+                ic.sides = {"alpha": "Alpha", "bravo": "Bravo"}
+        self.hex_map_view.set_impulse_combat_state(ic)
+        self.hex_map_view.set_editable(self._session_role != "guest")
+        self._notify_game_state_changed(domain="impulse_combat")
+
+    def _map_shot_context_for_tokens(self):
+        """Return MapShotContext if map combat has shooter/target tokens selected."""
+        from phoenix_command.session.domains.impulse_combat_state import TokenCombatRuntime
+        from phoenix_command.simulations.map_shot_context import build_map_shot_context
+
+        ic = self.hex_map_view.get_impulse_combat_state()
+        tokens = self.hex_map_view.get_token_state()
+        if ic.map_mode != "combat":
+            return None
+        shooter_id = ic.selected_token_id
+        if not shooter_id:
+            return None
+        shooter_tok = tokens.placements.get(shooter_id)
+        if not shooter_tok or not shooter_tok.character_name:
+            return None
+        target_tok = None
+        for tid, tok in tokens.placements.items():
+            if tid != shooter_id and tok.character_name and tok.side_id != shooter_tok.side_id:
+                target_tok = tok
+                break
+        if not target_tok:
+            return None
+        shooter_rt = ic.token_runtime.get(shooter_id, TokenCombatRuntime())
+        target_rt = ic.token_runtime.get(target_tok.token_id, TokenCombatRuntime())
+        map_state = self.hex_map_view.get_map_state()
+        ctx = build_map_shot_context(
+            shooter_tok,
+            shooter_rt,
+            target_tok,
+            target_rt,
+            map_state,
+        )
+        return ctx, shooter_tok.character_name, target_tok.character_name
 
     def _on_map_changed(self) -> None:
         self._notify_game_state_changed(domain="map")
@@ -617,7 +1301,19 @@ class MainWindow(QMainWindow):
             return
 
         from phoenix_command.gui.dialogs.shot_dialog import ShotDialog
-        dialog = ShotDialog(characters=self.characters, parent=self)
+        map_ctx = None
+        shooter_name = None
+        target_name = None
+        ctx_pair = self._map_shot_context_for_tokens()
+        if ctx_pair:
+            map_ctx, shooter_name, target_name = ctx_pair
+        dialog = ShotDialog(
+            characters=self.characters,
+            map_context=map_ctx,
+            default_shooter_name=shooter_name,
+            default_target_name=target_name,
+            parent=self,
+        )
         if dialog.exec():
             self._after_combat_dialog()
 

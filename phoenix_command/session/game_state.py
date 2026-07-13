@@ -3,6 +3,7 @@
 from dataclasses import dataclass, field
 
 from phoenix_command.session.domains.combat_state import CombatState
+from phoenix_command.session.domains.impulse_combat_state import ImpulseCombatState
 from phoenix_command.session.domains.map_state import MapState
 from phoenix_command.session.domains.session_meta import SessionMeta
 from phoenix_command.session.domains.token_state import TokenState
@@ -20,6 +21,7 @@ class GameState:
     combat: CombatState = field(default_factory=CombatState)
     map: MapState | None = None
     tokens: TokenState | None = None
+    impulse_combat: ImpulseCombatState = field(default_factory=ImpulseCombatState)
 
     def to_dict(self) -> dict:
         result = {
@@ -27,6 +29,7 @@ class GameState:
             "revision": self.revision,
             "meta": self.meta.to_dict(),
             "combat": self.combat.to_dict(),
+            "impulse_combat": self.impulse_combat.to_dict(),
         }
         if self.map is not None:
             result["map"] = self.map.to_dict()
@@ -50,6 +53,7 @@ class GameState:
             combat=CombatState.from_dict(data.get("combat", {})),
             map=MapState.from_dict(map_data) if map_data is not None else None,
             tokens=TokenState.from_dict(tokens_data) if tokens_data is not None else None,
+            impulse_combat=ImpulseCombatState.from_dict(data.get("impulse_combat")),
         )
 
     def bump_revision(self) -> int:

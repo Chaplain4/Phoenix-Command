@@ -282,7 +282,27 @@ class CombatSimulatorUtils:
         defensive_alm = target.defensive_alm
         log.append(f"  Defensive ALM: {defensive_alm}")
 
-        alm_sum = aim_time_alm + range_alm + situation_stance_alm + visibility_alm + movement_alm + duck_alm + defensive_alm
+        custom_alm = 0
+        for item in shot_params.custom_eal_modifiers or []:
+            if isinstance(item, (list, tuple)) and len(item) >= 2:
+                label, alm = item[0], int(item[1])
+            elif isinstance(item, dict):
+                label, alm = item.get("label", "custom"), int(item.get("alm", 0))
+            else:
+                continue
+            custom_alm += alm
+            log.append(f"  Custom EAL '{label}': {alm:+d}")
+
+        alm_sum = (
+            aim_time_alm
+            + range_alm
+            + situation_stance_alm
+            + visibility_alm
+            + movement_alm
+            + duck_alm
+            + defensive_alm
+            + custom_alm
+        )
         log.append(f"  Total ALM sum: {alm_sum}")
 
         ba = weapon.ballistic_data.get_ballistic_accuracy(range_hexes) if weapon.ballistic_data else float('inf')
@@ -665,8 +685,26 @@ class CombatSimulatorUtils:
             duck_alm -= 10
             log.append("  Shooter duck: -10")
 
-        alm_sum = aim_time_alm + range_alm + situation_stance_alm + visibility_alm + movement_alm + duck_alm
-        
+        custom_alm = 0
+        for item in shot_params.custom_eal_modifiers or []:
+            if isinstance(item, (list, tuple)) and len(item) >= 2:
+                label, alm = item[0], int(item[1])
+            elif isinstance(item, dict):
+                label, alm = item.get("label", "custom"), int(item.get("alm", 0))
+            else:
+                continue
+            custom_alm += alm
+            log.append(f"  Custom EAL '{label}': {alm:+d}")
+
+        alm_sum = (
+            aim_time_alm
+            + range_alm
+            + situation_stance_alm
+            + visibility_alm
+            + movement_alm
+            + duck_alm
+            + custom_alm
+        )
         ba = weapon.ballistic_data.get_ballistic_accuracy(range_hexes) if weapon.ballistic_data else float('inf')
         effective_alm = min(ba, alm_sum)
         

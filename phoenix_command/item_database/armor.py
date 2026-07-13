@@ -219,6 +219,223 @@ mich_tc2000 = Armor(
     }
 )
 
+# --- US Modern ---
+
+msv = Armor(
+    name="MSV (w/ ESAPI)",
+    weight=25.0,
+    description="Modular Scalable Vest with front and back ESAPI plates. NIJ IV / GOST 6.",
+    protection={
+        **{(loc, True): ArmorProtectionData(layers=[
+            ArmorLayer(ArmorMaterial.KEVLAR, protection_factor=4, blunt_protection_factor=1),
+            ArmorLayer(ArmorMaterial.UHMWPE, protection_factor=6, blunt_protection_factor=5),
+            ArmorLayer(ArmorMaterial.BORON_CARBIDE, protection_factor=19, blunt_protection_factor=1),
+        ]) for loc in iotv_front_vital},
+        **{(loc, True): ArmorProtectionData(layers=[
+            ArmorLayer(ArmorMaterial.KEVLAR, protection_factor=4, blunt_protection_factor=1),
+        ]) for loc in iotv_front_soft},
+        **{(loc, False): ArmorProtectionData(layers=[
+            ArmorLayer(ArmorMaterial.KEVLAR, protection_factor=4, blunt_protection_factor=1),
+            ArmorLayer(ArmorMaterial.UHMWPE, protection_factor=6, blunt_protection_factor=5),
+            ArmorLayer(ArmorMaterial.BORON_CARBIDE, protection_factor=19, blunt_protection_factor=1),
+        ]) for loc in iotv_back_vital},
+        **{(loc, False): ArmorProtectionData(layers=[
+            ArmorLayer(ArmorMaterial.KEVLAR, protection_factor=4, blunt_protection_factor=1),
+        ]) for loc in iotv_back_soft},
+    }
+)
+
+_spcs_soft_locs = [
+    AdvancedHitLocation.TORSO_GLANCE,
+    AdvancedHitLocation.INTESTINES,
+    AdvancedHitLocation.INTESTINES_SPINE_SIDE,
+    AdvancedHitLocation.INTESTINES_SIDE,
+]
+
+spcs = Armor(
+    name="SPCS (w/ ESAPI)",
+    weight=20.0,
+    description="Soldier Plate Carrier System with front and back ESAPI plates. NIJ IV / GOST 6.",
+    protection={
+        **{(loc, True): ArmorProtectionData(layers=[
+            ArmorLayer(ArmorMaterial.KEVLAR, protection_factor=4, blunt_protection_factor=1),
+            ArmorLayer(ArmorMaterial.UHMWPE, protection_factor=6, blunt_protection_factor=5),
+            ArmorLayer(ArmorMaterial.BORON_CARBIDE, protection_factor=19, blunt_protection_factor=1),
+        ]) for loc in iotv_front_vital},
+        **{(loc, True): ArmorProtectionData(layers=[
+            ArmorLayer(ArmorMaterial.KEVLAR, protection_factor=4, blunt_protection_factor=1),
+        ]) for loc in _spcs_soft_locs},
+        **{(loc, False): ArmorProtectionData(layers=[
+            ArmorLayer(ArmorMaterial.KEVLAR, protection_factor=4, blunt_protection_factor=1),
+            ArmorLayer(ArmorMaterial.UHMWPE, protection_factor=6, blunt_protection_factor=5),
+            ArmorLayer(ArmorMaterial.BORON_CARBIDE, protection_factor=19, blunt_protection_factor=1),
+        ]) for loc in iotv_back_vital},
+        **{(loc, False): ArmorProtectionData(layers=[
+            ArmorLayer(ArmorMaterial.KEVLAR, protection_factor=4, blunt_protection_factor=1),
+        ]) for loc in _spcs_soft_locs},
+    }
+)
+
+mtv = Armor(
+    name="MTV (w/ ESAPI)",
+    weight=29.0,
+    description="USMC Modular Tactical Vest with front and back ESAPI plates. NIJ IV / GOST 6.",
+    protection={
+        **{(loc, True): ArmorProtectionData(layers=[
+            ArmorLayer(ArmorMaterial.KEVLAR, protection_factor=4, blunt_protection_factor=1),
+            ArmorLayer(ArmorMaterial.UHMWPE, protection_factor=6, blunt_protection_factor=5),
+            ArmorLayer(ArmorMaterial.BORON_CARBIDE, protection_factor=19, blunt_protection_factor=1),
+        ]) for loc in iotv_front_vital},
+        **{(loc, True): ArmorProtectionData(layers=[
+            ArmorLayer(ArmorMaterial.KEVLAR, protection_factor=4, blunt_protection_factor=1),
+        ]) for loc in iotv_front_soft},
+        **{(loc, False): ArmorProtectionData(layers=[
+            ArmorLayer(ArmorMaterial.KEVLAR, protection_factor=4, blunt_protection_factor=1),
+            ArmorLayer(ArmorMaterial.UHMWPE, protection_factor=6, blunt_protection_factor=5),
+            ArmorLayer(ArmorMaterial.BORON_CARBIDE, protection_factor=19, blunt_protection_factor=1),
+        ]) for loc in iotv_back_vital},
+        **{(loc, False): ArmorProtectionData(layers=[
+            ArmorLayer(ArmorMaterial.KEVLAR, protection_factor=4, blunt_protection_factor=1),
+        ]) for loc in iotv_back_soft},
+    }
+)
+
+esbi_side_plates = Armor(
+    name="ESBI Side Plates",
+    weight=5.0,
+    description="Enhanced Side Ballistic Inserts for rifle-rated lateral torso protection. NIJ IV / GOST 6.",
+    protection={
+        **{(loc, is_front): ArmorProtectionData(layers=[
+            ArmorLayer(ArmorMaterial.KEVLAR, protection_factor=4, blunt_protection_factor=1),
+            ArmorLayer(ArmorMaterial.UHMWPE, protection_factor=6, blunt_protection_factor=5),
+            ArmorLayer(ArmorMaterial.BORON_CARBIDE, protection_factor=19, blunt_protection_factor=1),
+        ]) for loc in side_plate_locs for is_front in [True, False]}
+    }
+)
+
+helmet_ach = Armor(
+    name="ACH Combat Helmet",
+    weight=3.5,
+    description="Advanced Combat Helmet standard across US Army and Air Force. NIJ III / GOST 3.",
+    protection={
+        **{(loc, is_front): ArmorProtectionData(layers=[
+            ArmorLayer(ArmorMaterial.UHMWPE, protection_factor=4, blunt_protection_factor=3),
+        ]) for loc in helmet_locs for is_front in [True, False]}
+    }
+)
+
+helmet_ech = Armor(
+    name="ECH Combat Helmet",
+    weight=3.3,
+    description="Enhanced Combat Helmet with improved rifle threat resistance. NIJ III+ / GOST 3.",
+    protection={
+        **{(loc, is_front): ArmorProtectionData(layers=[
+            ArmorLayer(ArmorMaterial.UHMWPE, protection_factor=4, blunt_protection_factor=4),
+        ]) for loc in helmet_locs for is_front in [True, False]}
+    }
+)
+
+helmet_ops_core_fast = Armor(
+    name="Ops-Core FAST High Cut Helmet",
+    weight=3.2,
+    description="High-cut ballistic helmet used by SOF and tactical law enforcement. NIJ III / GOST 3.",
+    protection={
+        **{(loc, is_front): ArmorProtectionData(layers=[
+            ArmorLayer(ArmorMaterial.UHMWPE, protection_factor=4, blunt_protection_factor=3),
+        ]) for loc in helmet_locs for is_front in [True, False]}
+    }
+)
+
+# --- US Law Enforcement ---
+
+patrol_soft_vest = Armor(
+    name="Patrol Soft Vest (NIJ IIIA)",
+    weight=4.0,
+    description="Concealable soft armor vest for daily patrol duty. NIJ IIIA / GOST 2.",
+    protection={
+        **{(loc, True): ArmorProtectionData(layers=[
+            ArmorLayer(ArmorMaterial.KEVLAR, protection_factor=4, blunt_protection_factor=1),
+        ]) for loc in iotv_front_vital},
+        **{(loc, True): ArmorProtectionData(layers=[
+            ArmorLayer(ArmorMaterial.KEVLAR, protection_factor=4, blunt_protection_factor=1),
+        ]) for loc in iotv_front_soft},
+        **{(loc, False): ArmorProtectionData(layers=[
+            ArmorLayer(ArmorMaterial.KEVLAR, protection_factor=4, blunt_protection_factor=1),
+        ]) for loc in iotv_back_vital},
+        **{(loc, False): ArmorProtectionData(layers=[
+            ArmorLayer(ArmorMaterial.KEVLAR, protection_factor=4, blunt_protection_factor=1),
+        ]) for loc in iotv_back_soft},
+    }
+)
+
+duty_carrier_iiia = Armor(
+    name="External Duty Carrier (IIIA)",
+    weight=5.5,
+    description="External uniform carrier with Level IIIA soft armor panels. NIJ IIIA / GOST 2.",
+    protection={
+        **{(loc, True): ArmorProtectionData(layers=[
+            ArmorLayer(ArmorMaterial.KEVLAR, protection_factor=4, blunt_protection_factor=1),
+        ]) for loc in iotv_front_vital},
+        **{(loc, True): ArmorProtectionData(layers=[
+            ArmorLayer(ArmorMaterial.KEVLAR, protection_factor=4, blunt_protection_factor=1),
+        ]) for loc in iotv_front_soft},
+        **{(loc, False): ArmorProtectionData(layers=[
+            ArmorLayer(ArmorMaterial.KEVLAR, protection_factor=4, blunt_protection_factor=1),
+        ]) for loc in iotv_back_vital},
+        **{(loc, False): ArmorProtectionData(layers=[
+            ArmorLayer(ArmorMaterial.KEVLAR, protection_factor=4, blunt_protection_factor=1),
+        ]) for loc in iotv_back_soft},
+    }
+)
+
+swat_plate_carrier = Armor(
+    name="SWAT Plate Carrier (w/ Level IV)",
+    weight=18.0,
+    description="Tactical plate carrier with Level IV rifle plates for SWAT and active shooter response. NIJ IV / GOST 6.",
+    protection={
+        **{(loc, True): ArmorProtectionData(layers=[
+            ArmorLayer(ArmorMaterial.KEVLAR, protection_factor=4, blunt_protection_factor=1),
+            ArmorLayer(ArmorMaterial.UHMWPE, protection_factor=6, blunt_protection_factor=5),
+            ArmorLayer(ArmorMaterial.BORON_CARBIDE, protection_factor=19, blunt_protection_factor=1),
+        ]) for loc in iotv_front_vital},
+        **{(loc, True): ArmorProtectionData(layers=[
+            ArmorLayer(ArmorMaterial.KEVLAR, protection_factor=4, blunt_protection_factor=1),
+        ]) for loc in _spcs_soft_locs},
+        **{(loc, False): ArmorProtectionData(layers=[
+            ArmorLayer(ArmorMaterial.KEVLAR, protection_factor=4, blunt_protection_factor=1),
+            ArmorLayer(ArmorMaterial.UHMWPE, protection_factor=6, blunt_protection_factor=5),
+            ArmorLayer(ArmorMaterial.BORON_CARBIDE, protection_factor=19, blunt_protection_factor=1),
+        ]) for loc in iotv_back_vital},
+        **{(loc, False): ArmorProtectionData(layers=[
+            ArmorLayer(ArmorMaterial.KEVLAR, protection_factor=4, blunt_protection_factor=1),
+        ]) for loc in _spcs_soft_locs},
+    }
+)
+
+swat_side_plates = Armor(
+    name="SWAT Side Plates (III)",
+    weight=4.0,
+    description="Side rifle plates for tactical teams. NIJ III / GOST 5.",
+    protection={
+        **{(loc, is_front): ArmorProtectionData(layers=[
+            ArmorLayer(ArmorMaterial.KEVLAR, protection_factor=4, blunt_protection_factor=1),
+            ArmorLayer(ArmorMaterial.UHMWPE, protection_factor=6, blunt_protection_factor=5),
+            ArmorLayer(ArmorMaterial.SILICON_CARBIDE, protection_factor=19, blunt_protection_factor=1),
+        ]) for loc in side_plate_locs for is_front in [True, False]}
+    }
+)
+
+helmet_le_ballistic = Armor(
+    name="Ballistic Helmet (LE)",
+    weight=3.5,
+    description="Mid-cut ballistic helmet for patrol and tactical law enforcement. NIJ III / GOST 3.",
+    protection={
+        **{(loc, is_front): ArmorProtectionData(layers=[
+            ArmorLayer(ArmorMaterial.UHMWPE, protection_factor=4, blunt_protection_factor=3),
+        ]) for loc in helmet_locs for is_front in [True, False]}
+    }
+)
+
 # --- USSR/Russia ---
 
 ratnik_6b45 = Armor(
@@ -536,6 +753,18 @@ armor = [
     leba,
     msa_tc2002,
     mich_tc2000,
+    msv,
+    spcs,
+    mtv,
+    esbi_side_plates,
+    helmet_ach,
+    helmet_ech,
+    helmet_ops_core_fast,
+    patrol_soft_vest,
+    duty_carrier_iiia,
+    swat_plate_carrier,
+    swat_side_plates,
+    helmet_le_ballistic,
     ratnik_6b45,
     ratnik_6b45_collar,
     ratnik_6b45_side_plates,

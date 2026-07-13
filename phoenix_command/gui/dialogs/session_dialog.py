@@ -45,6 +45,11 @@ class HostSessionDialog(QDialog):
         steps.setWordWrap(True)
         discord_layout.addWidget(steps)
 
+        discord_layout.addWidget(QLabel("Your display name:"))
+        self.name_edit = QLineEdit()
+        self.name_edit.setPlaceholderText("Host")
+        discord_layout.addWidget(self.name_edit)
+
         discord_layout.addWidget(QLabel("<b>Step 1 — Invite code (send to guest):</b>"))
         self.invite_edit = QTextEdit()
         self.invite_edit.setReadOnly(True)
@@ -107,8 +112,9 @@ class HostSessionDialog(QDialog):
     def set_status(self, text: str) -> None:
         self.status_label.setText(text)
 
-
-class JoinSessionDialog(QDialog):
+    @property
+    def display_name(self) -> str:
+        return self.name_edit.text().strip() or "Host"
     """Join session: paste invite, produce answer for Discord."""
 
     def __init__(self, parent=None):
@@ -128,6 +134,11 @@ class JoinSessionDialog(QDialog):
         )
         steps.setWordWrap(True)
         layout.addWidget(steps)
+
+        layout.addWidget(QLabel("Your display name:"))
+        self.name_edit = QLineEdit()
+        self.name_edit.setPlaceholderText("Player")
+        layout.addWidget(self.name_edit)
 
         layout.addWidget(QLabel("<b>Invite code (from host):</b>"))
         self.invite_edit = QTextEdit()
@@ -177,6 +188,10 @@ class JoinSessionDialog(QDialog):
         if text:
             QApplication.clipboard().setText(text)
             self.status_label.setText("Answer copied to clipboard.")
+
+    @property
+    def display_name(self) -> str:
+        return self.name_edit.text().strip() or "Player"
 
 
 class SaveLoadSessionDialog(QDialog):

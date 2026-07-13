@@ -17,6 +17,9 @@ class MessageType(str, Enum):
     DOMAIN_DELTA = "domain_delta"
     DOMAIN_FULL = "domain_full"
     REQUEST_STATE = "request_state"
+    PLAYER_HELLO = "player_hello"
+    PLAYER_INTENT = "player_intent"
+    INTENT_NACK = "intent_nack"
     ACK = "ack"
     PING = "ping"
     PONG = "pong"
@@ -77,6 +80,39 @@ def encode_message(message: SyncMessage) -> bytes:
 
 def decode_message(data: bytes) -> SyncMessage:
     return SyncMessage.from_dict(json.loads(data.decode("utf-8")))
+
+
+def make_player_hello(player_id: str, display_name: str) -> SyncMessage:
+    return SyncMessage(
+        type=MessageType.PLAYER_HELLO,
+        payload={"player_id": player_id, "display_name": display_name},
+    )
+
+
+def make_player_intent(
+    player_id: str,
+    intent_id: str,
+    token_id: str,
+    action: str,
+    args: dict | None = None,
+) -> SyncMessage:
+    return SyncMessage(
+        type=MessageType.PLAYER_INTENT,
+        payload={
+            "player_id": player_id,
+            "intent_id": intent_id,
+            "token_id": token_id,
+            "action": action,
+            "args": args or {},
+        },
+    )
+
+
+def make_intent_nack(intent_id: str, reason: str) -> SyncMessage:
+    return SyncMessage(
+        type=MessageType.INTENT_NACK,
+        payload={"intent_id": intent_id, "reason": reason},
+    )
 
 
 def make_full_state_message(state: GameState) -> SyncMessage:

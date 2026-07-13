@@ -39,6 +39,7 @@ from PyQt6.QtWidgets import (
 from phoenix_command.gui.widgets.wrapping_toolbar import WrappingToolbar
 
 from phoenix_command.gui.dialogs.map_dialogs import (
+    ConditionPaletteDialog,
     MapLayerManagerDialog,
     MapObstacleDialog,
     MapSizeDialog,
@@ -47,6 +48,7 @@ from phoenix_command.gui.dialogs.map_dialogs import (
     StairDialog,
     TokenDialog,
 )
+from phoenix_command.gui.widgets.combat_map_bar import CombatMapBar
 from phoenix_command.gui.utils.hex_geometry import (
     axial_distance,
     axial_to_pixel,
@@ -63,7 +65,9 @@ from phoenix_command.gui.utils.hex_geometry import (
     point_on_edge,
     rect_bounds_pixels,
 )
+from phoenix_command.session.domains.impulse_combat_state import ImpulseCombatState
 from phoenix_command.session.domains.map_state import (
+    HexCondition,
     LayerStair,
     MapState,
     Obstacle,
@@ -71,6 +75,7 @@ from phoenix_command.session.domains.map_state import (
     TerrainTile,
     WallSegment,
 )
+from phoenix_command.session.domains.player_info import PlayerInfo
 from phoenix_command.session.domains.token_state import TokenPlacement, TokenState
 from phoenix_command.tables.catalogs.movement_catalog import TERRAIN_PRESETS
 
@@ -91,6 +96,15 @@ class EditMode(str, Enum):
     STAIR = "stair"
     RULER = "ruler"
     ERASER = "eraser"
+    CONDITION = "condition"
+
+
+SIDE_COLORS = {
+    "alpha": "#4a90e2",
+    "bravo": "#e24a4a",
+    "charlie": "#4ae24a",
+    "delta": "#e2c44a",
+}
 
 
 class TokenGraphicsItem(QGraphicsPixmapItem):
@@ -106,6 +120,7 @@ class TokenGraphicsItem(QGraphicsPixmapItem):
         on_edit,
         on_delete,
         on_stair,
+        status_text: str = "",
     ):
         super().__init__()
         self.token = token
@@ -120,12 +135,21 @@ class TokenGraphicsItem(QGraphicsPixmapItem):
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, True)
         self.setAcceptHoverEvents(editable)
         self._load_pixmap()
-        self._label = QGraphicsTextItem(token.label or token.character_name or "", self)
+        base = token.label or token.character_name or ""
+        self._label = QGraphicsTextItem(base, self)
         self._label.setDefaultTextColor(QColor("white"))
         font = QFont()
         font.setPointSize(8)
         self._label.setFont(font)
         self._label.setPos(-20, self._grid_size * token.size)
+        if status_text:
+            self.setToolTip(status_text)
+            self._status = QGraphicsTextItem(status_text, self)
+            self._status.setDefaultTextColor(QColor(200, 255, 200))
+            sf = QFont()
+            sf.setPointSize(6)
+            self._status.setFont(sf)
+            self._status.setPos(-24, self._grid_size * token.size + 14)
         self._facing_arrow = self._make_facing_arrow()
         self._apply_facing()
 
@@ -200,10 +224,14 @@ class HexMapScene(QGraphicsScene):
         self.token_state = TokenState()
         self._token_items: dict[str, TokenGraphicsItem] = {}
         self._editable = True
+        self._status_by_token: dict[str, str] = {}
         self.on_token_moved_callback = None
         self.on_token_edit_callback = None
         self.on_token_delete_callback = None
         self.on_token_stair_callback = None
+
+    def set_token_status(self, status_by_token: dict[str, str]) -> None:
+        self._status_by_token = status_by_token
 
     def set_editable(self, editable: bool) -> None:
         self._editable = editable
@@ -304,6 +332,21 @@ class HexMapScene(QGraphicsScene):
                     text.setZValue(layer.elevation + 1)
                     self.addItem(text)
 
+            for key, cond in layer.conditions.items():
+                q, r = map(int, key.split(","))
+                if not is_in_bounds(q, r, grid):
+                    continue
+                corners = hex_corners(q, r, grid)
+                poly = QPolygonF([QPointF(x, y) for x, y in corners])
+                color = QColor(180, 80, 220, int(layer.opacity * 80))
+                item = QGraphicsPolygonItem(poly)
+                item.setBrush(QBrush(color))
+                item.setPen(QPen(QColor(120, 40, 160, 120), 1))
+                item.setZValue(layer.elevation + 0.5)
+                vis = ", ".join(cond.visibility) if cond.visibility else "clear"
+                item.setToolTip(f"Conditions: {vis}")
+                self.addItem(item)
+
             for key, obstacle in layer.obstacles.items():
                 q, r = map(int, key.split(","))
                 if not is_in_bounds(q, r, grid):
@@ -384,6 +427,7 @@ class HexMapScene(QGraphicsScene):
                 self.on_token_edit_callback,
                 self.on_token_delete_callback,
                 self.on_token_stair_callback,
+                status_text=self._status_by_token.get(tid, ""),
             )
             item.setPos(cx - item.pixmap().width() / 2, cy - item.pixmap().height() / 2)
             item.setZValue(1000)
@@ -433,6 +477,10 @@ class HexMapView(QWidget):
     """Hex map editor widget with toolbar."""
 
     map_changed = pyqtSignal()
+    combat_action_requested = pyqtSignal(str, str, dict)
+    advance_impulse_requested = pyqtSignal()
+    map_mode_changed = pyqtSignal(str)
+    declare_shot_requested = pyqtSignal(str)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -467,6 +515,15 @@ class HexMapView(QWidget):
         self._ruler_end: tuple[int, int] | None = None
         self._ruler_items: list[QGraphicsItem] = []
 
+        self._impulse_combat = ImpulseCombatState()
+        self._session_role: str | None = None
+        self._player_id = "host"
+        self._players: list[PlayerInfo] = []
+        self._condition_visibility = ""
+        self._pick_move_token_id: str | None = None
+        self._pick_move_action: str | None = None
+        self._combat_callbacks = None  # set by main window
+
         self._scene = HexMapScene()
         self._scene.on_token_moved_callback = self._emit_map_changed
         self._scene.on_token_edit_callback = self._edit_token_item
@@ -478,9 +535,16 @@ class HexMapView(QWidget):
         self._view.setTransformationAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
 
         self._setup_toolbar()
+        self._combat_bar = CombatMapBar()
+        self._combat_bar.map_mode_changed.connect(self._on_map_mode_changed)
+        self._combat_bar.advance_impulse_requested.connect(self.advance_impulse_requested.emit)
+        self._combat_bar.combat_action_requested.connect(self._on_combat_action)
+        self._combat_bar.token_selected.connect(self._on_combat_token_selected)
+        self._combat_bar.declare_shot_requested.connect(self.declare_shot_requested.emit)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(self._toolbar)
+        layout.addWidget(self._combat_bar)
         layout.addWidget(self._view)
 
         self._scene.map_state.ensure_default_layer()
@@ -500,6 +564,7 @@ class HexMapView(QWidget):
             ("Stair", EditMode.STAIR),
             ("Ruler", EditMode.RULER),
             ("Eraser", EditMode.ERASER),
+            ("Condition", EditMode.CONDITION),
         ]
         self._mode_buttons: dict[EditMode, QPushButton] = {}
         for label, mode in modes:
@@ -523,6 +588,7 @@ class HexMapView(QWidget):
         for label, slot in [
             ("Layers...", self._open_layer_manager),
             ("Terrain...", self._open_terrain_palette),
+            ("Conditions...", self._open_condition_palette),
             ("Obstacle...", self._open_obstacle_dialog),
             ("Wall...", self._open_wall_dialog),
             ("Map Size...", self._open_map_size_dialog),
@@ -593,7 +659,7 @@ class HexMapView(QWidget):
                 self._panning = True
                 self._pan_start = event.position()
                 return True
-            if event.button() == Qt.MouseButton.LeftButton and self._editable:
+            if event.button() == Qt.MouseButton.LeftButton and self._can_edit_map():
                 return self._on_lmb_press(pos.x(), pos.y())
 
         if et == event.Type.MouseMove:
@@ -607,7 +673,7 @@ class HexMapView(QWidget):
                     self._view.verticalScrollBar().value() - int(delta.y())
                 )
                 return True
-            if self._editable and (self._painting or self._terrain_drag or self._ruler_drag):
+            if self._can_edit_map() and (self._painting or self._terrain_drag or self._ruler_drag):
                 pos = self._view.mapToScene(event.position().toPoint())
                 return self._on_lmb_move(pos.x(), pos.y())
 
@@ -615,7 +681,7 @@ class HexMapView(QWidget):
             if event.button() == Qt.MouseButton.MiddleButton and self._panning:
                 self._panning = False
                 return True
-            if event.button() == Qt.MouseButton.LeftButton and self._editable:
+            if event.button() == Qt.MouseButton.LeftButton and self._can_edit_map():
                 return self._on_lmb_release()
 
         return super().eventFilter(obj, event)
@@ -625,11 +691,29 @@ class HexMapView(QWidget):
 
     # --- Mouse handlers ---
 
+    def _can_edit_map(self) -> bool:
+        if self._impulse_combat.map_mode == "combat":
+            return self._pick_move_token_id is not None
+        return self._editable
+
     def _on_lmb_press(self, x: float, y: float) -> bool:
         grid = self._scene.map_state.grid
         q, r = pixel_to_axial(x, y, grid)
         if not is_in_bounds(q, r, grid):
             return True
+
+        if self._pick_move_token_id and self._pick_move_action:
+            self.combat_action_requested.emit(
+                self._pick_move_token_id,
+                self._pick_move_action,
+                {"target_q": q, "target_r": r},
+            )
+            self._pick_move_token_id = None
+            self._pick_move_action = None
+            return True
+
+        if self._impulse_combat.map_mode == "combat":
+            return self._on_combat_lmb(q, r)
 
         if self._mode == EditMode.TERRAIN:
             col, row = pixel_to_offset(x, y, grid)
@@ -654,7 +738,7 @@ class HexMapView(QWidget):
             return True
 
         if self._mode in (EditMode.OBSTACLE, EditMode.WALL, EditMode.WINDOW,
-                          EditMode.DOOR, EditMode.ERASER):
+                          EditMode.DOOR, EditMode.ERASER, EditMode.CONDITION):
             self._painting = True
             self._dirty = False
             self._last_cell = None
@@ -822,8 +906,20 @@ class HexMapView(QWidget):
             layer.terrain.pop(key, None)
             layer.obstacles.pop(key, None)
             layer.stairs.pop(key, None)
+            layer.conditions.pop(key, None)
             edge = nearest_edge(x, y, q, r, grid)
             layer.walls.pop(f"{q},{r}:{edge}", None)
+            self._last_cell = (q, r)
+            self._dirty = True
+            self._rebuild_scene()
+
+        elif self._mode == EditMode.CONDITION:
+            if self._last_cell == (q, r):
+                return
+            if self._condition_visibility:
+                layer.conditions[key] = HexCondition(visibility=[self._condition_visibility])
+            else:
+                layer.conditions.pop(key, None)
             self._last_cell = (q, r)
             self._dirty = True
             self._rebuild_scene()
@@ -846,6 +942,8 @@ class HexMapView(QWidget):
         dialog = TokenDialog(
             character_names=self._character_names,
             grid_orientation=self._scene.map_state.grid.orientation,
+            player_options=self._player_options(),
+            side_options=self._side_options(),
             parent=self,
         )
         dialog._q = q
@@ -930,6 +1028,8 @@ class HexMapView(QWidget):
             token=item.token,
             character_names=self._character_names,
             grid_orientation=self._scene.map_state.grid.orientation,
+            player_options=self._player_options(),
+            side_options=self._side_options(),
             parent=self,
         )
         if dialog.exec():
@@ -1058,11 +1158,110 @@ class HexMapView(QWidget):
 
     def set_editable(self, editable: bool) -> None:
         self._editable = editable
-        self._scene.set_editable(editable)
-        self._toolbar.setEnabled(editable)
+        in_combat = self._impulse_combat.map_mode == "combat"
+        token_movable = editable and not in_combat
+        self._scene.set_editable(token_movable)
+        self._toolbar.setEnabled(editable and not in_combat)
+        self._combat_bar.set_host(self._session_role != "guest")
+        self._refresh_combat_ui()
 
     def set_character_names(self, names: list[str]) -> None:
         self._character_names = names
+
+    def get_impulse_combat_state(self) -> ImpulseCombatState:
+        return self._impulse_combat
+
+    def set_impulse_combat_state(self, state: ImpulseCombatState) -> None:
+        self._impulse_combat = state
+        self._impulse_combat.selected_token_id = state.selected_token_id
+        status = {
+            tid: rt.status_label()
+            for tid, rt in state.token_runtime.items()
+        }
+        self._scene.set_token_status(status)
+        self._refresh_combat_ui()
+        in_combat = state.map_mode == "combat"
+        self._scene.set_editable(self._editable and not in_combat)
+        self._toolbar.setEnabled(self._editable and not in_combat)
+        self._rebuild_scene()
+
+    def set_session_context(
+        self,
+        role: str | None,
+        player_id: str,
+        players: list[PlayerInfo] | None = None,
+    ) -> None:
+        self._session_role = role
+        self._player_id = player_id
+        self._players = players or []
+        is_guest = role == "guest"
+        self._combat_bar.set_host(not is_guest)
+        self._refresh_combat_ui()
+
+    def set_action_provider(self, provider) -> None:
+        """Callable(token_id) -> list of (action_id, label, cost)."""
+        self._combat_callbacks = provider
+        self._refresh_combat_ui()
+
+    def _refresh_combat_ui(self) -> None:
+        self._combat_bar.set_impulse_combat(self._impulse_combat)
+        labels: dict[str, str] = {}
+        for tid, tok in self._scene.token_state.placements.items():
+            if self._session_role == "guest" and tok.controlled_by != self._player_id:
+                continue
+            label = tok.label or tok.character_name or tid[:8]
+            if tok.side_id:
+                label = f"[{tok.side_id}] {label}"
+            labels[tid] = label
+        self._combat_bar.set_tokens(labels)
+        sel = self._impulse_combat.selected_token_id
+        if sel and sel in labels:
+            self._combat_bar.select_token(sel)
+            if self._combat_callbacks:
+                self._combat_bar.set_available_actions(self._combat_callbacks(sel))
+
+    def _on_map_mode_changed(self, mode: str) -> None:
+        self._impulse_combat.map_mode = mode
+        self.map_mode_changed.emit(mode)
+        self._refresh_combat_ui()
+
+    def _on_combat_action(self, token_id: str, action: str, args: dict) -> None:
+        if action in ("move", "movement_while_braced"):
+            self._pick_move_token_id = token_id
+            self._pick_move_action = action
+            return
+        self.combat_action_requested.emit(token_id, action, args)
+
+    def _on_combat_token_selected(self, token_id: str) -> None:
+        self._impulse_combat.selected_token_id = token_id
+        if self._combat_callbacks:
+            self._combat_bar.set_available_actions(self._combat_callbacks(token_id))
+        rt = self._impulse_combat.token_runtime.get(token_id)
+        if rt:
+            self._combat_bar.set_impulse_combat(self._impulse_combat)
+
+    def _on_combat_lmb(self, q: int, r: int) -> bool:
+        for item in self._scene.selectedItems():
+            if isinstance(item, TokenGraphicsItem):
+                token = item.token
+                if self._session_role == "guest" and token.controlled_by != self._player_id:
+                    continue
+                self._impulse_combat.selected_token_id = token.token_id
+                self._combat_bar.select_token(token.token_id)
+                return True
+        return False
+
+    def _open_condition_palette(self) -> None:
+        dialog = ConditionPaletteDialog(parent=self)
+        if dialog.exec():
+            self._condition_visibility = dialog.visibility_name()
+            self._set_mode(EditMode.CONDITION)
+
+    def _player_options(self) -> list[tuple[str, str]]:
+        return [(p.player_id, p.display_name) for p in self._players if not p.is_host]
+
+    def _side_options(self) -> list[tuple[str, str]]:
+        return list(self._impulse_combat.sides.items())
 
     def get_map_state(self) -> MapState:
         return self._scene.map_state

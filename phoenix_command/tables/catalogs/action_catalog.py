@@ -30,6 +30,12 @@ _register([
     ActionDef("look_over_cover", "Look Over or Around Cover", "Actions", 1),
     ActionDef("duck_from_firing", "Duck from a Firing Stance or from Looking", "Actions", 1),
     ActionDef("brace_weapon", "Brace a Weapon", "Actions", 1),
+    ActionDef(
+        "movement_while_braced",
+        "Movement While Braced",
+        "Actions",
+        0,  # cost computed: movement + 1 AC brace
+    ),
     ActionDef("facing_change_60_120", "60 - 120 Degree Facing Change", "Actions", 1),
     ActionDef("facing_change_60_firing", "60 Degree Facing Change in Firing Stance", "Actions", 2),
     ActionDef("standing_to_kneeling", "Go from Standing to Kneeling", "Actions", 1),

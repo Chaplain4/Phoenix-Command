@@ -106,8 +106,14 @@ class P2PSessionHost(QThread):
             else:
                 data = message
             parsed = self._transport.unpack(data)
-            if parsed and parsed.type == MessageType.REQUEST_STATE and self._on_outbound:
-                self._on_outbound(parsed)
+            if parsed and self._on_outbound:
+                if parsed.type == MessageType.REQUEST_STATE:
+                    self._on_outbound(parsed)
+                elif parsed.type in (
+                    MessageType.PLAYER_HELLO,
+                    MessageType.PLAYER_INTENT,
+                ):
+                    self._on_outbound(parsed)
 
     def submit_answer(self, answer_code: str) -> None:
         if self._loop is None:

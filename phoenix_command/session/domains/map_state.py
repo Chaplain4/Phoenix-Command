@@ -134,6 +134,27 @@ class LayerStair:
 
 
 @dataclass
+class HexCondition:
+    """Combat conditions on a hex cell (visibility, tags)."""
+
+    visibility: list[str] = field(default_factory=list)
+    tags: list[str] = field(default_factory=list)
+
+    def to_dict(self) -> dict:
+        return {
+            "visibility": list(self.visibility),
+            "tags": list(self.tags),
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "HexCondition":
+        return cls(
+            visibility=list(data.get("visibility", [])),
+            tags=list(data.get("tags", [])),
+        )
+
+
+@dataclass
 class TerrainTile:
     """Terrain on a hex cell."""
 
@@ -327,6 +348,7 @@ class MapLayer:
     obstacles: dict[str, Obstacle] = field(default_factory=dict)
     walls: dict[str, WallSegment] = field(default_factory=dict)
     stairs: dict[str, LayerStair] = field(default_factory=dict)
+    conditions: dict[str, HexCondition] = field(default_factory=dict)
     visible: bool = True
     opacity: float = 1.0
 
@@ -341,6 +363,7 @@ class MapLayer:
             "obstacles": {k: v.to_dict() for k, v in self.obstacles.items()},
             "walls": {k: v.to_dict() for k, v in self.walls.items()},
             "stairs": {k: v.to_dict() for k, v in self.stairs.items()},
+            "conditions": {k: v.to_dict() for k, v in self.conditions.items()},
             "visible": self.visible,
             "opacity": self.opacity,
         }
@@ -364,6 +387,10 @@ class MapLayer:
             },
             stairs={
                 k: LayerStair.from_dict(v) for k, v in data.get("stairs", {}).items()
+            },
+            conditions={
+                k: HexCondition.from_dict(v)
+                for k, v in data.get("conditions", {}).items()
             },
             visible=bool(data.get("visible", True)),
             opacity=float(data.get("opacity", 1.0)),
