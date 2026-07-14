@@ -11,8 +11,16 @@ def _hex_key(q: int, r: int) -> str:
     return f"{q},{r}"
 
 
-def _wall_key(q: int, r: int, edge: int) -> str:
+HEX_WALL_EDGE = "hex"
+
+
+def _wall_key(q: int, r: int, edge: int | str) -> str:
     return f"{q},{r}:{edge}"
+
+
+def hex_wall_key(q: int, r: int) -> str:
+    """Key for a wall that fills an entire hex cell."""
+    return _wall_key(q, r, HEX_WALL_EDGE)
 
 
 def _parse_hex_key(key: str) -> tuple[int, int]:
@@ -20,10 +28,22 @@ def _parse_hex_key(key: str) -> tuple[int, int]:
     return int(q), int(r)
 
 
-def _parse_wall_key(key: str) -> tuple[int, int, int]:
+def _parse_wall_key(key: str) -> tuple[int, int, int | str]:
     coords, edge = key.rsplit(":", 1)
     q, r = coords.split(",")
+    if edge == HEX_WALL_EDGE:
+        return int(q), int(r), HEX_WALL_EDGE
     return int(q), int(r), int(edge)
+
+
+def is_hex_wall_key(key: str) -> bool:
+    return key.endswith(f":{HEX_WALL_EDGE}")
+
+
+def layer_has_hex_wall(layer: "MapLayer | None", q: int, r: int) -> bool:
+    if not layer:
+        return False
+    return hex_wall_key(q, r) in layer.walls
 
 
 @dataclass
@@ -344,6 +364,8 @@ class MapLayer:
     kind: str = "ground"  # ground, floor, basement, trench
     elevation: int = 0
     background: BackgroundImage | None = None
+    annotations_b64: str = ""  # freehand PNG overlay; does not alter background
+    annotations_mime: str = "image/png"
     terrain: dict[str, TerrainTile] = field(default_factory=dict)
     obstacles: dict[str, Obstacle] = field(default_factory=dict)
     walls: dict[str, WallSegment] = field(default_factory=dict)
@@ -359,6 +381,8 @@ class MapLayer:
             "kind": self.kind,
             "elevation": self.elevation,
             "background": self.background.to_dict() if self.background else None,
+            "annotations_b64": self.annotations_b64,
+            "annotations_mime": self.annotations_mime,
             "terrain": {k: v.to_dict() for k, v in self.terrain.items()},
             "obstacles": {k: v.to_dict() for k, v in self.obstacles.items()},
             "walls": {k: v.to_dict() for k, v in self.walls.items()},
@@ -376,6 +400,8 @@ class MapLayer:
             kind=data.get("kind", "ground"),
             elevation=int(data.get("elevation", 0)),
             background=BackgroundImage.from_dict(data.get("background")),
+            annotations_b64=data.get("annotations_b64", "") or "",
+            annotations_mime=data.get("annotations_mime", "image/png") or "image/png",
             terrain={
                 k: TerrainTile.from_dict(v) for k, v in data.get("terrain", {}).items()
             },

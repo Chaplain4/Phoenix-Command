@@ -6,7 +6,12 @@ from dataclasses import dataclass, field
 
 from phoenix_command.models.enums import TargetExposure
 from phoenix_command.session.domains.impulse_combat_state import TokenCombatRuntime
-from phoenix_command.session.domains.map_state import MapLayer, MapState, WallSegment
+from phoenix_command.session.domains.map_state import (
+    MapLayer,
+    MapState,
+    WallSegment,
+    layer_has_hex_wall,
+)
 from phoenix_command.session.domains.token_state import TokenPlacement
 from phoenix_command.simulations.hex_tactical import line_hexes
 
@@ -33,6 +38,11 @@ def _hex_obstacle_blocks(layer: MapLayer | None, q: int, r: int) -> bool:
         return False
     obs = layer.obstacles.get(f"{q},{r}")
     return bool(obs and obs.blocks_los)
+
+
+def _hex_wall_blocks(layer: MapLayer | None, q: int, r: int) -> bool:
+    """Full-hex wall barriers block LOS like dense obstacles."""
+    return layer_has_hex_wall(layer, q, r)
 
 
 def _wall_on_edge(layer: MapLayer | None, q: int, r: int, edge: int) -> WallSegment | None:
@@ -123,6 +133,9 @@ def check_los(
         if _hex_obstacle_blocks(shooter_layer, q, r) or _hex_obstacle_blocks(target_layer, q, r):
             notes.append(f"LOS blocked by obstacle at ({q},{r})")
             return LosResult(blocked=True, notes=notes)
+        if _hex_wall_blocks(shooter_layer, q, r) or _hex_wall_blocks(target_layer, q, r):
+            notes.append(f"LOS blocked by hex wall at ({q},{r})")
+            return LosResult(blocked=True, notes=notes)
 
         if i + 1 < len(line):
             nq, nr = line[i + 1]
@@ -143,6 +156,9 @@ def check_los(
     if len(line) >= 2:
         pq, pr = line[-2]
         tq, tr = line[-1]
+        if _hex_wall_blocks(target_layer, tq, tr):
+            notes.append(f"Target behind hex wall ({tq},{tr})")
+            return LosResult(blocked=True, notes=notes)
         edge = _edge_between(tq, tr, pq, pr)
         if edge is not None and target_layer:
             wall = _wall_on_edge(target_layer, tq, tr, edge)
@@ -158,6 +174,9 @@ def check_los(
     if _hex_obstacle_blocks(target_layer, target.q, target.r):
         through_opening = True
         notes.append("Target hex has LOS-blocking obstacle (cover)")
+    elif _hex_wall_blocks(target_layer, target.q, target.r):
+        through_opening = True
+        notes.append("Target hex has hex wall (cover)")
 
     if through_opening or elev_s != elev_t:
         exposures = _cover_exposures()

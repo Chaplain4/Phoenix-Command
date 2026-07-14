@@ -6,6 +6,8 @@ import base64
 import uuid
 from pathlib import Path
 
+from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QIcon, QPixmap
 from PyQt6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -24,6 +26,7 @@ from PyQt6.QtWidgets import (
     QSpinBox,
     QTableWidget,
     QTableWidgetItem,
+    QToolButton,
     QVBoxLayout,
     QWidget,
 )
@@ -51,6 +54,7 @@ from phoenix_command.tables.catalogs.barrier_catalog import (
 )
 from phoenix_command.tables.catalogs.movement_catalog import TERRAIN_PRESETS
 from phoenix_command.gui.utils.hex_geometry import compute_background_layout, facing_labels
+from phoenix_command.gui.utils.token_presets import list_token_presets, load_preset_b64, preset_pixmap_path
 
 
 def load_image_as_b64(path: str) -> tuple[str, str]:
@@ -660,11 +664,53 @@ class TokenDialog(QDialog):
 
         self._image_b64 = tok.image_b64
         self._image_mime = tok.image_mime
-        self.image_label = QLabel("No image" if not tok.image_b64 else "Image loaded")
-        layout.addRow("Image:", self.image_label)
+
+        image_box = QVBoxLayout()
+        preset_row = QHBoxLayout()
+        self._preset_buttons: dict[str, QToolButton] = {}
+        for preset_id, label in list_token_presets():
+            btn = QToolButton()
+            btn.setToolTip(label)
+            btn.setCheckable(True)
+            btn.setAutoExclusive(True)
+            path = preset_pixmap_path(preset_id)
+            if path:
+                pix = QPixmap(path).scaled(
+                    48, 48,
+                    Qt.AspectRatioMode.KeepAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation,
+                )
+                btn.setIcon(QIcon(pix))
+                btn.setIconSize(pix.size())
+            else:
+                btn.setText(label[:3])
+            btn.clicked.connect(lambda _checked=False, pid=preset_id: self._apply_preset(pid))
+            preset_row.addWidget(btn)
+            self._preset_buttons[preset_id] = btn
+        preset_row.addStretch()
+        image_box.addLayout(preset_row)
+
+        preview_row = QHBoxLayout()
+        self.image_preview = QLabel()
+        self.image_preview.setFixedSize(64, 64)
+        self.image_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.image_preview.setStyleSheet("border: 1px solid #888;")
+        preview_row.addWidget(self.image_preview)
+        self.image_label = QLabel("No image" if not tok.image_b64 else "Custom / preset")
+        preview_row.addWidget(self.image_label, stretch=1)
+        image_box.addLayout(preview_row)
+
+        btn_row = QHBoxLayout()
         load_btn = QPushButton("Load Image...")
         load_btn.clicked.connect(self._load_image)
-        layout.addRow(load_btn)
+        clear_btn = QPushButton("Clear")
+        clear_btn.clicked.connect(self._clear_image)
+        btn_row.addWidget(load_btn)
+        btn_row.addWidget(clear_btn)
+        btn_row.addStretch()
+        image_box.addLayout(btn_row)
+        layout.addRow("Image:", image_box)
+        self._refresh_image_preview()
 
         self._token_id = tok.token_id
         self._layer_id = tok.layer_id
@@ -676,6 +722,30 @@ class TokenDialog(QDialog):
         buttons.rejected.connect(self.reject)
         layout.addRow(buttons)
 
+    def _refresh_image_preview(self) -> None:
+        if not self._image_b64:
+            self.image_preview.clear()
+            self.image_preview.setText("—")
+            self.image_label.setText("No image")
+            return
+        pix = QPixmap()
+        pix.loadFromData(base64.b64decode(self._image_b64))
+        self.image_preview.setPixmap(
+            pix.scaled(64, 64, Qt.AspectRatioMode.KeepAspectRatio,
+                       Qt.TransformationMode.SmoothTransformation)
+        )
+        self.image_label.setText("Image set")
+
+    def _apply_preset(self, preset_id: str) -> None:
+        try:
+            self._image_b64, self._image_mime = load_preset_b64(preset_id)
+        except KeyError:
+            QMessageBox.warning(self, "Token Image", f"Preset '{preset_id}' not found.")
+            return
+        for pid, btn in self._preset_buttons.items():
+            btn.setChecked(pid == preset_id)
+        self._refresh_image_preview()
+
     def _load_image(self):
         path, _ = QFileDialog.getOpenFileName(
             self, "Load Token Image", "", "Images (*.png *.jpg *.jpeg *.bmp *.gif *.webp)"
@@ -683,7 +753,17 @@ class TokenDialog(QDialog):
         if not path:
             return
         self._image_b64, self._image_mime = load_image_as_b64(path)
+        for btn in self._preset_buttons.values():
+            btn.setChecked(False)
         self.image_label.setText(Path(path).name)
+        self._refresh_image_preview()
+
+    def _clear_image(self) -> None:
+        self._image_b64 = ""
+        self._image_mime = "image/png"
+        for btn in self._preset_buttons.values():
+            btn.setChecked(False)
+        self._refresh_image_preview()
 
     def get_token(self) -> TokenPlacement:
         return TokenPlacement(

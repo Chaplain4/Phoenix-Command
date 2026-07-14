@@ -110,6 +110,20 @@ def test_facing_labels_count():
     assert len(facing_labels("pointy")) == 12
 
 
+def test_facing_labels_short_compass():
+    flat = {label: value for label, value in facing_labels("flat")}
+    assert flat["N"] == 9
+    assert flat["S"] == 3
+    assert flat["SE"] == 1
+    assert flat["NE"] == 11
+    assert flat["Corner E"] == 0
+    pointy = {label: value for label, value in facing_labels("pointy")}
+    assert pointy["E"] == 0
+    assert pointy["W"] == 6
+    assert pointy["NW"] == 8
+    assert pointy["SE"] == 2
+
+
 def test_background_target_rect():
     grid = HexGridConfig(cols=5, rows=5, size=24.0)
     x, y, w, h = background_target_rect(grid)

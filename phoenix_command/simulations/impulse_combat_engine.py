@@ -368,6 +368,9 @@ class ImpulseCombatEngine:
             key = f"{target_q},{target_r}"
             if key in layer.obstacles and layer.obstacles[key].blocks_movement:
                 return ActionResult(False, "Hex blocked by obstacle")
+            from phoenix_command.session.domains.map_state import hex_wall_key
+            if hex_wall_key(target_q, target_r) in layer.walls:
+                return ActionResult(False, "Hex blocked by wall")
 
         base_id = classify_movement_base(placement.facing, dir_idx)
         terrain_cost, modifier_ids = self._terrain_modifiers(layer, target_q, target_r, rt.stance)

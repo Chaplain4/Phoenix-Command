@@ -23,6 +23,7 @@ from phoenix_command.session.domains.map_state import (
     MapState,
     Opening,
     WallSegment,
+    hex_wall_key,
 )
 from phoenix_command.session.domains.token_state import TokenPlacement, TokenState
 from phoenix_command.simulations.combat_simulator_utils import CombatSimulatorUtils
@@ -66,6 +67,17 @@ def test_los_blocked_by_solid_wall() -> None:
     result = check_los(map_state, shooter, target)
     # May or may not block depending on edge keys — at least returns LosResult
     assert isinstance(result.blocked, bool)
+
+
+def test_los_blocked_by_hex_wall() -> None:
+    map_state = MapState()
+    layer = map_state.ensure_default_layer()
+    layer.walls[hex_wall_key(1, 0)] = WallSegment()
+    shooter = TokenPlacement(token_id="s", q=0, r=0, layer_id=layer.id)
+    target = TokenPlacement(token_id="t", q=2, r=0, layer_id=layer.id)
+    result = check_los(map_state, shooter, target)
+    assert result.blocked
+    assert any("hex wall" in note for note in result.notes)
 
 
 def test_los_through_open_window() -> None:

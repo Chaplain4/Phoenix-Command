@@ -145,9 +145,13 @@ class CombatMapBar(QWidget):
     def select_token(self, token_id: str) -> None:
         idx = self._token_combo.findData(token_id)
         if idx >= 0:
+            self._token_combo.blockSignals(True)
             self._token_combo.setCurrentIndex(idx)
+            self._token_combo.blockSignals(False)
         self._selected_token_id = token_id
         self._refresh_status()
+        if token_id:
+            self.token_selected.emit(token_id)
 
     def _on_token_changed(self) -> None:
         tid = self._token_combo.currentData()

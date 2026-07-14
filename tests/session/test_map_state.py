@@ -15,6 +15,9 @@ from phoenix_command.session.domains.map_state import (
     Opening,
     TerrainTile,
     WallSegment,
+    hex_wall_key,
+    is_hex_wall_key,
+    layer_has_hex_wall,
     rules_hexes,
 )
 from phoenix_command.session.domains.token_state import TokenPlacement, TokenState
@@ -211,8 +214,18 @@ def test_map_state_hide_inactive_layers():
     assert restored.hide_inactive_layers is True
 
 
-def test_map_state_legacy_hide_inactive_default():
+def test_layer_annotations_round_trip():
+    layer = MapLayer(annotations_b64="aGVsbG8=", annotations_mime="image/png")
+    restored = MapLayer.from_dict(layer.to_dict())
+    assert restored.annotations_b64 == "aGVsbG8="
+    assert restored.annotations_mime == "image/png"
+
+
+def test_hex_wall_key_helpers():
+    assert hex_wall_key(3, 5) == "3,5:hex"
+    assert is_hex_wall_key("3,5:hex")
+    assert not is_hex_wall_key("3,5:2")
     layer = MapLayer()
-    data = {"grid": {}, "layers": [layer.to_dict()], "active_layer_id": layer.id}
-    state = MapState.from_dict(data)
-    assert state.hide_inactive_layers is False
+    layer.walls[hex_wall_key(1, 1)] = WallSegment()
+    assert layer_has_hex_wall(layer, 1, 1)
+    assert not layer_has_hex_wall(layer, 0, 0)

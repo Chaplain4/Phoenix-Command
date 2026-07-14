@@ -191,34 +191,39 @@ def facing_to_degrees(facing: int, orientation: str) -> float:
 
 
 def facing_labels(orientation: str) -> list[tuple[str, int]]:
-    """Human-readable labels for facing 0-11 (even=side midpoint, odd=corner)."""
+    """Human-readable labels for facing 0-11.
+
+    Flat-top: even indices are corners, odd are side midpoints.
+    Pointy-top: even indices are side midpoints, odd are corners.
+    Side labels use short compass names (N, SE, …).
+    """
     if orientation == "flat":
         return [
             ("Corner E", 0),
-            ("Side E-SE", 1),
+            ("SE", 1),
             ("Corner SE", 2),
-            ("Side SE-SW", 3),
+            ("S", 3),
             ("Corner SW", 4),
-            ("Side SW-W", 5),
+            ("SW", 5),
             ("Corner W", 6),
-            ("Side W-NW", 7),
+            ("NW", 7),
             ("Corner NW", 8),
-            ("Side NW-NE", 9),
+            ("N", 9),
             ("Corner NE", 10),
-            ("Side NE-E", 11),
+            ("NE", 11),
         ]
     return [
-        ("Side E", 0),
+        ("E", 0),
         ("Corner NE", 1),
-        ("Side SE", 2),
+        ("SE", 2),
         ("Corner S", 3),
-        ("Side SW", 4),
+        ("SW", 4),
         ("Corner SW", 5),
-        ("Side W", 6),
+        ("W", 6),
         ("Corner NW", 7),
-        ("Side NW", 8),
+        ("NW", 8),
         ("Corner N", 9),
-        ("Side NE", 10),
+        ("NE", 10),
         ("Corner NW", 11),
     ]
 
