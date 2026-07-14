@@ -64,7 +64,8 @@ class CombatMapBar(QWidget):
         layout.addWidget(self._token_combo)
 
         self._status_label = QLabel("")
-        self._status_label.setMinimumWidth(160)
+        self._status_label.setMinimumWidth(200)
+        self._status_label.setToolTip("AC remaining this impulse (and move progress)")
         layout.addWidget(self._status_label)
 
         self._action_combo = QComboBox()

@@ -9,6 +9,7 @@ from pathlib import Path
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon, QPixmap
 from PyQt6.QtWidgets import (
+    QButtonGroup,
     QCheckBox,
     QComboBox,
     QDialog,
@@ -54,7 +55,11 @@ from phoenix_command.tables.catalogs.barrier_catalog import (
 )
 from phoenix_command.tables.catalogs.movement_catalog import TERRAIN_PRESETS
 from phoenix_command.gui.utils.hex_geometry import compute_background_layout, facing_labels
-from phoenix_command.gui.utils.token_presets import list_token_presets, load_preset_b64, preset_pixmap_path
+from phoenix_command.gui.utils.token_presets import (
+    list_token_presets_by_faction,
+    load_preset_b64,
+    preset_pixmap_path,
+)
 
 
 def load_image_as_b64(path: str) -> tuple[str, str]:
@@ -666,29 +671,35 @@ class TokenDialog(QDialog):
         self._image_mime = tok.image_mime
 
         image_box = QVBoxLayout()
-        preset_row = QHBoxLayout()
         self._preset_buttons: dict[str, QToolButton] = {}
-        for preset_id, label in list_token_presets():
-            btn = QToolButton()
-            btn.setToolTip(label)
-            btn.setCheckable(True)
-            btn.setAutoExclusive(True)
-            path = preset_pixmap_path(preset_id)
-            if path:
-                pix = QPixmap(path).scaled(
-                    48, 48,
-                    Qt.AspectRatioMode.KeepAspectRatio,
-                    Qt.TransformationMode.SmoothTransformation,
-                )
-                btn.setIcon(QIcon(pix))
-                btn.setIconSize(pix.size())
-            else:
-                btn.setText(label[:3])
-            btn.clicked.connect(lambda _checked=False, pid=preset_id: self._apply_preset(pid))
-            preset_row.addWidget(btn)
-            self._preset_buttons[preset_id] = btn
-        preset_row.addStretch()
-        image_box.addLayout(preset_row)
+        self._preset_group = QButtonGroup(self)
+        self._preset_group.setExclusive(True)
+        for _faction_id, faction_label, weapons in list_token_presets_by_faction():
+            row = QHBoxLayout()
+            faction_lbl = QLabel(f"{faction_label}:")
+            faction_lbl.setMinimumWidth(64)
+            row.addWidget(faction_lbl)
+            for preset_id, weapon_label in weapons:
+                btn = QToolButton()
+                btn.setToolTip(f"{weapon_label} ({faction_label})")
+                btn.setCheckable(True)
+                path = preset_pixmap_path(preset_id)
+                if path:
+                    pix = QPixmap(path).scaled(
+                        40, 40,
+                        Qt.AspectRatioMode.KeepAspectRatio,
+                        Qt.TransformationMode.SmoothTransformation,
+                    )
+                    btn.setIcon(QIcon(pix))
+                    btn.setIconSize(pix.size())
+                else:
+                    btn.setText(weapon_label[:3])
+                btn.clicked.connect(lambda _checked=False, pid=preset_id: self._apply_preset(pid))
+                row.addWidget(btn)
+                self._preset_buttons[preset_id] = btn
+                self._preset_group.addButton(btn)
+            row.addStretch()
+            image_box.addLayout(row)
 
         preview_row = QHBoxLayout()
         self.image_preview = QLabel()

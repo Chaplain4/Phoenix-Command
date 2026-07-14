@@ -6,18 +6,55 @@ import base64
 from importlib import resources
 from pathlib import Path
 
-TOKEN_PRESETS: list[tuple[str, str]] = [
+# (preset_id, label) — id matches assets/tokens/{id}.png
+# NATO uses unprefixed weapon ids for backward compatibility.
+_WEAPON_LABELS: list[tuple[str, str]] = [
     ("assault", "Assault"),
     ("rifle", "Rifle"),
     ("smg", "SMG"),
     ("lmg", "LMG"),
+    ("shotgun", "Shotgun"),
     ("rpg", "RPG"),
 ]
+
+TOKEN_FACTIONS: list[tuple[str, str, str]] = [
+    # (faction_id, display_name, filename_prefix) — empty prefix = NATO defaults
+    ("nato", "NATO", ""),
+    ("militant", "Militant", "militant_"),
+    ("swat", "SWAT", "swat_"),
+    ("criminal", "Criminal", "criminal_"),
+    ("rf", "RF", "rf_"),
+]
+
+
+def _build_presets() -> list[tuple[str, str]]:
+    out: list[tuple[str, str]] = []
+    for _fid, faction_label, prefix in TOKEN_FACTIONS:
+        for weapon_id, weapon_label in _WEAPON_LABELS:
+            pid = f"{prefix}{weapon_id}"
+            label = f"{weapon_label} ({faction_label})"
+            out.append((pid, label))
+    return out
+
+
+TOKEN_PRESETS: list[tuple[str, str]] = _build_presets()
 
 
 def list_token_presets() -> list[tuple[str, str]]:
     """Return (preset_id, label) pairs."""
     return list(TOKEN_PRESETS)
+
+
+def list_token_presets_by_faction() -> list[tuple[str, str, list[tuple[str, str]]]]:
+    """Return (faction_id, faction_label, [(preset_id, weapon_label), ...])."""
+    rows: list[tuple[str, str, list[tuple[str, str]]]] = []
+    for faction_id, faction_label, prefix in TOKEN_FACTIONS:
+        weapons = [
+            (f"{prefix}{wid}", wlabel)
+            for wid, wlabel in _WEAPON_LABELS
+        ]
+        rows.append((faction_id, faction_label, weapons))
+    return rows
 
 
 def _fallback_path(preset_id: str) -> Path:

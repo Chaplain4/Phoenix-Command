@@ -476,6 +476,10 @@ class MainWindow(QMainWindow):
     def _characters_by_name(self) -> dict:
         return {c.name: c for c in self.characters}
 
+    def _is_combat_authority(self) -> bool:
+        """Solo (None) and host may resolve combat; guests only send intents."""
+        return self._session_role != "guest"
+
     def _combat_engine(self) -> ImpulseCombatEngine:
         tokens = self.hex_map_view.get_token_state()
         ic = self.hex_map_view.get_impulse_combat_state()
@@ -557,13 +561,20 @@ class MainWindow(QMainWindow):
         return None
 
     def _on_advance_impulse(self) -> None:
-        if self._session_role != "host":
+        if not self._is_combat_authority():
             return
         engine = self._combat_engine()
         due = engine.advance_impulse()
-        self.hex_map_view.set_impulse_combat_state(self._game_bridge.state.impulse_combat)
+        ic = self._game_bridge.state.impulse_combat
+        self.hex_map_view.set_impulse_combat_state(ic)
         for proj in due:
             self._resolve_pending_projectile(proj)
+        sel = ic.selected_token_id
+        rt = ic.token_runtime.get(sel or "")
+        ac_txt = f" AC {rt.ac_remaining:.1f}" if rt else ""
+        self.statusBar().showMessage(
+            f"Impulse {ic.impulse + 1}/4 (Phase {ic.phase}){ac_txt}"
+        )
         self._notify_game_state_changed(immediate=True)
 
     def _on_declare_shot(self, shooter_token_id: str) -> None:
@@ -1021,18 +1032,24 @@ class MainWindow(QMainWindow):
         self._notify_game_state_changed(domain="impulse_combat", immediate=True)
 
     def _on_map_mode_changed(self, mode: str) -> None:
-        if self._session_role != "host":
+        if not self._is_combat_authority():
             return
+        # Sync bridge ← view first so refill mutates the same ImpulseCombatState
+        engine = self._combat_engine()
         ic = self._game_bridge.state.impulse_combat
         ic.map_mode = mode
         if mode == "combat":
-            engine = self._combat_engine()
             engine.ensure_runtime_for_tokens()
             engine.refill_impulse_ac()
             if not ic.sides:
                 ic.sides = {"alpha": "Alpha", "bravo": "Bravo"}
         self.hex_map_view.set_impulse_combat_state(ic)
         self.hex_map_view.set_editable(self._session_role != "guest")
+        if mode == "combat":
+            sel = ic.selected_token_id
+            rt = ic.token_runtime.get(sel or "")
+            ac_txt = f" — AC {rt.ac_remaining:.1f}" if rt else ""
+            self.statusBar().showMessage(f"Combat mode (Impulse {ic.impulse + 1}/4){ac_txt}")
         self._notify_game_state_changed(domain="impulse_combat")
 
     def _map_shot_context_for_tokens(self):

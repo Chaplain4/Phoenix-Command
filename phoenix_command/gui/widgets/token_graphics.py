@@ -12,11 +12,11 @@ from PyQt6.QtWidgets import (
     QGraphicsPixmapItem,
     QGraphicsPolygonItem,
     QGraphicsTextItem,
-    QMenu,
 )
 
 from phoenix_command.gui.utils.hex_geometry import facing_to_degrees
 from phoenix_command.session.domains.token_state import TokenPlacement
+
 
 class TokenGraphicsItem(QGraphicsPixmapItem):
     """Draggable token on the map."""
@@ -33,6 +33,7 @@ class TokenGraphicsItem(QGraphicsPixmapItem):
         on_stair,
         status_text: str = "",
         selected: bool = False,
+        on_context_menu=None,
     ):
         super().__init__()
         self.token = token
@@ -43,6 +44,7 @@ class TokenGraphicsItem(QGraphicsPixmapItem):
         self._on_edit = on_edit
         self._on_delete = on_delete
         self._on_stair = on_stair
+        self._on_context_menu = on_context_menu
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, editable)
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, True)
         self.setAcceptHoverEvents(editable)
@@ -50,14 +52,17 @@ class TokenGraphicsItem(QGraphicsPixmapItem):
         base = token.label or token.character_name or ""
         self._label = QGraphicsTextItem(base, self)
         self._label.setDefaultTextColor(QColor("white"))
+        self._label.setAcceptedMouseButtons(Qt.MouseButton.NoButton)
         font = QFont()
         font.setPointSize(8)
         self._label.setFont(font)
         self._label.setPos(-20, self._grid_size * token.size)
+        self._status = None
         if status_text:
             self.setToolTip(status_text)
             self._status = QGraphicsTextItem(status_text, self)
             self._status.setDefaultTextColor(QColor(200, 255, 200))
+            self._status.setAcceptedMouseButtons(Qt.MouseButton.NoButton)
             sf = QFont()
             sf.setPointSize(6)
             self._status.setFont(sf)
@@ -76,6 +81,7 @@ class TokenGraphicsItem(QGraphicsPixmapItem):
         ring.setBrush(QBrush(QColor(0, 0, 0, 0)))
         ring.setZValue(10)
         ring.setVisible(False)
+        ring.setAcceptedMouseButtons(Qt.MouseButton.NoButton)
         return ring
 
     def _make_facing_arrow(self) -> QGraphicsPolygonItem:
@@ -90,6 +96,7 @@ class TokenGraphicsItem(QGraphicsPixmapItem):
         arrow.setPen(QPen(QColor(80, 60, 0), 1))
         arrow.setPos(self.pixmap().width() / 2, self.pixmap().height() / 2)
         arrow.setZValue(20)
+        arrow.setAcceptedMouseButtons(Qt.MouseButton.NoButton)
         return arrow
 
     def _load_pixmap(self):
@@ -105,6 +112,8 @@ class TokenGraphicsItem(QGraphicsPixmapItem):
             pixmap = QPixmap(size, size)
             pixmap.fill(QColor("#4a90e2"))
             self.setPixmap(pixmap)
+        # Hit-test opaque pixels only so transparent corners don't steal clicks
+        self.setShapeMode(QGraphicsPixmapItem.ShapeMode.MaskShape)
 
     def _apply_facing(self):
         self.setTransformOriginPoint(self.boundingRect().center())
@@ -127,7 +136,7 @@ class TokenGraphicsItem(QGraphicsPixmapItem):
 
     def mouseReleaseEvent(self, event):
         super().mouseReleaseEvent(event)
-        if self._on_moved:
+        if event.button() == Qt.MouseButton.LeftButton and self._on_moved:
             self._on_moved(self)
 
     def mouseDoubleClickEvent(self, event):
@@ -138,19 +147,10 @@ class TokenGraphicsItem(QGraphicsPixmapItem):
         super().mouseDoubleClickEvent(event)
 
     def contextMenuEvent(self, event):
+        """Defer menu to HexMapView — nested QMenu.exec here crashes on Windows."""
         if not self._editable:
+            event.ignore()
             return
-        menu = QMenu()
-        edit_act = menu.addAction("Edit...")
-        delete_act = menu.addAction("Delete")
-        stair_act = menu.addAction("Move via stair...")
-        stair_act.setEnabled(bool(self._on_stair and self._on_stair(self.token, choose_only=True)))
-        action = menu.exec(event.screenPos())
-        if action == edit_act and self._on_edit:
-            self._on_edit(self)
-        elif action == delete_act and self._on_delete:
-            self._on_delete(self)
-        elif action == stair_act and self._on_stair:
-            self._on_stair(self.token, choose_only=False)
-
-
+        event.accept()
+        if self._on_context_menu:
+            self._on_context_menu(self)

@@ -4,10 +4,11 @@ from __future__ import annotations
 
 import base64
 
-from PyQt6.QtCore import QBuffer, QByteArray, QIODevice, QPointF, Qt, pyqtSignal
+from PyQt6.QtCore import QBuffer, QByteArray, QIODevice, QPointF, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import (
     QBrush,
     QColor,
+    QCursor,
     QImage,
     QPainter,
     QPen,
@@ -23,6 +24,7 @@ from PyQt6.QtWidgets import (
     QGraphicsTextItem,
     QGraphicsView,
     QLabel,
+    QMenu,
     QPushButton,
     QVBoxLayout,
     QWidget,
@@ -152,6 +154,7 @@ class HexMapView(QWidget):
         self._scene.on_token_edit_callback = self._edit_token_item
         self._scene.on_token_delete_callback = self._delete_token_item
         self._scene.on_token_stair_callback = self._token_move_via_stair
+        self._scene.on_token_context_menu_callback = self._show_token_context_menu
         self._view = QGraphicsView(self._scene)
         self._view.setRenderHint(QPainter.RenderHint.Antialiasing)
         self._view.setDragMode(QGraphicsView.DragMode.NoDrag)
@@ -883,6 +886,40 @@ class HexMapView(QWidget):
 
     def _emit_map_changed(self) -> None:
         self.map_changed.emit()
+
+    def _show_token_context_menu(self, item: TokenGraphicsItem) -> None:
+        """Show token menu from the widget (not inside QGraphicsItem) — avoids Windows crash."""
+        if not self._editable or self._impulse_combat.map_mode == "combat":
+            return
+        tid = item.token.token_id
+        menu = QMenu(self)
+        edit_act = menu.addAction("Edit...")
+        delete_act = menu.addAction("Delete")
+        stair_act = menu.addAction("Move via stair...")
+        has_stair = bool(self._token_move_via_stair(item.token, choose_only=True))
+        stair_act.setEnabled(has_stair)
+        action = menu.exec(QCursor.pos())
+        if action == edit_act:
+            QTimer.singleShot(0, lambda: self._edit_token_by_id(tid))
+        elif action == delete_act:
+            QTimer.singleShot(0, lambda: self._delete_token_by_id(tid))
+        elif action == stair_act:
+            QTimer.singleShot(0, lambda: self._stair_token_by_id(tid))
+
+    def _edit_token_by_id(self, token_id: str) -> None:
+        item = self._scene._token_items.get(token_id)
+        if item:
+            self._edit_token_item(item)
+
+    def _delete_token_by_id(self, token_id: str) -> None:
+        item = self._scene._token_items.get(token_id)
+        if item:
+            self._delete_token_item(item)
+
+    def _stair_token_by_id(self, token_id: str) -> None:
+        placement = self._scene.token_state.placements.get(token_id)
+        if placement:
+            self._token_move_via_stair(placement, choose_only=False)
 
     def _edit_token_item(self, item: TokenGraphicsItem) -> None:
         dialog = TokenDialog(

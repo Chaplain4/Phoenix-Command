@@ -51,6 +51,7 @@ class HexMapScene(QGraphicsScene):
         self.on_token_edit_callback = None
         self.on_token_delete_callback = None
         self.on_token_stair_callback = None
+        self.on_token_context_menu_callback = None
 
     def set_selected_token_id(self, token_id: str | None) -> None:
         self._selected_token_id = token_id
@@ -297,6 +298,7 @@ class HexMapScene(QGraphicsScene):
                 self.on_token_stair_callback,
                 status_text=self._status_by_token.get(tid, ""),
                 selected=(tid == self._selected_token_id),
+                on_context_menu=self.on_token_context_menu_callback,
             )
             item.setPos(cx - item.pixmap().width() / 2, cy - item.pixmap().height() / 2)
             item.setZValue(1000)
