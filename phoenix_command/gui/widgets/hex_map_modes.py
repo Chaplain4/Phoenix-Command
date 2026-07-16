@@ -23,6 +23,7 @@ class EditorCategory(str, Enum):
 class EditMode(str, Enum):
     SELECT = "select"
     TERRAIN = "terrain"
+    TERRAIN_ERASER = "terrain_eraser"
     OBSTACLE = "obstacle"
     WALL = "wall"
     WINDOW = "window"
@@ -38,13 +39,12 @@ class EditMode(str, Enum):
 
 CATEGORY_MODES: dict[EditorCategory, list[EditMode]] = {
     EditorCategory.MAP: [EditMode.ANNOTATE_BRUSH, EditMode.ANNOTATE_ERASER],
-    EditorCategory.TERRAIN: [EditMode.TERRAIN],
+    EditorCategory.TERRAIN: [EditMode.TERRAIN, EditMode.TERRAIN_ERASER, EditMode.CONDITION],
     EditorCategory.OBJECTS: [
         EditMode.OBSTACLE,
         EditMode.WALL,
         EditMode.WINDOW,
         EditMode.DOOR,
-        EditMode.CONDITION,
         EditMode.STAIR,
         EditMode.RULER,
         EditMode.ERASER,

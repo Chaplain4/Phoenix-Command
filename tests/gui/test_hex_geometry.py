@@ -98,11 +98,11 @@ def test_axial_distance_neighbors():
 
 
 def test_facing_to_degrees():
-    assert facing_to_degrees(0, "flat") == 0.0
-    assert facing_to_degrees(6, "flat") == 180.0
-    assert facing_to_degrees(1, "flat") == 30.0
-    assert facing_to_degrees(3, "pointy") == 90.0
-    assert facing_to_degrees(11, "pointy") == 330.0
+    assert facing_to_degrees(0, "flat") == 90.0
+    assert facing_to_degrees(6, "flat") == 270.0
+    assert facing_to_degrees(1, "flat") == 120.0
+    assert facing_to_degrees(3, "pointy") == 180.0
+    assert facing_to_degrees(11, "pointy") == 60.0
 
 
 def test_facing_labels_count():

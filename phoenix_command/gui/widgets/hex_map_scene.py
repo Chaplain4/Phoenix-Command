@@ -24,6 +24,7 @@ from phoenix_command.gui.utils.hex_geometry import (
     hex_corners,
     is_in_bounds,
     iter_rect_cells,
+    pixel_to_axial,
     point_on_edge,
     rect_bounds_pixels,
 )
@@ -247,16 +248,24 @@ class HexMapScene(QGraphicsScene):
                 line.setZValue(layer.elevation + 4)
                 self.addItem(line)
                 for opening in wall.openings:
-                    px, py = point_on_edge(q, r, edge, opening.position, grid)
                     color = QColor(100, 200, 255) if opening.kind == "window" else QColor(200, 150, 50)
                     if opening.kind == "door":
                         if opening.state == "open":
                             color = QColor(100, 255, 100)
                         elif opening.state == "locked":
                             color = QColor(255, 80, 80)
-                    marker = QGraphicsEllipseItem(px - 4, py - 4, 8, 8)
-                    marker.setBrush(QBrush(color))
-                    marker.setPen(QPen(QColor(0, 0, 0), 1))
+                    if opening.kind == "window":
+                        start_pos = max(0.1, opening.position - 0.18)
+                        end_pos = min(0.9, opening.position + 0.18)
+                        wx0, wy0 = point_on_edge(q, r, edge, start_pos, grid)
+                        wx1, wy1 = point_on_edge(q, r, edge, end_pos, grid)
+                        marker = QGraphicsLineItem(wx0, wy0, wx1, wy1)
+                        marker.setPen(QPen(color, 4))
+                    else:
+                        px, py = point_on_edge(q, r, edge, opening.position, grid)
+                        marker = QGraphicsEllipseItem(px - 4, py - 4, 8, 8)
+                        marker.setBrush(QBrush(color))
+                        marker.setPen(QPen(QColor(0, 0, 0), 1))
                     marker.setZValue(layer.elevation + 5)
                     self.addItem(marker)
 

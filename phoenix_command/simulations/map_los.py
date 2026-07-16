@@ -51,14 +51,25 @@ def _wall_on_edge(layer: MapLayer | None, q: int, r: int, edge: int) -> WallSegm
     return layer.walls.get(f"{q},{r}:{edge}")
 
 
-def _opening_allows_los(wall: WallSegment) -> bool:
-    """True if wall has an open window/door that permits LOS through."""
+def _stance_height_range(stance: str) -> tuple[float, float]:
+    if stance == "prone":
+        return (0.1, 0.5)
+    if stance == "kneeling":
+        return (0.5, 1.4)
+    return (0.8, 1.8)
+
+
+def _opening_allows_los(wall: WallSegment, target_rt: TokenCombatRuntime) -> bool:
+    """True if wall has an opening that exposes some of the target body."""
+    body_low, body_high = _stance_height_range(target_rt.stance)
     for opening in wall.openings:
-        if opening.state == "open":
+        if opening.kind == "door" and opening.state == "open":
             return True
-        # Closed/locked windows still allow partial LOS for cover shots
         if opening.kind == "window":
-            return True
+            if opening.state == "open":
+                return True
+            if opening.sill_height <= body_high and opening.head_height >= body_low:
+                return True
     return False
 
 
@@ -145,7 +156,7 @@ def check_los(
                     wall = _wall_on_edge(layer, q, r, edge)
                     if wall is None:
                         continue
-                    if _opening_allows_los(wall):
+                    if _opening_allows_los(wall, target_rt):
                         through_opening = True
                         notes.append(f"LOS through opening at ({q},{r}:{edge})")
                     else:
@@ -156,19 +167,19 @@ def check_los(
     if len(line) >= 2:
         pq, pr = line[-2]
         tq, tr = line[-1]
-        if _hex_wall_blocks(target_layer, tq, tr):
-            notes.append(f"Target behind hex wall ({tq},{tr})")
-            return LosResult(blocked=True, notes=notes)
         edge = _edge_between(tq, tr, pq, pr)
         if edge is not None and target_layer:
             wall = _wall_on_edge(target_layer, tq, tr, edge)
             if wall is not None:
-                if _opening_allows_los(wall):
+                if _opening_allows_los(wall, target_rt):
                     through_opening = True
                     notes.append(f"Target behind opening ({tq},{tr}:{edge})")
                 else:
                     notes.append(f"Target behind solid wall ({tq},{tr}:{edge})")
                     return LosResult(blocked=True, notes=notes)
+        if _hex_wall_blocks(target_layer, tq, tr) and not through_opening:
+            notes.append(f"Target behind hex wall ({tq},{tr})")
+            return LosResult(blocked=True, notes=notes)
 
     # Obstacle on target hex itself (partial cover)
     if _hex_obstacle_blocks(target_layer, target.q, target.r):

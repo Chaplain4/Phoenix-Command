@@ -30,13 +30,22 @@ from phoenix_command.tables.catalogs.movement_catalog import TERRAIN_PRESETS
 
 def test_map_state_round_trip():
     layer = MapLayer(name="Floor 1", kind="floor", elevation=1)
+    layer.default_visibility = "SMOKE_HEAVY"
     layer.terrain["0,0"] = TerrainTile("open", 1, "#88cc88")
     layer.obstacles["1,0"] = Obstacle(height=2.0, material="steel", thickness=1.0)
     layer.walls["0,1:2"] = WallSegment(
         material="cinder_block",
         thickness=8.0,
         height=2.5,
-        openings=[Opening(kind="door", state="locked", position=0.5)],
+        openings=[
+            Opening(
+                kind="door",
+                state="locked",
+                position=0.5,
+                sill_height=0.0,
+                head_height=2.1,
+            )
+        ],
     )
     layer.background = BackgroundImage(
         data_b64=base64.b64encode(b"fakepng").decode("ascii"),
@@ -56,6 +65,7 @@ def test_map_state_round_trip():
     assert restored.layers[0].terrain["0,0"].movement_cost == 1
     assert restored.layers[0].obstacles["1,0"].material == "steel"
     assert restored.layers[0].walls["0,1:2"].openings[0].state == "locked"
+    assert restored.layers[0].default_visibility == "SMOKE_HEAVY"
     assert restored.custom_barriers["custom_x"].protection_factor == 42.0
 
 
@@ -199,12 +209,26 @@ def test_background_image_legacy_scale():
 
 
 def test_layer_stair_round_trip():
-    stair = LayerStair(target_layer_id="layer-b", label="Upstairs")
+    stair = LayerStair(target_layer_id="layer-b", label="Upstairs", source_layer_id="layer-a")
     layer = MapLayer()
     layer.stairs["0,0"] = stair
     restored = MapLayer.from_dict(layer.to_dict())
     assert restored.stairs["0,0"].target_layer_id == "layer-b"
     assert restored.stairs["0,0"].label == "Upstairs"
+    assert restored.stairs["0,0"].source_layer_id == "layer-a"
+
+
+def test_opening_height_round_trip():
+    opening = Opening(
+        kind="window",
+        state="closed",
+        position=0.5,
+        sill_height=1.0,
+        head_height=1.8,
+    )
+    restored = Opening.from_dict(opening.to_dict())
+    assert restored.sill_height == pytest.approx(1.0)
+    assert restored.head_height == pytest.approx(1.8)
 
 
 def test_map_state_hide_inactive_layers():

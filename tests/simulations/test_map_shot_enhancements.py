@@ -96,6 +96,29 @@ def test_los_through_open_window() -> None:
         assert TargetExposure.FIRING_OVER_COVER in result.visible_exposures
 
 
+def test_los_through_window_on_hex_wall_edge() -> None:
+    map_state = MapState()
+    layer = map_state.ensure_default_layer()
+    layer.walls[hex_wall_key(2, 0)] = WallSegment(height=2.5)
+    layer.walls["2,0:3"] = WallSegment(
+        openings=[
+            Opening(
+                kind="window",
+                state="closed",
+                position=0.5,
+                sill_height=0.9,
+                head_height=2.1,
+            )
+        ]
+    )
+    shooter = TokenPlacement(token_id="s", q=0, r=0, layer_id=layer.id)
+    target = TokenPlacement(token_id="t", q=2, r=0, layer_id=layer.id)
+    result = check_los(map_state, shooter, target, TokenCombatRuntime(stance="standing"))
+    assert result.clear
+    assert result.through_opening
+    assert not result.blocked
+
+
 def test_cross_layer_visible_cover_exposures() -> None:
     map_state = MapState()
     ground = map_state.ensure_default_layer()

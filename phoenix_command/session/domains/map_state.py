@@ -138,11 +138,13 @@ class LayerStair:
 
     target_layer_id: str
     label: str = ""
+    source_layer_id: str = ""
 
     def to_dict(self) -> dict:
         return {
             "target_layer_id": self.target_layer_id,
             "label": self.label,
+            "source_layer_id": self.source_layer_id,
         }
 
     @classmethod
@@ -150,6 +152,7 @@ class LayerStair:
         return cls(
             target_layer_id=data.get("target_layer_id", ""),
             label=data.get("label", ""),
+            source_layer_id=data.get("source_layer_id", ""),
         )
 
 
@@ -261,12 +264,16 @@ class Opening:
     kind: str = "window"  # "window" or "door"
     state: str = "closed"  # "locked", "closed", "open" (doors)
     position: float = 0.5  # 0..1 along edge
+    sill_height: float = 0.9
+    head_height: float = 2.1
 
     def to_dict(self) -> dict:
         return {
             "kind": self.kind,
             "state": self.state,
             "position": self.position,
+            "sill_height": self.sill_height,
+            "head_height": self.head_height,
         }
 
     @classmethod
@@ -275,6 +282,8 @@ class Opening:
             kind=data.get("kind", "window"),
             state=data.get("state", "closed"),
             position=float(data.get("position", 0.5)),
+            sill_height=float(data.get("sill_height", 0.9)),
+            head_height=float(data.get("head_height", 2.1)),
         )
 
 
@@ -371,6 +380,7 @@ class MapLayer:
     walls: dict[str, WallSegment] = field(default_factory=dict)
     stairs: dict[str, LayerStair] = field(default_factory=dict)
     conditions: dict[str, HexCondition] = field(default_factory=dict)
+    default_visibility: str = "GOOD_VISIBILITY"
     visible: bool = True
     opacity: float = 1.0
 
@@ -388,6 +398,7 @@ class MapLayer:
             "walls": {k: v.to_dict() for k, v in self.walls.items()},
             "stairs": {k: v.to_dict() for k, v in self.stairs.items()},
             "conditions": {k: v.to_dict() for k, v in self.conditions.items()},
+            "default_visibility": self.default_visibility,
             "visible": self.visible,
             "opacity": self.opacity,
         }
@@ -418,6 +429,7 @@ class MapLayer:
                 k: HexCondition.from_dict(v)
                 for k, v in data.get("conditions", {}).items()
             },
+            default_visibility=data.get("default_visibility", "GOOD_VISIBILITY"),
             visible=bool(data.get("visible", True)),
             opacity=float(data.get("opacity", 1.0)),
         )

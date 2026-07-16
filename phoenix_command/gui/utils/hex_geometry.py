@@ -187,7 +187,10 @@ def axial_distance(q1: int, r1: int, q2: int, r2: int) -> int:
 def facing_to_degrees(facing: int, orientation: str) -> float:
     """Convert hex facing (0-11) to rotation degrees; 30° per step."""
     del orientation  # same screen angles; hex grid orientation affects labels only
-    return float((facing % 12) * 30)
+    # Token artwork / facing arrow is drawn pointing up by default, while
+    # facing index 0 is treated as east on the map. Offset by +90° so
+    # compass labels line up with the rendered direction on screen.
+    return float((((facing % 12) * 30) + 90) % 360)
 
 
 def facing_labels(orientation: str) -> list[tuple[str, int]]:

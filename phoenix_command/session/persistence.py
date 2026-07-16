@@ -19,8 +19,19 @@ from phoenix_command.session.serialization import (
 
 MAP_FILE_KIND = "phoenix_command_map"
 CHARACTER_FILE_KIND = "phoenix_command_character"
-MAP_SCHEMA_VERSION = 1
+MAP_SCHEMA_VERSION = 2
 CHARACTER_SCHEMA_VERSION = 1
+
+
+def linked_character_names(token_state: TokenState | None) -> set[str]:
+    """Character names referenced by token placements on the map."""
+    if token_state is None:
+        return set()
+    return {
+        name
+        for placement in token_state.placements.values()
+        if (name := placement.character_name)
+    }
 
 
 def save_game_state(path: str | Path, state: GameState) -> None:
@@ -35,18 +46,30 @@ def save_map_file(
     path: str | Path,
     map_state: MapState,
     token_state: TokenState | None = None,
+    characters: dict[str, Character] | None = None,
 ) -> None:
-    """Save hex map with layer backgrounds and optional token placements."""
+    """Save hex map with layer backgrounds, token placements, and linked characters."""
+    tokens = token_state or TokenState()
+    linked = linked_character_names(tokens)
+    char_payload: dict[str, dict] = {}
+    if characters and linked:
+        for name in sorted(linked):
+            char = characters.get(name)
+            if char is not None:
+                char_payload[name] = character_to_dict(char)
     payload = {
         "file_kind": MAP_FILE_KIND,
         "schema_version": MAP_SCHEMA_VERSION,
         "map": map_state.to_dict(),
-        "tokens": (token_state or TokenState()).to_dict(),
+        "tokens": tokens.to_dict(),
+        "characters": char_payload,
     }
     Path(path).write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
 
-def load_map_file(path: str | Path) -> tuple[MapState, TokenState]:
+def load_map_file(
+    path: str | Path,
+) -> tuple[MapState, TokenState, dict[str, Character]]:
     """Load hex map file; backgrounds are embedded as base64 in layer data."""
     data = json.loads(Path(path).read_text(encoding="utf-8"))
     if data.get("file_kind") not in (MAP_FILE_KIND, None):
@@ -57,7 +80,11 @@ def load_map_file(path: str | Path) -> tuple[MapState, TokenState]:
         )
     map_state = MapState.from_dict(data.get("map", {}))
     tokens = TokenState.from_dict(data.get("tokens", {}))
-    return map_state, tokens
+    characters = {
+        name: character_from_dict(char_data)
+        for name, char_data in data.get("characters", {}).items()
+    }
+    return map_state, tokens, characters
 
 
 def save_character_file(path: str | Path, character: Character) -> None:

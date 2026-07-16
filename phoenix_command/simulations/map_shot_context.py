@@ -80,9 +80,8 @@ def _collect_visibility(
     for layer in layers:
         for q, r in hexes:
             cond = layer.conditions.get(f"{q},{r}")
-            if not cond:
-                continue
-            for vis_name in cond.visibility:
+            vis_names = cond.visibility if cond and cond.visibility else [layer.default_visibility]
+            for vis_name in vis_names:
                 if vis_name in seen:
                     continue
                 seen.add(vis_name)

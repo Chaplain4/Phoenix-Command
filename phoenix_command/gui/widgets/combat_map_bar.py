@@ -3,14 +3,7 @@
 from __future__ import annotations
 
 from PyQt6.QtCore import pyqtSignal
-from PyQt6.QtWidgets import (
-    QComboBox,
-    QHBoxLayout,
-    QLabel,
-    QPushButton,
-    QSpinBox,
-    QWidget,
-)
+from PyQt6.QtWidgets import QComboBox, QHBoxLayout, QLabel, QPushButton, QSpinBox, QWidget
 
 from phoenix_command.session.domains.impulse_combat_state import ImpulseCombatState
 
@@ -18,7 +11,6 @@ from phoenix_command.session.domains.impulse_combat_state import ImpulseCombatSt
 class CombatMapBar(QWidget):
     """Phase/impulse display and token action controls."""
 
-    map_mode_changed = pyqtSignal(str)
     advance_impulse_requested = pyqtSignal()
     combat_action_requested = pyqtSignal(str, str, dict)  # token_id, action, args
     token_selected = pyqtSignal(str)
@@ -33,19 +25,6 @@ class CombatMapBar(QWidget):
 
         layout = QHBoxLayout(self)
         layout.setContentsMargins(4, 2, 4, 2)
-
-        self._edit_btn = QPushButton("Edit")
-        self._edit_btn.setCheckable(True)
-        self._edit_btn.setChecked(True)
-        self._edit_btn.clicked.connect(lambda: self._set_mode("edit"))
-        layout.addWidget(self._edit_btn)
-
-        self._combat_btn = QPushButton("Combat")
-        self._combat_btn.setCheckable(True)
-        self._combat_btn.clicked.connect(lambda: self._set_mode("combat"))
-        layout.addWidget(self._combat_btn)
-
-        layout.addWidget(QLabel("|"))
 
         self._phase_label = QLabel("Phase 1")
         layout.addWidget(self._phase_label)
@@ -97,15 +76,11 @@ class CombatMapBar(QWidget):
     def set_host(self, is_host: bool) -> None:
         self._is_host = is_host
         self._next_impulse_btn.setEnabled(is_host)
-        self._edit_btn.setEnabled(is_host)
-        self._combat_btn.setEnabled(is_host)
 
     def set_impulse_combat(self, state: ImpulseCombatState) -> None:
         self._impulse_combat = state
         in_combat = state.map_mode == "combat"
-        self.setVisible(in_combat or self._is_host)
-        self._edit_btn.setChecked(state.map_mode == "edit")
-        self._combat_btn.setChecked(in_combat)
+        self.setVisible(in_combat)
         self._phase_label.setText(f"Phase {state.phase}")
         self._impulse_label.setText(f"Impulse {state.impulse + 1}/4")
         self._refresh_status()
@@ -160,11 +135,6 @@ class CombatMapBar(QWidget):
         self._refresh_status()
         if tid:
             self.token_selected.emit(tid)
-
-    def _set_mode(self, mode: str) -> None:
-        if not self._is_host:
-            return
-        self.map_mode_changed.emit(mode)
 
     def _emit_action(self) -> None:
         if not self._selected_token_id:

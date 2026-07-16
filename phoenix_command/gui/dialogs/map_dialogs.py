@@ -866,19 +866,49 @@ class CustomBarrierDialog(QDialog):
 class ConditionPaletteDialog(QDialog):
     """Select visibility condition for hex condition brush."""
 
-    def __init__(self, parent=None):
+    def __init__(self, layer: MapLayer, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Hex Conditions (Table 4C)")
+        self._layer = layer
         layout = QFormLayout(self)
-        self.visibility_combo = QComboBox()
-        self.visibility_combo.addItem("(clear)", "")
+
+        self.default_visibility_combo = QComboBox()
         for vis in VisibilityModifier4C:
-            self.visibility_combo.addItem(vis.name, vis.name)
-        layout.addRow("Visibility modifier:", self.visibility_combo)
+            self.default_visibility_combo.addItem(vis.name, vis.name)
+        idx = self.default_visibility_combo.findData(layer.default_visibility or "GOOD_VISIBILITY")
+        if idx >= 0:
+            self.default_visibility_combo.setCurrentIndex(idx)
+        self.default_visibility_combo.currentIndexChanged.connect(self._reload_override_options)
+        layout.addRow("Default layer visibility:", self.default_visibility_combo)
+
+        self.visibility_combo = QComboBox()
+        layout.addRow("Hex override:", self.visibility_combo)
+        self._reload_override_options()
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
         layout.addRow(buttons)
+
+    def _reload_override_options(self) -> None:
+        default_visibility = self.default_visibility_combo.currentData()
+        current = self.visibility_combo.currentData()
+        self.visibility_combo.blockSignals(True)
+        self.visibility_combo.clear()
+        self.visibility_combo.addItem("(use layer default)", "")
+        for vis in VisibilityModifier4C:
+            if vis.name == default_visibility:
+                continue
+            self.visibility_combo.addItem(vis.name, vis.name)
+        idx = self.visibility_combo.findData(current)
+        if idx >= 0:
+            self.visibility_combo.setCurrentIndex(idx)
+        self.visibility_combo.blockSignals(False)
+
+    def apply_to_layer(self) -> None:
+        self._layer.default_visibility = self.default_visibility_name()
+
+    def default_visibility_name(self) -> str:
+        return self.default_visibility_combo.currentData() or "GOOD_VISIBILITY"
 
     def visibility_name(self) -> str:
         return self.visibility_combo.currentData() or ""

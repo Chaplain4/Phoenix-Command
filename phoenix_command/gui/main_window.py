@@ -476,6 +476,19 @@ class MainWindow(QMainWindow):
     def _characters_by_name(self) -> dict:
         return {c.name: c for c in self.characters}
 
+    def _merge_map_characters(self, loaded: dict) -> None:
+        """Import characters bundled with a map file into the session roster."""
+        if not loaded:
+            return
+        by_name = self._characters_by_name()
+        for name, char in loaded.items():
+            if name in by_name:
+                idx = next(i for i, c in enumerate(self.characters) if c.name == name)
+                self.characters[idx] = char
+            else:
+                self.characters.append(char)
+        self._refresh_character_list()
+
     def _is_combat_authority(self) -> bool:
         """Solo (None) and host may resolve combat; guests only send intents."""
         return self._session_role != "guest"
@@ -1107,6 +1120,7 @@ class MainWindow(QMainWindow):
                 path,
                 self.hex_map_view.get_map_state(),
                 self.hex_map_view.get_token_state(),
+                characters=self._characters_by_name(),
             )
             self._game_bridge.state.map = self.hex_map_view.get_map_state()
             self._game_bridge.state.tokens = self.hex_map_view.get_token_state()
@@ -1124,14 +1138,19 @@ class MainWindow(QMainWindow):
         if not path:
             return
         try:
-            map_state, token_state = load_map_file(path)
+            map_state, token_state, map_characters = load_map_file(path)
             self.hex_map_view.set_map_state(map_state)
             self.hex_map_view.set_token_state(token_state)
+            self._merge_map_characters(map_characters)
             self.hex_map_view.set_character_names([c.name for c in self.characters])
             self._game_bridge.state.map = map_state
             self._game_bridge.state.tokens = token_state
+            self._game_bridge.capture_from_window(self)
             self._notify_game_state_changed(domain="map")
-            self.statusBar().showMessage(f"Map loaded: {path}")
+            loaded_names = ", ".join(sorted(map_characters)) or "none"
+            self.statusBar().showMessage(
+                f"Map loaded: {path} (characters: {loaded_names})"
+            )
         except Exception as exc:
             QMessageBox.critical(self, "Load Map Failed", str(exc))
 
