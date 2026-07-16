@@ -35,6 +35,8 @@ from phoenix_command.gui.dialogs.map_dialogs import (
     TokenDialog,
 )
 from phoenix_command.gui.utils.hex_geometry import (
+    clamp_token_display_size,
+    degrees_to_facing,
     hex_corners,
     is_in_bounds,
     iter_offset_rect,
@@ -58,6 +60,11 @@ from phoenix_command.gui.widgets.map_mode_panel import MapModePanel
 from phoenix_command.gui.widgets.hex_map_ruler import RulerOverlayController
 from phoenix_command.gui.widgets.hex_map_scene import HexMapScene
 from phoenix_command.gui.widgets.token_graphics import TokenGraphicsItem
+from phoenix_command.gui.widgets.transform_gizmo import (
+    HandleKind,
+    TransformGizmoItem,
+    TransformState,
+)
 from phoenix_command.gui.widgets.wrapping_toolbar import WrappingToolbar
 from phoenix_command.session.domains.impulse_combat_state import ImpulseCombatState
 from phoenix_command.session.domains.map_state import (
@@ -105,6 +112,10 @@ class HexMapView(QWidget):
         self._character_names: list[str] = []
         self._zoom = 1.0
         self._selected_token_id: str | None = None
+        self._bg_selected = False
+        self._gizmo: TransformGizmoItem | None = None
+        self._gizmo_target: str | None = None  # "background" | "token" | None
+        self._gizmo_dragging = False
 
         # Drag-paint state
         self._painting = False
@@ -325,7 +336,11 @@ class HexMapView(QWidget):
                 )
                 return True
             if (self._mode == EditMode.RULER or self._can_edit_map()) and (
-                self._painting or self._rubber_drag or self._ruler.dragging or self._annotations.painting
+                self._painting
+                or self._rubber_drag
+                or self._ruler.dragging
+                or self._annotations.painting
+                or self._gizmo_dragging
             ):
                 pos = self._view.mapToScene(event.position().toPoint())
                 return self._on_lmb_move(pos.x(), pos.y())
@@ -340,6 +355,7 @@ class HexMapView(QWidget):
                 or self._annotations.painting
                 or self._rubber_drag
                 or self._painting
+                or self._gizmo_dragging
             ):
                 return self._on_lmb_release()
 
@@ -370,6 +386,7 @@ class HexMapView(QWidget):
         item.apply_facing_delta(delta)
         self._scene.token_state.placements[item.token.token_id] = item.token
         self.map_changed.emit()
+        self._refresh_gizmo()
         return True
 
     # --- Mouse handlers ---
@@ -382,6 +399,15 @@ class HexMapView(QWidget):
     def _on_lmb_press(self, x: float, y: float) -> bool:
         grid = self._scene.map_state.grid
         q, r = pixel_to_axial(x, y, grid)
+
+        # Background may extend outside the hex grid.
+        if (
+            self._impulse_combat.map_mode != "combat"
+            and self._mode == EditMode.SELECT
+            and self._category == EditorCategory.MAP
+        ):
+            return self._on_map_select_press(x, y)
+
         if not is_in_bounds(q, r, grid):
             return True
 
@@ -415,8 +441,7 @@ class HexMapView(QWidget):
             return True
 
         if self._mode == EditMode.SELECT:
-            self._select_token_at(q, r)
-            return True
+            return self._on_token_select_press(x, y, q, r)
 
         if self._mode == EditMode.TERRAIN:
             col, row = pixel_to_offset(x, y, grid)
@@ -487,6 +512,11 @@ class HexMapView(QWidget):
     def _on_lmb_move(self, x: float, y: float) -> bool:
         grid = self._scene.map_state.grid
 
+        if self._gizmo_dragging and self._gizmo is not None:
+            state = self._gizmo.update_drag(QPointF(x, y))
+            self._apply_gizmo_live(state)
+            return True
+
         if self._annotations.painting:
             self._annotations.continue_brush(x, y)
             return True
@@ -522,6 +552,12 @@ class HexMapView(QWidget):
         return False
 
     def _on_lmb_release(self) -> bool:
+        if self._gizmo_dragging and self._gizmo is not None:
+            state = self._gizmo.end_drag()
+            self._gizmo_dragging = False
+            self._commit_gizmo(state)
+            return True
+
         if self._annotations.painting:
             if self._annotations.finish():
                 self._rebuild_scene()
@@ -781,6 +817,171 @@ class HexMapView(QWidget):
         self._scene.set_selected_token_id(found)
         if found:
             self._impulse_combat.selected_token_id = found
+        self._refresh_gizmo()
+
+    def _on_map_select_press(self, x: float, y: float) -> bool:
+        if self._gizmo is not None and self._gizmo_target == "background":
+            kind = self._gizmo.hit_test(QPointF(x, y))
+            if kind is not None:
+                self._gizmo.begin_drag(kind, QPointF(x, y))
+                self._gizmo_dragging = True
+                return True
+        if self._scene.hit_active_background(x, y):
+            self._bg_selected = True
+            self._selected_token_id = None
+            self._scene.set_selected_token_id(None)
+            self._refresh_gizmo()
+            if self._gizmo is not None:
+                kind = self._gizmo.hit_test(QPointF(x, y)) or HandleKind.BODY
+                self._gizmo.begin_drag(kind, QPointF(x, y))
+                self._gizmo_dragging = True
+            return True
+        self._bg_selected = False
+        self._clear_gizmo()
+        return True
+
+    def _on_token_select_press(self, x: float, y: float, q: int, r: int) -> bool:
+        if self._gizmo is not None and self._gizmo_target == "token":
+            kind = self._gizmo.hit_test(QPointF(x, y))
+            if kind is not None:
+                self._gizmo.begin_drag(kind, QPointF(x, y))
+                self._gizmo_dragging = True
+                return True
+        self._select_token_at(q, r)
+        if self._selected_token_id and self._gizmo is not None:
+            kind = self._gizmo.hit_test(QPointF(x, y)) or HandleKind.BODY
+            self._gizmo.begin_drag(kind, QPointF(x, y))
+            self._gizmo_dragging = True
+        return True
+
+    def _token_transform_state(self, token_id: str) -> TransformState | None:
+        item = self._scene._token_items.get(token_id)
+        if item is None:
+            return None
+        w, h = item.display_size()
+        cx = item.pos().x() + w / 2.0
+        cy = item.pos().y() + h / 2.0
+        return TransformState(cx, cy, w, h, item.rotation())
+
+    def _ensure_gizmo(self) -> TransformGizmoItem:
+        if self._gizmo is None:
+            self._gizmo = TransformGizmoItem()
+            self._scene.addItem(self._gizmo)
+        elif self._gizmo.scene() is None:
+            self._scene.addItem(self._gizmo)
+        return self._gizmo
+
+    def _clear_gizmo(self) -> None:
+        self._gizmo_dragging = False
+        self._gizmo_target = None
+        if self._gizmo is not None:
+            if self._gizmo.scene() is not None:
+                self._scene.removeItem(self._gizmo)
+            self._gizmo = None
+
+    def _refresh_gizmo(self) -> None:
+        """Show/hide transform gizmo based on category, mode, and selection."""
+        if (
+            not self._editable
+            or self._impulse_combat.map_mode == "combat"
+            or self._mode != EditMode.SELECT
+        ):
+            self._clear_gizmo()
+            self._scene.set_use_token_selection_ring(True)
+            return
+
+        if self._category == EditorCategory.MAP and self._bg_selected:
+            state = self._scene.background_transform_state()
+            if state is None:
+                self._bg_selected = False
+                self._clear_gizmo()
+                return
+            gizmo = self._ensure_gizmo()
+            gizmo.set_state(state)
+            self._gizmo_target = "background"
+            self._scene.set_use_token_selection_ring(True)
+            return
+
+        if self._category == EditorCategory.TOKENS and self._selected_token_id:
+            state = self._token_transform_state(self._selected_token_id)
+            if state is None:
+                self._clear_gizmo()
+                self._scene.set_use_token_selection_ring(True)
+                return
+            gizmo = self._ensure_gizmo()
+            gizmo.set_state(state)
+            self._gizmo_target = "token"
+            # Gizmo replaces the yellow ring in Tokens/Select.
+            self._scene.set_use_token_selection_ring(False)
+            return
+
+        self._clear_gizmo()
+        self._scene.set_use_token_selection_ring(True)
+
+    def _apply_gizmo_live(self, state: TransformState) -> None:
+        if self._gizmo_target == "background":
+            self._scene.apply_background_visual(
+                state.cx, state.cy, state.width, state.height, state.rotation
+            )
+            return
+        if self._gizmo_target == "token" and self._selected_token_id:
+            item = self._scene._token_items.get(self._selected_token_id)
+            if item is None:
+                return
+            grid = self._scene.map_state.grid
+            # Clamp display size to one hex during live drag.
+            diameter = grid.size * 2.0
+            max_dim = max(state.width, state.height)
+            if max_dim > diameter and max_dim > 0:
+                factor = diameter / max_dim
+                state = TransformState(
+                    state.cx,
+                    state.cy,
+                    state.width * factor,
+                    state.height * factor,
+                    state.rotation,
+                )
+                self._gizmo.set_state(state)
+            item.apply_pixmap_size(state.width, state.height)
+            item.setPos(state.cx - state.width / 2.0, state.cy - state.height / 2.0)
+            item.set_preview_rotation(state.rotation)
+
+    def _commit_gizmo(self, state: TransformState) -> None:
+        if self._gizmo_target == "background":
+            if self._scene.commit_background_from_transform(
+                state.cx, state.cy, state.width, state.height, state.rotation
+            ):
+                self.map_changed.emit()
+            self._refresh_gizmo()
+            return
+        if self._gizmo_target == "token" and self._selected_token_id:
+            item = self._scene._token_items.get(self._selected_token_id)
+            if item is None:
+                return
+            grid = self._scene.map_state.grid
+            token = item.token
+            # Convert pixel size back to size + scale_x/y, then clamp.
+            base = max(1e-6, grid.size * 2.0 * token.size)
+            scale_x = state.width / base
+            scale_y = state.height / base
+            size, scale_x, scale_y = clamp_token_display_size(
+                token.size, scale_x, scale_y, grid.size
+            )
+            token.size = size
+            token.scale_x = scale_x
+            token.scale_y = scale_y
+            token.facing = degrees_to_facing(state.rotation, grid.orientation)
+            # Snap center to hex.
+            q, r = pixel_to_axial(state.cx, state.cy, grid)
+            if not is_in_bounds(q, r, grid):
+                q, r = token.q, token.r
+            token.q = q
+            token.r = r
+            self._scene.token_state.placements[token.token_id] = token
+            self._rebuild_scene()
+            self.map_changed.emit()
+            return
+        self._refresh_gizmo()
 
     def _erase_annotations_rect(self, x0: float, y0: float, x1: float, y1: float) -> None:
         if self._annotations.erase_rect(x0, y0, x1, y1):
@@ -840,10 +1041,15 @@ class HexMapView(QWidget):
     def _rebuild_scene(self) -> None:
         self._ruler.clear()
         self._annotations.invalidate()
+        # Gizmo is a scene item — cleared by rebuild(); drop dangling ref.
+        self._gizmo = None
+        self._gizmo_dragging = False
         self._scene.rebuild()
+        self._refresh_gizmo()
 
     def _emit_map_changed(self) -> None:
         self.map_changed.emit()
+        self._refresh_gizmo()
 
     def _show_token_context_menu(self, item: TokenGraphicsItem) -> None:
         """Show token menu from the widget (not inside QGraphicsItem) — avoids Windows crash."""
@@ -953,11 +1159,15 @@ class HexMapView(QWidget):
     def _set_category(self, category: EditorCategory) -> None:
         self._category = category
         self._category_panel.set_category(category)
+        if category != EditorCategory.MAP:
+            self._bg_selected = False
         modes = CATEGORY_MODES[category]
         if self._mode not in modes:
             self._set_mode(modes[0])
         else:
             self._apply_category_visibility()
+            self._update_token_movability()
+            self._refresh_gizmo()
 
     def _apply_category_visibility(self) -> None:
         self._category_panel.set_category(self._category)
@@ -973,26 +1183,34 @@ class HexMapView(QWidget):
         self._dialog_buttons["obstacle"].setVisible(show_objects)
         self._dialog_buttons["wall"].setVisible(show_objects)
 
-    def _set_mode(self, mode: EditMode) -> None:
-        if self._ruler.dragging:
-            self._ruler.finish()
-        # Switch category if mode belongs to another
-        for cat, modes in CATEGORY_MODES.items():
-            if mode in modes:
-                self._category = cat
-                self._category_panel.set_category(cat)
-                break
-        self._mode = mode
-        for m, btn in self._mode_buttons.items():
-            btn.setChecked(m == mode)
-        self._apply_category_visibility()
-        # Tokens movable only in Tokens category while editable
+    def _update_token_movability(self) -> None:
+        # Token ItemIsMovable only when not using gizmo-driven Select transforms.
         token_movable = (
             self._editable
             and self._impulse_combat.map_mode != "combat"
             and self._category == EditorCategory.TOKENS
+            and self._mode != EditMode.SELECT
         )
         self._scene.set_editable(token_movable)
+
+    def _set_mode(self, mode: EditMode) -> None:
+        if self._ruler.dragging:
+            self._ruler.finish()
+        # Keep current category when the mode is already valid there (SELECT is shared).
+        if mode not in CATEGORY_MODES.get(self._category, []):
+            for cat, modes in CATEGORY_MODES.items():
+                if mode in modes:
+                    self._category = cat
+                    self._category_panel.set_category(cat)
+                    break
+        if self._category != EditorCategory.MAP:
+            self._bg_selected = False
+        self._mode = mode
+        for m, btn in self._mode_buttons.items():
+            btn.setChecked(m == mode)
+        self._apply_category_visibility()
+        self._update_token_movability()
+        self._refresh_gizmo()
 
     def _cycle_door_state(self) -> None:
         states = ["closed", "open", "locked"]
@@ -1092,12 +1310,7 @@ class HexMapView(QWidget):
             self._scene.set_selected_token_id(state.selected_token_id)
         self._refresh_combat_ui()
         in_combat = state.map_mode == "combat"
-        token_movable = (
-            self._editable
-            and not in_combat
-            and self._category == EditorCategory.TOKENS
-        )
-        self._scene.set_editable(token_movable)
+        self._update_token_movability()
         self._toolbar.setVisible(not in_combat)
         self._sync_combat_toolbar_state(self._editable and not in_combat)
         self._category_panel.setVisible(self._editable and not in_combat)
@@ -1153,17 +1366,13 @@ class HexMapView(QWidget):
         self._impulse_combat.map_mode = mode
         self.map_mode_changed.emit(mode)
         in_combat = mode == "combat"
-        token_movable = (
-            self._editable
-            and not in_combat
-            and self._category == EditorCategory.TOKENS
-        )
-        self._scene.set_editable(token_movable)
+        self._update_token_movability()
         self._toolbar.setVisible(not in_combat)
         self._sync_combat_toolbar_state(self._editable and not in_combat)
         self._category_panel.setVisible(self._editable and not in_combat)
         self._map_mode_panel.set_mode(mode)
         self._refresh_combat_ui()
+        self._refresh_gizmo()
 
     def _on_combat_action(self, token_id: str, action: str, args: dict) -> None:
         if action in ("move", "movement_while_braced"):

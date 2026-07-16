@@ -87,11 +87,21 @@ def test_token_state_round_trip():
         image_b64=base64.b64encode(b"token").decode("ascii"),
         label="Alpha",
         size=1.2,
+        scale_x=0.8,
+        scale_y=1.1,
     )
     state = TokenState(placements={"t1": token})
     restored = TokenState.from_dict(state.to_dict())
     assert restored.placements["t1"].q == 3
     assert restored.placements["t1"].image_b64
+    assert restored.placements["t1"].scale_x == 0.8
+    assert restored.placements["t1"].scale_y == 1.1
+
+
+def test_token_scale_defaults_legacy():
+    tok = TokenPlacement.from_dict({"token_id": "t1", "size": 0.5})
+    assert tok.scale_x == 1.0
+    assert tok.scale_y == 1.0
 
 
 def test_token_facing_legacy_migration():

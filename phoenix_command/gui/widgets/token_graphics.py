@@ -34,6 +34,7 @@ class TokenGraphicsItem(QGraphicsPixmapItem):
         status_text: str = "",
         selected: bool = False,
         on_context_menu=None,
+        show_selection_ring: bool = True,
     ):
         super().__init__()
         self.token = token
@@ -45,6 +46,7 @@ class TokenGraphicsItem(QGraphicsPixmapItem):
         self._on_delete = on_delete
         self._on_stair = on_stair
         self._on_context_menu = on_context_menu
+        self._show_selection_ring = show_selection_ring
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, editable)
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, True)
         self.setAcceptHoverEvents(editable)
@@ -56,7 +58,7 @@ class TokenGraphicsItem(QGraphicsPixmapItem):
         font = QFont()
         font.setPointSize(8)
         self._label.setFont(font)
-        self._label.setPos(-20, self._grid_size * token.size)
+        self._label.setPos(-20, self.pixmap().height() / 2)
         self._status = None
         if status_text:
             self.setToolTip(status_text)
@@ -66,11 +68,15 @@ class TokenGraphicsItem(QGraphicsPixmapItem):
             sf = QFont()
             sf.setPointSize(6)
             self._status.setFont(sf)
-            self._status.setPos(-24, self._grid_size * token.size + 14)
+            self._status.setPos(-24, self.pixmap().height() / 2 + 14)
         self._selection_ring = self._make_selection_ring()
         self._facing_arrow = self._make_facing_arrow()
         self._apply_facing()
         self.set_token_selected(selected)
+
+    def display_size(self) -> tuple[float, float]:
+        """Return current pixmap width/height in scene pixels."""
+        return float(self.pixmap().width()), float(self.pixmap().height())
 
     def _make_selection_ring(self) -> QGraphicsEllipseItem:
         w = self.pixmap().width()
@@ -100,16 +106,23 @@ class TokenGraphicsItem(QGraphicsPixmapItem):
         return arrow
 
     def _load_pixmap(self):
+        diameter = self._grid_size * 2 * self.token.size
+        w = max(1, int(diameter * self.token.scale_x))
+        h = max(1, int(diameter * self.token.scale_y))
         if self.token.image_b64:
             raw = base64.b64decode(self.token.image_b64)
             pixmap = QPixmap()
             pixmap.loadFromData(raw)
-            size = int(self._grid_size * 2 * self.token.size)
-            self.setPixmap(pixmap.scaled(size, size, Qt.AspectRatioMode.KeepAspectRatio,
-                                         Qt.TransformationMode.SmoothTransformation))
+            self.setPixmap(
+                pixmap.scaled(
+                    w,
+                    h,
+                    Qt.AspectRatioMode.IgnoreAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation,
+                )
+            )
         else:
-            size = int(self._grid_size * 2 * self.token.size)
-            pixmap = QPixmap(size, size)
+            pixmap = QPixmap(w, h)
             pixmap.fill(QColor("#4a90e2"))
             self.setPixmap(pixmap)
         # Hit-test opaque pixels only so transparent corners don't steal clicks
@@ -121,10 +134,45 @@ class TokenGraphicsItem(QGraphicsPixmapItem):
         if self._facing_arrow:
             self._facing_arrow.setPos(self.pixmap().width() / 2, self.pixmap().height() / 2)
 
+    def set_preview_rotation(self, degrees: float) -> None:
+        """Temporary continuous rotation while dragging the gizmo rotate handle."""
+        self.setTransformOriginPoint(self.boundingRect().center())
+        self.setRotation(degrees)
+
+    def apply_pixmap_size(self, width: float, height: float) -> None:
+        """Live-resize pixmap from native art during gizmo drag."""
+        if self.token.image_b64:
+            raw = base64.b64decode(self.token.image_b64)
+            pixmap = QPixmap()
+            pixmap.loadFromData(raw)
+            self.setPixmap(
+                pixmap.scaled(
+                    max(1, int(width)),
+                    max(1, int(height)),
+                    Qt.AspectRatioMode.IgnoreAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation,
+                )
+            )
+        else:
+            pixmap = QPixmap(max(1, int(width)), max(1, int(height)))
+            pixmap.fill(QColor("#4a90e2"))
+            self.setPixmap(pixmap)
+        if self._selection_ring:
+            pad = 4
+            self._selection_ring.setRect(
+                -pad, -pad, self.pixmap().width() + pad * 2, self.pixmap().height() + pad * 2
+            )
+        if self._facing_arrow:
+            self._facing_arrow.setPos(self.pixmap().width() / 2, self.pixmap().height() / 2)
+        self._label.setPos(-20, self.pixmap().height() / 2)
+        if self._status:
+            self._status.setPos(-24, self.pixmap().height() / 2 + 14)
+
     def set_token_selected(self, selected: bool) -> None:
         self.setSelected(selected)
+        show_ring = selected and self._show_selection_ring
         if self._selection_ring:
-            self._selection_ring.setVisible(selected)
+            self._selection_ring.setVisible(show_ring)
         if self._facing_arrow:
             color = QColor(255, 240, 80) if selected else QColor(255, 220, 0)
             self._facing_arrow.setBrush(QBrush(color))
@@ -148,9 +196,8 @@ class TokenGraphicsItem(QGraphicsPixmapItem):
 
     def contextMenuEvent(self, event):
         """Defer menu to HexMapView — nested QMenu.exec here crashes on Windows."""
-        if not self._editable:
-            event.ignore()
-            return
-        event.accept()
         if self._on_context_menu:
             self._on_context_menu(self)
+            event.accept()
+            return
+        super().contextMenuEvent(event)

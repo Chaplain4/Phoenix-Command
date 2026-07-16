@@ -9,7 +9,9 @@ from phoenix_command.gui.utils.hex_geometry import (
     axial_to_offset,
     axial_to_pixel,
     background_target_rect,
+    clamp_token_display_size,
     compute_background_layout,
+    degrees_to_facing,
     edge_endpoints,
     facing_to_degrees,
     facing_labels,
@@ -103,6 +105,47 @@ def test_facing_to_degrees():
     assert facing_to_degrees(1, "flat") == 120.0
     assert facing_to_degrees(3, "pointy") == 180.0
     assert facing_to_degrees(11, "pointy") == 60.0
+
+
+def test_degrees_to_facing_round_trip():
+    for facing in range(12):
+        degrees = facing_to_degrees(facing, "flat")
+        assert degrees_to_facing(degrees, "flat") == facing
+        assert degrees_to_facing(degrees, "pointy") == facing
+
+
+def test_degrees_to_facing_snaps_nearest():
+    # Midway between facing 0 (90°) and 1 (120°) → 105° snaps to 0 or 1.
+    assert degrees_to_facing(91.0, "flat") == 0
+    assert degrees_to_facing(119.0, "flat") == 1
+    assert degrees_to_facing(105.0, "flat") in (0, 1)
+
+
+def test_clamp_token_display_size_within_hex():
+    grid_size = 24.0
+    size, sx, sy = clamp_token_display_size(0.35, 1.0, 1.0, grid_size)
+    assert size == pytest.approx(0.35)
+    assert sx == pytest.approx(1.0)
+    assert sy == pytest.approx(1.0)
+
+
+def test_clamp_token_display_size_reduces_oversized():
+    grid_size = 24.0
+    # size=1.0, scale=2 → 2 hex diameters → must clamp.
+    size, sx, sy = clamp_token_display_size(1.0, 2.0, 2.0, grid_size)
+    diameter = grid_size * 2 * size
+    assert max(diameter * sx, diameter * sy) <= grid_size * 2 + 1e-6
+
+
+def test_compute_background_layout_manual():
+    grid = HexGridConfig(cols=10, rows=10, size=24.0)
+    dest_w, dest_h, px, py = compute_background_layout(
+        "manual", 100, 50, grid, scale_x=2.0, scale_y=1.5, offset_x=10.0, offset_y=20.0
+    )
+    assert dest_w == pytest.approx(200.0)
+    assert dest_h == pytest.approx(75.0)
+    assert px == pytest.approx(10.0)
+    assert py == pytest.approx(20.0)
 
 
 def test_facing_labels_count():

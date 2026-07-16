@@ -34,8 +34,10 @@ from phoenix_command.gui.widgets.hex_map_modes import (
     TERRAIN_ALPHA,
 )
 from phoenix_command.gui.widgets.token_graphics import TokenGraphicsItem
+from phoenix_command.gui.widgets.transform_gizmo import TransformState
 from phoenix_command.session.domains.map_state import MapState, is_hex_wall_key
 from phoenix_command.session.domains.token_state import TokenState
+
 
 class HexMapScene(QGraphicsScene):
     """Scene that renders map layers."""
@@ -48,11 +50,22 @@ class HexMapScene(QGraphicsScene):
         self._editable = True
         self._status_by_token: dict[str, str] = {}
         self._selected_token_id: str | None = None
+        self._active_bg_item: QGraphicsPixmapItem | None = None
+        self._active_bg_native: QPixmap | None = None
+        self._active_bg_native_w = 0
+        self._active_bg_native_h = 0
+        self._use_token_selection_ring = True
         self.on_token_moved_callback = None
         self.on_token_edit_callback = None
         self.on_token_delete_callback = None
         self.on_token_stair_callback = None
         self.on_token_context_menu_callback = None
+
+    def set_use_token_selection_ring(self, enabled: bool) -> None:
+        self._use_token_selection_ring = enabled
+        for tid, item in self._token_items.items():
+            item._show_selection_ring = enabled
+            item.set_token_selected(tid == self._selected_token_id)
 
     def set_selected_token_id(self, token_id: str | None) -> None:
         self._selected_token_id = token_id
@@ -83,6 +96,84 @@ class HexMapScene(QGraphicsScene):
         self.token_state = token_state
         self.rebuild()
 
+    def active_background_native_size(self) -> tuple[int, int]:
+        return self._active_bg_native_w, self._active_bg_native_h
+
+    def background_transform_state(self) -> TransformState | None:
+        """Return TransformState for the active layer background, or None."""
+        layer = self.map_state.get_active_layer()
+        if not layer.background or not layer.background.data_b64:
+            return None
+        if self._active_bg_native_w <= 0 or self._active_bg_native_h <= 0:
+            return None
+        bg = layer.background
+        dest_w, dest_h, pos_x, pos_y = compute_background_layout(
+            bg.fit_mode,
+            self._active_bg_native_w,
+            self._active_bg_native_h,
+            self.map_state.grid,
+            scale_x=bg.scale_x,
+            scale_y=bg.scale_y,
+            offset_x=bg.offset_x,
+            offset_y=bg.offset_y,
+        )
+        return TransformState(
+            pos_x + dest_w / 2.0,
+            pos_y + dest_h / 2.0,
+            dest_w,
+            dest_h,
+            bg.rotation,
+        )
+
+    def hit_active_background(self, x: float, y: float) -> bool:
+        item = self._active_bg_item
+        if item is None:
+            return False
+        return item.contains(item.mapFromScene(QPointF(x, y)))
+
+    def apply_background_visual(
+        self, cx: float, cy: float, width: float, height: float, rotation: float
+    ) -> None:
+        """Live-update active background pixmap without rebuilding the scene."""
+        if self._active_bg_item is None or self._active_bg_native is None:
+            return
+        w = max(1, int(width))
+        h = max(1, int(height))
+        scaled = self._active_bg_native.scaled(
+            w,
+            h,
+            Qt.AspectRatioMode.IgnoreAspectRatio,
+            Qt.TransformationMode.SmoothTransformation,
+        )
+        item = self._active_bg_item
+        item.setPixmap(scaled)
+        item.setPos(cx - width / 2.0, cy - height / 2.0)
+        item.setTransform(QTransform())
+        if abs(rotation) > 1e-6:
+            item.setTransformOriginPoint(QPointF(width / 2.0, height / 2.0))
+            item.setRotation(rotation)
+        else:
+            item.setTransformOriginPoint(QPointF(0, 0))
+            item.setRotation(0)
+
+    def commit_background_from_transform(
+        self, cx: float, cy: float, width: float, height: float, rotation: float
+    ) -> bool:
+        """Write transform into BackgroundImage (forces fit_mode=manual)."""
+        layer = self.map_state.get_active_layer()
+        if not layer.background or self._active_bg_native_w <= 0:
+            return False
+        bg = layer.background
+        bg.fit_mode = "manual"
+        bg.offset_x = cx - width / 2.0
+        bg.offset_y = cy - height / 2.0
+        bg.scale_x = width / self._active_bg_native_w
+        bg.scale_y = height / self._active_bg_native_h
+        bg.scale = bg.scale_x
+        bg.rotation = float(rotation) % 360.0
+        self.apply_background_visual(cx, cy, width, height, bg.rotation)
+        return True
+
     def _add_background(self, layer, grid) -> None:
         if not layer.background or not layer.background.data_b64:
             return
@@ -112,14 +203,16 @@ class HexMapScene(QGraphicsScene):
         item.setPos(pos_x, pos_y)
         item.setOpacity(bg.opacity)
         if bg.rotation:
-            center = QPointF(pos_x + dest_w / 2, pos_y + dest_h / 2)
-            transform = QTransform()
-            transform.translate(center.x(), center.y())
-            transform.rotate(bg.rotation)
-            transform.translate(-center.x(), -center.y())
-            item.setTransform(transform)
+            item.setTransformOriginPoint(QPointF(dest_w / 2.0, dest_h / 2.0))
+            item.setRotation(bg.rotation)
         item.setZValue(-100 + layer.elevation)
         self.addItem(item)
+        active = self.map_state.get_active_layer()
+        if layer.id == active.id:
+            self._active_bg_item = item
+            self._active_bg_native = pixmap
+            self._active_bg_native_w = pixmap.width()
+            self._active_bg_native_h = pixmap.height()
 
     def _add_annotations(self, layer, grid) -> None:
         if not layer.annotations_b64:
@@ -147,6 +240,10 @@ class HexMapScene(QGraphicsScene):
     def rebuild(self) -> None:
         self.clear()
         self._token_items.clear()
+        self._active_bg_item = None
+        self._active_bg_native = None
+        self._active_bg_native_w = 0
+        self._active_bg_native_h = 0
         grid = self.map_state.grid
         active = self.map_state.get_active_layer()
         custom = self.map_state.custom_barriers
@@ -308,6 +405,7 @@ class HexMapScene(QGraphicsScene):
                 status_text=self._status_by_token.get(tid, ""),
                 selected=(tid == self._selected_token_id),
                 on_context_menu=self.on_token_context_menu_callback,
+                show_selection_ring=self._use_token_selection_ring,
             )
             item.setPos(cx - item.pixmap().width() / 2, cy - item.pixmap().height() / 2)
             item.setZValue(1000)
@@ -351,5 +449,3 @@ class HexMapScene(QGraphicsScene):
             self.token_state.placements[item.token.token_id] = item.token
         if self.on_token_moved_callback:
             self.on_token_moved_callback()
-
-

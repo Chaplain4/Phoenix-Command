@@ -38,7 +38,7 @@ class EditMode(str, Enum):
 
 
 CATEGORY_MODES: dict[EditorCategory, list[EditMode]] = {
-    EditorCategory.MAP: [EditMode.ANNOTATE_BRUSH, EditMode.ANNOTATE_ERASER],
+    EditorCategory.MAP: [EditMode.SELECT, EditMode.ANNOTATE_BRUSH, EditMode.ANNOTATE_ERASER],
     EditorCategory.TERRAIN: [EditMode.TERRAIN, EditMode.TERRAIN_ERASER, EditMode.CONDITION],
     EditorCategory.OBJECTS: [
         EditMode.OBSTACLE,

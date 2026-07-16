@@ -22,6 +22,8 @@ class TokenPlacement:
     image_mime: str = "image/png"
     label: str = ""
     size: float = 0.35  # diameter in hexes
+    scale_x: float = 1.0
+    scale_y: float = 1.0
     side_id: str = ""
     controlled_by: str | None = None  # player_id; None = host-only / unassigned
 
@@ -39,6 +41,8 @@ class TokenPlacement:
             "image_mime": self.image_mime,
             "label": self.label,
             "size": self.size,
+            "scale_x": self.scale_x,
+            "scale_y": self.scale_y,
             "side_id": self.side_id,
             "controlled_by": self.controlled_by,
         }
@@ -60,6 +64,8 @@ class TokenPlacement:
             image_mime=data.get("image_mime", "image/png"),
             label=data.get("label", ""),
             size=float(data.get("size", 1.0)),
+            scale_x=float(data.get("scale_x", 1.0)),
+            scale_y=float(data.get("scale_y", 1.0)),
             side_id=data.get("side_id", ""),
             controlled_by=data.get("controlled_by"),
         )

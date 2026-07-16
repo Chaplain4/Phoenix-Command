@@ -616,6 +616,8 @@ class TokenDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle("Token Properties")
         tok = token or TokenPlacement(token_id=str(uuid.uuid4()))
+        self._scale_x = tok.scale_x
+        self._scale_y = tok.scale_y
         layout = QFormLayout(self)
 
         self.label_edit = QLineEdit(tok.label)
@@ -788,6 +790,8 @@ class TokenDialog(QDialog):
             image_mime=self._image_mime,
             label=self.label_edit.text(),
             size=self.size_spin.value(),
+            scale_x=self._scale_x,
+            scale_y=self._scale_y,
             side_id=self.side_edit.text(),
             controlled_by=self.control_combo.currentData(),
         )

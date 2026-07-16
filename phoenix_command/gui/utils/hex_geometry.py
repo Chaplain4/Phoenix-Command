@@ -193,6 +193,39 @@ def facing_to_degrees(facing: int, orientation: str) -> float:
     return float((((facing % 12) * 30) + 90) % 360)
 
 
+def degrees_to_facing(degrees: float, orientation: str) -> int:
+    """Snap continuous rotation degrees to nearest facing index (0-11)."""
+    del orientation
+    normalized = (float(degrees) - 90.0) % 360.0
+    return int(round(normalized / 30.0)) % 12
+
+
+def clamp_token_display_size(
+    size: float,
+    scale_x: float,
+    scale_y: float,
+    grid_size: float,
+    min_size: float = 0.15,
+) -> tuple[float, float, float]:
+    """Ensure token pixel bounding box fits within one hex diameter."""
+    size = max(min_size, float(size))
+    scale_x = max(0.05, float(scale_x))
+    scale_y = max(0.05, float(scale_y))
+    limit = grid_size * 2.0
+    diameter = grid_size * 2.0 * size
+    width = diameter * scale_x
+    height = diameter * scale_y
+    max_dim = max(width, height)
+    if max_dim <= limit or max_dim <= 0:
+        return size, scale_x, scale_y
+    factor = limit / max_dim
+    new_size = size * factor
+    if new_size >= min_size:
+        return new_size, scale_x, scale_y
+    # Size already at floor — shrink aspect scales instead.
+    return size, scale_x * factor, scale_y * factor
+
+
 def facing_labels(orientation: str) -> list[tuple[str, int]]:
     """Human-readable labels for facing 0-11.
 
