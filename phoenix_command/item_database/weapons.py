@@ -9137,7 +9137,7 @@ nsv = Weapon(
     name="NSV",
     weight=116.0,
     description="Developed in 1969. Used as heavy ground support, air defense, and tank air defense weapon.",
-    caliber=Caliber.CAL_127X107,
+    caliber=Caliber.CAL_127X108,
     weapon_type=WeaponType.HEAVY_MACHINE_GUN,
     country=Country.USSR,
     length_deployed=61.0,
@@ -10282,3 +10282,9 @@ WEAPONS_LIST = [
     barrett_mrad,
     m2010_esr,
 ]
+
+# Post-Cold-War / modern catalogue (1980s–2020s) — see weapons_modern.py
+from phoenix_command.item_database.weapons_modern import *  # noqa: F401,F403
+from phoenix_command.item_database.weapons_modern import MODERN_WEAPONS
+
+WEAPONS_LIST.extend(MODERN_WEAPONS)

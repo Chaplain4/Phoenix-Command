@@ -380,15 +380,22 @@ class Caliber(Enum):
     # Rifle calibers
     CAL_556_NATO = "5.56mm NATO"
     CAL_545X39 = "5.45 x 39.5mm"
+    CAL_58X42 = "5.8 x 42mm"
     CAL_762_NATO = "7.62mm NATO"
     CAL_762X39 = "7.62 x 39mm"
+    CAL_9X39 = "9 x 39mm"
     CAL_75_FRENCH = "7.5 x 54mm"
     CAL_47_CASELESS = "4.7mm Caseless"
     CAL_300_WIN_MAG = "300 Winchester Magnum"
     CAL_338_NORMA_MAG = ".338 Norma Magnum"
+    CAL_338_LAPUA_MAG = ".338 Lapua Magnum"
     CAL_762X54R = "7.62 x 54mm"
-    CAL_127X107 = "12.7 x 107mm"
+    CAL_127X108 = "12.7 x 108mm"
     CAL_50_BMG = ".50 Browning"
+
+    # PDW calibers
+    CAL_46X30 = "4.6 x 30mm"
+    CAL_57X28 = "5.7 x 28mm"
 
     # Shotgun calibers
     CAL_12_GAUGE = "12 Gauge"
@@ -401,8 +408,10 @@ class Caliber(Enum):
     CAL_64MM = "64mm Rocket-Propelled Grenade"
     CAL_66MM = "66mm Rocket-Propelled Grenade"
     CAL_67MM = "67mm Rocket-Propelled Grenade"
+    CAL_84MM = "84mm Rocket-Propelled Grenade"
     CAL_85MM = "85mm Rocket-Propelled Grenade"
     CAL_94MM = "94mm Rocket-Propelled Grenade"
+    CAL_105MM = "105mm Rocket-Propelled Grenade"
 
 class WeaponType(Enum):
     """Weapon type classifications."""
@@ -449,6 +458,7 @@ class Country(Enum):
     BELGIUM = "Belgium"
     CHINA = "China"
     CZECHOSLOVAKIA = "Czechoslovakia"
+    CZECH_REPUBLIC = "Czech Republic"
     FRANCE = "France"
     WEST_GERMANY = "West Germany"
     GERMANY = "Germany"
@@ -456,7 +466,9 @@ class Country(Enum):
     ITALY = "Italy"
     JAPAN = "Japan"
     SOUTH_AFRICA = "South Africa"
+    SWEDEN = "Sweden"
     USSR = "USSR"
+    RUSSIA = "Russia"
     SWITZERLAND = "Switzerland"
     UK = "UK"
     USA = "USA"
