@@ -373,7 +373,35 @@ class CombatSimulatorUtils:
         dc = ammo.get_dc(range_hexes)
         log.append(f"  PEN: {pen}, DC: {dc}")
 
-        epen = pen
+        # Intervening cover PF (§3.8): manual cover_pf or geometric barriers
+        cover_pf = float(getattr(shot_params, "cover_pf", 0.0) or 0.0)
+        barriers = getattr(shot_params, "intervening_barriers", None)
+        if cover_pf <= 0 and barriers:
+            from phoenix_command.simulations.map_cover import cover_pf_for_location
+            cover_pf = cover_pf_for_location(
+                barriers,
+                location,
+                getattr(shot_params, "target_stance", "standing") or "standing",
+                getattr(shot_params, "shooter_stance", "standing") or "standing",
+            )
+        if cover_pf > 0:
+            log.append(f"  Intervening cover PF: {cover_pf:.1f}")
+
+        # PEN after cover (APEN for blunt if armor then stops)
+        pen_after_cover = float(pen) - cover_pf
+        if pen_after_cover <= 0:
+            log.append("  Round stopped by intervening cover (no flesh hit)")
+            damage_result = AdvancedDamageCalculator.calculate_damage(
+                location=location, dc=0, epen=0.0, is_front=is_front_shot
+            )
+            damage_result.damage = 0
+            incap_effect = None
+            recovery = Table8HealingAndRecovery.get_critical_time_period_and_recovery_chance_8a(
+                target.physical_damage_total, target.health
+            )
+            return damage_result, incap_effect, recovery, None
+
+        epen = pen_after_cover
         penetrated = True
         blunt_pf = 0
         total_protection = 0
@@ -402,7 +430,8 @@ class CombatSimulatorUtils:
                     log.append(f"  Armor penetrated, Remaining PEN: {epen}")
         
         if not penetrated:
-            blunt_damage = Table9ABluntDamage.get_blunt_damage(location, blunt_pf, pen)
+            # Table 9A APEN = weapon PEN after intervening cover
+            blunt_damage = Table9ABluntDamage.get_blunt_damage(location, blunt_pf, pen_after_cover)
             log.append(f"  Blunt damage: {blunt_damage}")
             damage_result = AdvancedDamageCalculator.calculate_damage(
                 location=location, dc=0, epen=0.0, is_front=is_front_shot

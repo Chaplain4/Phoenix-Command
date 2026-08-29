@@ -31,6 +31,11 @@ class ShotParameters:
     reflexive_duck_shooter: bool = False
     reflexive_duck_target: bool = False
     custom_eal_modifiers: List[tuple] = field(default_factory=list)  # (label, alm)
+    # Intervening cover (§3.8): manual override wins over geometric barriers
+    cover_pf: float = 0.0
+    intervening_barriers: Optional[list] = None  # list[BarrierCrossing] from map
+    shooter_stance: str = "standing"
+    target_stance: str = "standing"
 
 
 @dataclass

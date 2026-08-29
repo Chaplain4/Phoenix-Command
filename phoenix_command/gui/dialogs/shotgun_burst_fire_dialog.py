@@ -8,8 +8,9 @@ from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel,
 from phoenix_command.models.character import Character
 from phoenix_command.models.enums import TargetExposure, SituationStanceModifier4B, VisibilityModifier4C, TargetOrientation
 from phoenix_command.models.gear import Weapon, AmmoType
-from phoenix_command.models.hit_result_advanced import ShotParameters, TargetGroup
-from phoenix_command.simulations.combat_simulator import CombatSimulator
+from phoenix_command.models.hit_result_advanced import ShotParameters
+from phoenix_command.gui.dialogs.cover_pf_controls import add_cover_pf_controls
+from phoenix_command.simulations.combat_simulator import CombatSimulator, TargetGroup
 
 
 class ShotgunBurstFireDialog(QDialog):
@@ -539,6 +540,7 @@ class ShotgunBurstFireDialog(QDialog):
         range_spin.setRange(1, 500)
         range_spin.setValue(10)
         range_spin.valueChanged.connect(lambda: self._update_pattern_info_for_target(target))
+        self.cover_pf_spin = add_cover_pf_controls(params_layout)
         params_layout.addRow("Range (hexes):", range_spin)
 
         exposure_combo = QComboBox()
@@ -868,7 +870,8 @@ class ShotgunBurstFireDialog(QDialog):
                 shooter_speed_hex_per_impulse=shooter_speed,
                 target_speed_hex_per_impulse=float(params['target_speed'].value()),
                 reflexive_duck_shooter=shooter_duck,
-                reflexive_duck_target=params['target_duck'].isChecked()
+                reflexive_duck_target=params['target_duck'].isChecked(),
+                cover_pf=float(self.cover_pf_spin.value()) if hasattr(self, "cover_pf_spin") else 0.0,
             )
             primary_shot_params_list.append(shot_params)
 
@@ -907,7 +910,8 @@ class ShotgunBurstFireDialog(QDialog):
                     shooter_speed_hex_per_impulse=shooter_speed,
                     target_speed_hex_per_impulse=float(params['target_speed'].value()),
                     reflexive_duck_shooter=shooter_duck,
-                    reflexive_duck_target=params['target_duck'].isChecked()
+                    reflexive_duck_target=params['target_duck'].isChecked(),
+                    cover_pf=float(self.cover_pf_spin.value()) if hasattr(self, "cover_pf_spin") else 0.0,
                 )
                 secondary_shot_params_list.append(shot_params)
 
@@ -1067,7 +1071,8 @@ class ShotgunBurstFireDialog(QDialog):
             shooter_speed_hex_per_impulse=shooter_speed,
             target_speed_hex_per_impulse=float(params['target_speed'].value()),
             reflexive_duck_shooter=shooter_duck,
-            reflexive_duck_target=params['target_duck'].isChecked()
+            reflexive_duck_target=params['target_duck'].isChecked(),
+            cover_pf=float(self.cover_pf_spin.value()) if hasattr(self, "cover_pf_spin") else 0.0,
         )
 
         range_hexes = params['range'].value()

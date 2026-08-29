@@ -14,6 +14,8 @@ class BarrierDef:
     category: str
     pf_fixed: float | None = None
     pf_by_thickness: dict[float, float] = field(default_factory=dict)
+    # Optical opacity: False = see-through (glass); PF still applies ballistically.
+    blocks_vision: bool = True
 
     def pf_at_thickness(self, thickness: float) -> float:
         if self.pf_fixed is not None:
@@ -79,9 +81,24 @@ _register([
     BarrierDef("aluminum", "Aluminum", "Materials", pf_by_thickness={
         0.12: 1, 0.25: 4, 0.5: 9, 0.75: 16, 1: 24, 2: 64, 4: 170,
     }),
-    BarrierDef("bullet_proof_glass", "Bullet Proof Glass", "Materials", pf_by_thickness={
-        0.12: 0.5, 0.25: 1, 0.5: 3, 0.75: 6, 1: 8, 2: 22, 4: 58,
-    }),
+    BarrierDef(
+        "bullet_proof_glass",
+        "Bullet Proof Glass",
+        "Materials",
+        pf_by_thickness={
+            0.12: 0.5, 0.25: 1, 0.5: 3, 0.75: 6, 1: 8, 2: 22, 4: 58,
+        },
+        blocks_vision=False,
+    ),
+    BarrierDef(
+        "window_glass",
+        "Window Glass",
+        "Materials",
+        pf_by_thickness={
+            0.12: 0.1, 0.25: 0.2, 0.5: 0.4, 0.75: 0.6, 1: 0.8, 2: 1.5, 4: 3.0,
+        },
+        blocks_vision=False,
+    ),
     BarrierDef("fiberglass", "Fiberglass", "Materials", pf_by_thickness={
         0.12: 0.4, 0.25: 1, 0.5: 3, 0.75: 5, 1: 7, 2: 18, 4: 181,
     }),
@@ -113,9 +130,15 @@ _register([
     BarrierDef("sand_loose", "Sand (loose)", "Materials", pf_by_thickness={
         6: 11, 8: 15, 10: 19, 12: 23, 16: 30, 24: 45, 36: 68,
     }),
-    BarrierDef("water", "Water", "Materials", pf_by_thickness={
-        6: 1, 8: 2, 10: 2, 12: 2, 16: 3, 24: 5, 36: 7,
-    }),
+    BarrierDef(
+        "water",
+        "Water",
+        "Materials",
+        pf_by_thickness={
+            6: 1, 8: 2, 10: 2, 12: 2, 16: 3, 24: 5, 36: 7,
+        },
+        blocks_vision=False,
+    ),
     BarrierDef("wood_thick", "Wood (thick)", "Materials", pf_by_thickness={
         6: 11, 8: 15, 10: 18, 12: 22, 16: 29, 24: 44, 36: 66,
     }),
@@ -134,9 +157,30 @@ def resolve_protection_factor(
     if custom_barriers and material_id in custom_barriers:
         entry = custom_barriers[material_id]
         if hasattr(entry, "protection_factor"):
-            return entry.protection_factor
+            return float(entry.protection_factor)
         return float(entry.get("protection_factor", 0))
     barrier = BUILTIN_BARRIERS.get(material_id)
     if barrier is None:
         return 0.0
     return barrier.pf_at_thickness(thickness)
+
+
+def resolve_blocks_vision(
+    material_id: str,
+    custom_barriers: dict | None = None,
+    override: bool | None = None,
+) -> bool:
+    """Resolve optical opacity. override=None uses catalog / custom material."""
+    if override is not None:
+        return bool(override)
+    if custom_barriers and material_id in custom_barriers:
+        entry = custom_barriers[material_id]
+        if hasattr(entry, "blocks_vision"):
+            return bool(entry.blocks_vision)
+        if isinstance(entry, dict) and "blocks_vision" in entry:
+            return bool(entry["blocks_vision"])
+        return True
+    barrier = BUILTIN_BARRIERS.get(material_id)
+    if barrier is None:
+        return True
+    return bool(barrier.blocks_vision)

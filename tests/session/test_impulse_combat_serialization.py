@@ -63,3 +63,64 @@ def test_game_state_includes_impulse_combat() -> None:
     state.impulse_combat.map_mode = "combat"
     restored = GameState.from_dict(state.to_dict())
     assert restored.impulse_combat.map_mode == "combat"
+
+
+def test_pending_shot_preview_multi_target_in_impulse_state() -> None:
+    from phoenix_command.session.domains.impulse_combat_state import PendingShotPreview
+
+    ic = ImpulseCombatState(
+        map_mode="combat",
+        shot_preview=PendingShotPreview(
+            preview_id="p1",
+            shooter_token_id="s",
+            target_token_id="t1",
+            proposed_by="host",
+            fire_kind="burst",
+            target_token_ids=["t1", "t2"],
+            aim_q=3,
+            aim_r=1,
+            arc_of_fire=1.5,
+            per_target={"t1": {"range_hexes": 4}},
+            cover_notes=["Wall PF=2.0"],
+            manual_cover_pf=3.5,
+            estimated_cover_pf=2.0,
+        ),
+    )
+    restored = ImpulseCombatState.from_dict(ic.to_dict())
+    assert restored.shot_preview is not None
+    assert restored.shot_preview.target_token_ids == ["t1", "t2"]
+    assert restored.shot_preview.aim_q == 3
+    assert restored.shot_preview.arc_of_fire == 1.5
+    assert restored.shot_preview.fire_kind == "burst"
+    assert restored.shot_preview.cover_notes == ["Wall PF=2.0"]
+    assert restored.shot_preview.manual_cover_pf == 3.5
+    assert restored.shot_preview.estimated_cover_pf == 2.0
+
+
+def test_pending_shot_preview_cover_defaults_for_legacy() -> None:
+    from phoenix_command.session.domains.impulse_combat_state import PendingShotPreview
+
+    p = PendingShotPreview.from_dict(
+        {
+            "preview_id": "x",
+            "shooter_token_id": "s",
+            "target_token_id": "t",
+            "proposed_by": "host",
+        }
+    )
+    assert p.cover_notes == []
+    assert p.manual_cover_pf is None
+    assert p.estimated_cover_pf == 0.0
+
+
+def test_custom_barrier_blocks_vision_round_trip() -> None:
+    from phoenix_command.session.domains.map_state import CustomBarrierMaterial, MapState
+
+    ms = MapState()
+    mat = CustomBarrierMaterial(
+        id="c1", name="Plexi", protection_factor=2.0, blocks_vision=False
+    )
+    ms.custom_barriers[mat.id] = mat
+    restored = MapState.from_dict(ms.to_dict())
+    assert restored.custom_barriers["c1"].blocks_vision is False
+    assert restored.custom_barriers["c1"].protection_factor == 2.0

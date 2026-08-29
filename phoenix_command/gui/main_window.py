@@ -162,6 +162,7 @@ class MainWindow(QMainWindow):
         self.hex_map_view.advance_impulse_requested.connect(self._on_advance_impulse)
         self.hex_map_view.map_mode_changed.connect(self._on_map_mode_changed)
         self.hex_map_view.declare_shot_requested.connect(self._on_declare_shot)
+        self.hex_map_view.aim_hex_picked.connect(self._on_aim_hex_picked)
         self.hex_map_view.set_action_provider(self._token_available_actions)
         self._shot_preview_dialog = None
         self._center_tabs.addTab(self.combat_zone, "Combat")
@@ -630,15 +631,11 @@ class MainWindow(QMainWindow):
         target = tokens.placements[target_id]
         shooter_rt = ic.token_runtime.get(shooter_token_id, TokenCombatRuntime())
         target_rt = ic.token_runtime.get(target_id, TokenCombatRuntime())
-        ctx = build_map_shot_context(
-            shooter, shooter_rt, target, target_rt, self.hex_map_view.get_map_state()
-        )
-        if ctx.los and ctx.los.blocked:
-            return None, "No LOS to target"
         char = self._characters_by_name().get(shooter.character_name)
         weapon = None
         ammo_name = ""
         tof = 0
+        ammo = None
         if char:
             for item in char.equipment:
                 if isinstance(item, Weapon) and (
@@ -652,11 +649,36 @@ class MainWindow(QMainWindow):
                         weapon = item
                         break
             if weapon and weapon.ammunition_types:
-                ammo = weapon.ammunition_types[0]
-                ammo_name = ammo.name if isinstance(ammo, AmmoType) else str(ammo)
-            if weapon and weapon.ballistic_data:
-                tof = int(weapon.ballistic_data.get_time_of_flight(ctx.range_rule_hexes) or 0)
+                from phoenix_command.models.gear import AmmoType as _AmmoType
+                raw = weapon.ammunition_types[0]
+                ammo = raw if isinstance(raw, _AmmoType) else None
+                ammo_name = ammo.name if ammo else str(raw)
 
+        # provisional range for PEN (refined after context)
+        from phoenix_command.gui.utils.hex_geometry import axial_distance
+        from phoenix_command.session.domains.map_state import rules_hexes
+        map_state = self.hex_map_view.get_map_state()
+        mph = map_state.grid.meters_per_hex if map_state else 1.0
+        approx_range = max(
+            1,
+            round(rules_hexes(axial_distance(shooter.q, shooter.r, target.q, target.r) * mph)),
+        )
+        pen = float(ammo.get_pen(approx_range)) if ammo else None
+
+        ctx = build_map_shot_context(
+            shooter,
+            shooter_rt,
+            target,
+            target_rt,
+            map_state,
+            pen=pen,
+        )
+        if ctx.los and ctx.los.blocked:
+            return None, "No LOS to target"
+        if weapon and weapon.ballistic_data:
+            tof = int(weapon.ballistic_data.get_time_of_flight(ctx.range_rule_hexes) or 0)
+
+        cover = ctx.los.cover if ctx.los else None
         preview = PendingShotPreview(
             preview_id=str(uuid.uuid4()),
             shooter_token_id=shooter_token_id,
@@ -679,6 +701,20 @@ class MainWindow(QMainWindow):
             shooter_speed=ctx.shot_params.shooter_speed_hex_per_impulse,
             target_speed=ctx.shot_params.target_speed_hex_per_impulse,
             is_front=ctx.is_front_shot,
+            target_token_ids=[target_id],
+            cover_notes=list(cover.notes) if cover else [],
+            estimated_cover_pf=float(cover.estimated_cover_pf) if cover else 0.0,
+        )
+        from phoenix_command.simulations.map_fire_dispatch import enrich_preview_targets
+
+        preview = enrich_preview_targets(
+            preview,
+            shooter,
+            tokens,
+            self.hex_map_view.get_map_state(),
+            ic.token_runtime,
+            weapon,
+            ammo,
         )
         return preview, ""
 
@@ -729,147 +765,122 @@ class MainWindow(QMainWindow):
             return False, "No open preview"
         return self._execute_confirmed_preview(preview)
 
-    def _execute_confirmed_preview(self, preview) -> tuple[bool, str]:
-        from phoenix_command.models.enums import (
-            SituationStanceModifier4B,
-            TargetExposure,
-            TargetOrientation,
-            VisibilityModifier4C,
-        )
-        from phoenix_command.models.gear import AmmoType, Weapon
-        from phoenix_command.models.hit_result_advanced import ShotParameters
-        from phoenix_command.simulations.combat_simulator import CombatSimulator
-        from phoenix_command.simulations.map_los import check_los
-
-        tokens = self.hex_map_view.get_token_state()
-        shooter_tok = tokens.placements.get(preview.shooter_token_id)
-        target_tok = tokens.placements.get(preview.target_token_id)
-        if not shooter_tok or not target_tok:
-            return False, "Tokens missing"
-        chars = self._characters_by_name()
-        shooter = chars.get(shooter_tok.character_name or "")
-        target = chars.get(target_tok.character_name or "")
-        if not shooter or not target:
-            return False, "Characters missing"
+    def _resolve_weapon_ammo(self, shooter, preview):
+        from phoenix_command.models.gear import AmmoType, Grenade, Weapon
 
         weapon = None
         for item in shooter.equipment:
-            if isinstance(item, Weapon) and item.name == preview.weapon_name:
+            if isinstance(item, (Weapon, Grenade)) and item.name == preview.weapon_name:
                 weapon = item
                 break
         if weapon is None:
             for item in shooter.equipment:
-                if isinstance(item, Weapon):
+                if isinstance(item, (Weapon, Grenade)):
                     weapon = item
                     break
         if not weapon:
-            return False, "No weapon"
+            return None, None, "No weapon"
 
         ammo = None
-        if preview.ammo_name:
-            for a in weapon.ammunition_types or []:
+        if isinstance(weapon, Grenade):
+            ammo = weapon
+        elif preview.ammo_name:
+            for a in getattr(weapon, "ammunition_types", None) or []:
                 if isinstance(a, AmmoType) and a.name == preview.ammo_name:
                     ammo = a
                     break
-        if ammo is None and weapon.ammunition_types:
+        if ammo is None and getattr(weapon, "ammunition_types", None):
             ammo = weapon.ammunition_types[0]
         if not ammo:
-            return False, "No ammo"
+            return weapon, None, "No ammo"
+        return weapon, ammo, ""
 
-        stance = []
-        for name in preview.stance_mods:
-            try:
-                stance.append(SituationStanceModifier4B[name])
-            except KeyError:
-                pass
-        vis = []
-        for name in preview.visibility_mods:
-            try:
-                vis.append(VisibilityModifier4C[name])
-            except KeyError:
-                pass
-        try:
-            exposure = TargetExposure[preview.selected_exposure or preview.exposure]
-        except KeyError:
-            exposure = TargetExposure.STANDING_EXPOSED
-        try:
-            orientation = TargetOrientation[preview.orientation]
-        except KeyError:
-            orientation = TargetOrientation.FRONT_REAR
-
-        customs = []
-        for entry in preview.custom_eal_modifiers:
-            if isinstance(entry, dict):
-                customs.append((entry.get("label", "custom"), int(entry.get("alm", 0))))
-            elif isinstance(entry, (list, tuple)) and len(entry) >= 2:
-                customs.append((entry[0], int(entry[1])))
-
-        shot_params = ShotParameters(
-            aim_time_ac=preview.aim_time_ac,
-            situation_stance_modifiers=stance or [SituationStanceModifier4B.STANDING],
-            visibility_modifiers=vis or [VisibilityModifier4C.GOOD_VISIBILITY],
-            target_orientation=orientation,
-            shooter_speed_hex_per_impulse=preview.shooter_speed,
-            target_speed_hex_per_impulse=preview.target_speed,
-            custom_eal_modifiers=customs,
+    def _execute_confirmed_preview(self, preview) -> tuple[bool, str]:
+        from phoenix_command.simulations.map_fire_dispatch import (
+            build_snapshot,
+            dispatch_map_fire,
         )
 
-        snapshot = {
-            "range_hexes": preview.range_hexes,
-            "exposure": exposure.name,
-            "is_front": preview.is_front,
-            "weapon_name": weapon.name,
-            "ammo_name": ammo.name if hasattr(ammo, "name") else str(ammo),
-            "fire_mode": preview.fire_mode,
-            "shot_params": {
-                "aim_time_ac": shot_params.aim_time_ac,
-                "stance": [m.name for m in shot_params.situation_stance_modifiers],
-                "visibility": [m.name for m in shot_params.visibility_modifiers],
-                "orientation": shot_params.target_orientation.name,
-                "shooter_speed": shot_params.shooter_speed_hex_per_impulse,
-                "target_speed": shot_params.target_speed_hex_per_impulse,
-                "custom_eal": list(preview.custom_eal_modifiers),
-            },
-            "shooter_name": shooter.name,
-            "target_name": target.name,
-        }
+        tokens = self.hex_map_view.get_token_state()
+        shooter_tok = tokens.placements.get(preview.shooter_token_id)
+        if not shooter_tok:
+            return False, "Shooter token missing"
+        chars = self._characters_by_name()
+        shooter = chars.get(shooter_tok.character_name or "")
+        if not shooter:
+            return False, "Shooter character missing"
+
+        weapon, ammo, err = self._resolve_weapon_ammo(shooter, preview)
+        if err:
+            return False, err
+
+        primary_ids = preview.primary_ids()
+        target_names = {}
+        for tid in primary_ids:
+            tok = tokens.placements.get(tid)
+            if tok and tok.character_name:
+                target_names[tid] = tok.character_name
+        if preview.target_token_id and preview.target_token_id not in target_names:
+            tok = tokens.placements.get(preview.target_token_id)
+            if tok and tok.character_name:
+                target_names[preview.target_token_id] = tok.character_name
+
+        snapshot = build_snapshot(preview, shooter.name, target_names)
 
         ic = self._game_bridge.state.impulse_combat
         ic.shot_preview = None
+        self.hex_map_view.clear_fire_overlay()
         self.hex_map_view.set_impulse_combat_state(ic)
 
         if preview.tof_impulses and preview.tof_impulses > 0:
             engine = self._combat_engine()
             engine.schedule_projectile(
                 preview.shooter_token_id,
-                preview.target_token_id,
+                preview.target_token_id or (primary_ids[0] if primary_ids else ""),
                 preview.tof_impulses,
                 snapshot,
             )
+            label = ", ".join(target_names.values()) or "aim hex"
             self.combat_log.append_system(
-                f"Shot in flight: {shooter.name} → {target.name}, TOF {preview.tof_impulses} impulse(s)"
+                f"Shot in flight: {shooter.name} → {label}, TOF {preview.tof_impulses} impulse(s)"
             )
             self.statusBar().showMessage(f"Projectile in flight ({preview.tof_impulses} impulses)")
             return True, "scheduled"
 
-        # Immediate resolve — check LOS again
-        los = check_los(
+        outcome = dispatch_map_fire(
+            preview,
+            shooter,
+            weapon,
+            ammo,
+            tokens,
+            chars,
             self.hex_map_view.get_map_state(),
-            shooter_tok,
-            target_tok,
-            ic.token_runtime.get(preview.target_token_id),
+            ic.token_runtime,
         )
-        if los.blocked:
-            self.combat_log.append_miss(
-                f"Miss: no LOS {shooter.name} → {target.name}"
-            )
-            return True, "miss_no_los"
-
-        result = CombatSimulator.single_shot(
-            shooter, target, weapon, ammo, preview.range_hexes, exposure, shot_params, preview.is_front
-        )
-        self._append_shot_result(result)
+        self._apply_map_fire_outcome(outcome)
         return True, "resolved"
+
+    def _apply_map_fire_outcome(self, outcome) -> None:
+        for reason in outcome.miss_reasons:
+            self.combat_log.append_miss(f"Miss: {reason}")
+        for msg in outcome.messages:
+            self.combat_log.append_system(msg)
+        for expl in outcome.explosive_results:
+            if expl.hit:
+                self.combat_log.append_hit(
+                    f"Explosive HIT (roll {expl.roll} vs {expl.odds}%)"
+                )
+            else:
+                self.combat_log.append_miss(
+                    f"Explosive miss — scatter {expl.scatter_hexes} "
+                    f"({'long' if expl.is_long else 'short'})"
+                )
+        for result in outcome.shot_results:
+            self._append_shot_result(result)
+        if not outcome.shot_results and not outcome.explosive_results and not outcome.miss_reasons:
+            self.combat_log.append_system(f"Fire ({outcome.kind}): no results")
+        self.body_diagram.refresh()
+        self.combat_zone.refresh_cards()
 
     def _append_shot_result(self, result) -> None:
         if result.hit:
@@ -882,84 +893,73 @@ class MainWindow(QMainWindow):
         self.combat_zone.refresh_cards()
 
     def _resolve_pending_projectile(self, proj) -> None:
-        from phoenix_command.models.enums import (
-            SituationStanceModifier4B,
-            TargetExposure,
-            TargetOrientation,
-            VisibilityModifier4C,
+        from phoenix_command.simulations.map_fire_dispatch import (
+            dispatch_map_fire,
+            preview_from_snapshot,
         )
-        from phoenix_command.models.gear import AmmoType, Weapon
-        from phoenix_command.models.hit_result_advanced import ShotParameters
-        from phoenix_command.simulations.combat_simulator import CombatSimulator
-        from phoenix_command.simulations.map_los import check_los
+        from phoenix_command.gui.utils.hex_geometry import axial_distance
+        from phoenix_command.session.domains.map_state import rules_hexes
+        from phoenix_command.session.domains.impulse_combat_state import TokenCombatRuntime
+        from phoenix_command.simulations.map_shot_context import build_map_shot_context
 
         snap = proj.shot_snapshot
         tokens = self.hex_map_view.get_token_state()
         shooter_tok = tokens.placements.get(proj.shooter_token_id)
-        target_tok = tokens.placements.get(proj.target_token_id)
-        if not shooter_tok or not target_tok:
-            self.combat_log.append_system("In-flight shot: token gone — miss")
-            return
-        ic = self.hex_map_view.get_impulse_combat_state()
-        los = check_los(
-            self.hex_map_view.get_map_state(),
-            shooter_tok,
-            target_tok,
-            ic.token_runtime.get(proj.target_token_id),
-        )
-        if los.blocked:
-            self.combat_log.append_miss(
-                f"In-flight miss (no LOS): {snap.get('shooter_name')} → {snap.get('target_name')}"
-            )
+        if not shooter_tok:
+            self.combat_log.append_system("In-flight shot: shooter gone — miss")
             return
         chars = self._characters_by_name()
-        shooter = chars.get(snap.get("shooter_name", ""))
-        target = chars.get(snap.get("target_name", ""))
-        if not shooter or not target:
+        shooter = chars.get(snap.get("shooter_name", "") or shooter_tok.character_name or "")
+        if not shooter:
+            self.combat_log.append_system("In-flight shot: shooter character missing")
             return
-        weapon = next(
-            (i for i in shooter.equipment if isinstance(i, Weapon) and i.name == snap.get("weapon_name")),
-            None,
-        )
-        if not weapon:
+
+        class _P:
+            weapon_name = snap.get("weapon_name", "")
+            ammo_name = snap.get("ammo_name", "")
+
+        weapon, ammo, err = self._resolve_weapon_ammo(shooter, _P())
+        if err:
+            self.combat_log.append_system(f"In-flight shot: {err}")
             return
-        ammo = None
-        for a in weapon.ammunition_types or []:
-            if isinstance(a, AmmoType) and a.name == snap.get("ammo_name"):
-                ammo = a
-                break
-        if ammo is None and weapon.ammunition_types:
-            ammo = weapon.ammunition_types[0]
-        sp = snap.get("shot_params", {})
-        stance = [SituationStanceModifier4B[n] for n in sp.get("stance", []) if n in SituationStanceModifier4B.__members__]
-        vis = [VisibilityModifier4C[n] for n in sp.get("visibility", []) if n in VisibilityModifier4C.__members__]
-        customs = []
-        for entry in sp.get("custom_eal", []):
-            if isinstance(entry, dict):
-                customs.append((entry.get("label", "custom"), int(entry.get("alm", 0))))
-        shot_params = ShotParameters(
-            aim_time_ac=int(sp.get("aim_time_ac", 2)),
-            situation_stance_modifiers=stance or [SituationStanceModifier4B.STANDING],
-            visibility_modifiers=vis or [VisibilityModifier4C.GOOD_VISIBILITY],
-            target_orientation=TargetOrientation[sp["orientation"]]
-            if sp.get("orientation") in TargetOrientation.__members__
-            else TargetOrientation.FRONT_REAR,
-            shooter_speed_hex_per_impulse=float(sp.get("shooter_speed", 0)),
-            target_speed_hex_per_impulse=float(sp.get("target_speed", 0)),
-            custom_eal_modifiers=customs,
-        )
-        exposure = TargetExposure[snap["exposure"]] if snap.get("exposure") in TargetExposure.__members__ else TargetExposure.STANDING_EXPOSED
-        result = CombatSimulator.single_shot(
+
+        preview = preview_from_snapshot(snap, proj.shooter_token_id, proj.target_token_id)
+        ic = self.hex_map_view.get_impulse_combat_state()
+        map_state = self.hex_map_view.get_map_state()
+
+        # Refresh ranges from current positions; keep frozen shot_params from snapshot
+        for tid in list(preview.primary_ids()):
+            tok = tokens.placements.get(tid)
+            if not tok:
+                continue
+            ctx = build_map_shot_context(
+                shooter_tok,
+                ic.token_runtime.get(proj.shooter_token_id, TokenCombatRuntime()),
+                tok,
+                ic.token_runtime.get(tid, TokenCombatRuntime()),
+                map_state,
+            )
+            per = dict(preview.per_target.get(tid, {}))
+            per["range_hexes"] = ctx.range_rule_hexes
+            per["los_clear"] = bool(ctx.los and ctx.los.clear and not ctx.los.blocked)
+            preview.per_target[tid] = per
+
+        if preview.aim_q is not None and preview.aim_r is not None and map_state:
+            mph = map_state.grid.meters_per_hex
+            dist_m = axial_distance(shooter_tok.q, shooter_tok.r, preview.aim_q, preview.aim_r) * mph
+            preview.range_hexes = max(1, round(rules_hexes(dist_m)))
+
+        outcome = dispatch_map_fire(
+            preview,
             shooter,
-            target,
             weapon,
             ammo,
-            int(snap.get("range_hexes", 1)),
-            exposure,
-            shot_params,
-            bool(snap.get("is_front", True)),
+            tokens,
+            chars,
+            map_state,
+            ic.token_runtime,
         )
-        self._append_shot_result(result)
+        self._apply_map_fire_outcome(outcome)
 
     def _maybe_show_shot_preview(self) -> None:
         from phoenix_command.gui.dialogs.map_shot_preview_dialog import MapShotPreviewDialog
@@ -969,16 +969,42 @@ class MainWindow(QMainWindow):
             if self._shot_preview_dialog:
                 self._shot_preview_dialog.close()
                 self._shot_preview_dialog = None
+            self.hex_map_view.clear_fire_overlay()
             return
         editable = self._can_edit_preview(self._player_id)
+        tokens = self.hex_map_view.get_token_state()
+        labels = {
+            tid: (tok.character_name or tok.label or tid)
+            for tid, tok in tokens.placements.items()
+        }
         if self._shot_preview_dialog is None:
-            self._shot_preview_dialog = MapShotPreviewDialog(preview, editable=editable, parent=self)
+            self._shot_preview_dialog = MapShotPreviewDialog(
+                preview, editable=editable, token_labels=labels, parent=self
+            )
             self._shot_preview_dialog.preview_updated.connect(self._on_preview_edited)
             self._shot_preview_dialog.confirmed.connect(self._on_preview_confirmed)
             self._shot_preview_dialog.cancelled.connect(self._on_preview_cancelled)
+            self._shot_preview_dialog.pick_aim_hex_requested.connect(self._on_pick_aim_hex)
+            self._shot_preview_dialog.overlay_refresh_requested.connect(
+                self._on_preview_overlay
+            )
             self._shot_preview_dialog.show()
         else:
             self._shot_preview_dialog.apply_remote_preview(preview)
+        self.hex_map_view.set_fire_overlay(preview)
+
+    def _on_pick_aim_hex(self) -> None:
+        self.statusBar().showMessage("Click a hex on the map for aim point…")
+        self.hex_map_view.begin_pick_aim_hex()
+
+    def _on_aim_hex_picked(self, q: int, r: int, layer_id: str) -> None:
+        if self._shot_preview_dialog is None:
+            return
+        self._shot_preview_dialog.set_aim_hex(q, r, layer_id)
+        self.statusBar().showMessage(f"Aim hex set to ({q}, {r})")
+
+    def _on_preview_overlay(self, preview) -> None:
+        self.hex_map_view.set_fire_overlay(preview)
 
     def _on_preview_edited(self, preview) -> None:
         if self._session_role == "guest":

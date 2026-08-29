@@ -110,6 +110,26 @@ class PendingShotPreview:
     shooter_speed: float = 0.0
     target_speed: float = 0.0
     is_front: bool = True
+    # Multi-target / area fire
+    target_token_ids: list[str] = field(default_factory=list)
+    secondary_by_primary: dict[str, list[str]] = field(default_factory=dict)
+    aim_q: int | None = None
+    aim_r: int | None = None
+    aim_layer_id: str = ""
+    arc_of_fire: float | None = None
+    continuous_burst_impulses: int = 0
+    per_target: dict[str, dict] = field(default_factory=dict)
+    fire_kind: str = "single"  # single|burst|shotgun|shotgun_burst|3rb|grenade|agl|explosive
+    cover_notes: list[str] = field(default_factory=list)
+    manual_cover_pf: float | None = None
+    estimated_cover_pf: float = 0.0
+
+    def primary_ids(self) -> list[str]:
+        if self.target_token_ids:
+            return list(self.target_token_ids)
+        if self.target_token_id:
+            return [self.target_token_id]
+        return []
 
     def to_dict(self) -> dict:
         return {
@@ -135,14 +155,36 @@ class PendingShotPreview:
             "shooter_speed": self.shooter_speed,
             "target_speed": self.target_speed,
             "is_front": self.is_front,
+            "target_token_ids": list(self.target_token_ids),
+            "secondary_by_primary": {
+                k: list(v) for k, v in self.secondary_by_primary.items()
+            },
+            "aim_q": self.aim_q,
+            "aim_r": self.aim_r,
+            "aim_layer_id": self.aim_layer_id,
+            "arc_of_fire": self.arc_of_fire,
+            "continuous_burst_impulses": self.continuous_burst_impulses,
+            "per_target": dict(self.per_target),
+            "fire_kind": self.fire_kind,
+            "cover_notes": list(self.cover_notes),
+            "manual_cover_pf": self.manual_cover_pf,
+            "estimated_cover_pf": self.estimated_cover_pf,
         }
 
     @classmethod
     def from_dict(cls, data: dict) -> "PendingShotPreview":
+        ids = list(data.get("target_token_ids", []))
+        legacy = data.get("target_token_id", "")
+        if not ids and legacy:
+            ids = [legacy]
+        aq = data.get("aim_q")
+        ar = data.get("aim_r")
+        arc = data.get("arc_of_fire")
+        mcp = data.get("manual_cover_pf", None)
         return cls(
             preview_id=data.get("preview_id", ""),
             shooter_token_id=data.get("shooter_token_id", ""),
-            target_token_id=data.get("target_token_id", ""),
+            target_token_id=legacy or (ids[0] if ids else ""),
             proposed_by=data.get("proposed_by", ""),
             status=data.get("status", "open"),
             range_hexes=int(data.get("range_hexes", 1)),
@@ -162,6 +204,20 @@ class PendingShotPreview:
             shooter_speed=float(data.get("shooter_speed", 0.0)),
             target_speed=float(data.get("target_speed", 0.0)),
             is_front=bool(data.get("is_front", True)),
+            target_token_ids=ids,
+            secondary_by_primary={
+                k: list(v) for k, v in data.get("secondary_by_primary", {}).items()
+            },
+            aim_q=int(aq) if aq is not None else None,
+            aim_r=int(ar) if ar is not None else None,
+            aim_layer_id=data.get("aim_layer_id", ""),
+            arc_of_fire=float(arc) if arc is not None else None,
+            continuous_burst_impulses=int(data.get("continuous_burst_impulses", 0)),
+            per_target=dict(data.get("per_target", {})),
+            fire_kind=data.get("fire_kind", "single"),
+            cover_notes=list(data.get("cover_notes", [])),
+            manual_cover_pf=float(mcp) if mcp is not None else None,
+            estimated_cover_pf=float(data.get("estimated_cover_pf", 0.0)),
         )
 
 

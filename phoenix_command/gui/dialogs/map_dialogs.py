@@ -51,6 +51,7 @@ from phoenix_command.tables.catalogs.action_catalog import (
 )
 from phoenix_command.tables.catalogs.barrier_catalog import (
     BUILTIN_BARRIERS,
+    resolve_blocks_vision,
     resolve_protection_factor,
 )
 from phoenix_command.tables.catalogs.movement_catalog import TERRAIN_PRESETS
@@ -392,9 +393,19 @@ class MapObstacleDialog(QDialog):
         self.blocks_movement.setChecked(obs.blocks_movement)
         layout.addRow("Blocks Movement:", self.blocks_movement)
 
-        self.blocks_los = QCheckBox()
-        self.blocks_los.setChecked(obs.blocks_los)
-        layout.addRow("Blocks LOS:", self.blocks_los)
+        self.vision_label = QLabel()
+        layout.addRow("Catalog vision:", self.vision_label)
+
+        self.override_vision = QCheckBox("Override blocks vision")
+        self.override_vision.setChecked(obs.blocks_los is not None)
+        layout.addRow(self.override_vision)
+
+        self.blocks_los = QCheckBox("Blocks vision (opaque)")
+        default_vision = obs.resolved_blocks_vision(self._map_state.custom_barriers)
+        self.blocks_los.setChecked(
+            obs.blocks_los if obs.blocks_los is not None else default_vision
+        )
+        layout.addRow(self.blocks_los)
 
         self.material_combo.currentIndexChanged.connect(self._update_pf)
         self.thickness_spin.valueChanged.connect(self._update_pf)
@@ -407,22 +418,27 @@ class MapObstacleDialog(QDialog):
         layout.addRow(buttons)
 
     def _update_pf(self):
+        mat = self.material_combo.currentData()
+        vision = resolve_blocks_vision(mat, self._map_state.custom_barriers)
+        self.vision_label.setText("opaque" if vision else "transparent (see-through)")
+        if not self.override_vision.isChecked():
+            self.blocks_los.setChecked(vision)
         if self.custom_check.isChecked():
             self.pf_label.setText("(custom)")
             return
-        mat = self.material_combo.currentData()
         pf = resolve_protection_factor(mat, self.thickness_spin.value(), self._map_state.custom_barriers)
         self.pf_label.setText(f"{pf:.1f}")
 
     def get_obstacle(self) -> Obstacle:
         pf = self.pf_spin.value() if self.custom_check.isChecked() else None
+        blocks_los = self.blocks_los.isChecked() if self.override_vision.isChecked() else None
         return Obstacle(
             height=self.height_spin.value(),
             material=self.material_combo.currentData(),
             thickness=self.thickness_spin.value(),
             protection_factor=pf,
             blocks_movement=self.blocks_movement.isChecked(),
-            blocks_los=self.blocks_los.isChecked(),
+            blocks_los=blocks_los,
         )
 
 
@@ -468,6 +484,9 @@ class MapWallDialog(QDialog):
         self.pf_label = QLabel()
         layout.addRow("Computed PF:", self.pf_label)
 
+        self.vision_label = QLabel()
+        layout.addRow("Blocks vision:", self.vision_label)
+
         self.material_combo.currentIndexChanged.connect(self._update_pf)
         self.thickness_spin.valueChanged.connect(self._update_pf)
         self.custom_check.toggled.connect(self._update_pf)
@@ -479,10 +498,12 @@ class MapWallDialog(QDialog):
         layout.addRow(buttons)
 
     def _update_pf(self):
+        mat = self.material_combo.currentData()
+        vision = resolve_blocks_vision(mat, self._map_state.custom_barriers)
+        self.vision_label.setText("yes (opaque)" if vision else "no (transparent)")
         if self.custom_check.isChecked():
             self.pf_label.setText("(custom)")
             return
-        mat = self.material_combo.currentData()
         pf = resolve_protection_factor(mat, self.thickness_spin.value(), self._map_state.custom_barriers)
         self.pf_label.setText(f"{pf:.1f}")
 
@@ -854,6 +875,9 @@ class CustomBarrierDialog(QDialog):
         self.pf_spin.setRange(0.0, 20000.0)
         self.pf_spin.setValue(1.0)
         layout.addRow("Protection Factor:", self.pf_spin)
+        self.blocks_vision = QCheckBox("Blocks vision (opaque)")
+        self.blocks_vision.setChecked(True)
+        layout.addRow(self.blocks_vision)
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
@@ -864,6 +888,7 @@ class CustomBarrierDialog(QDialog):
             id=f"custom_{uuid.uuid4().hex[:8]}",
             name=self.name_edit.text(),
             protection_factor=self.pf_spin.value(),
+            blocks_vision=self.blocks_vision.isChecked(),
         )
 
 

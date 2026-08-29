@@ -9,6 +9,7 @@ from phoenix_command.models.character import Character
 from phoenix_command.models.enums import TargetExposure, SituationStanceModifier4B, VisibilityModifier4C, TargetOrientation
 from phoenix_command.models.gear import Weapon, AmmoType
 from phoenix_command.models.hit_result_advanced import ShotParameters
+from phoenix_command.gui.dialogs.cover_pf_controls import add_cover_pf_controls
 from phoenix_command.simulations.combat_simulator import CombatSimulator
 
 
@@ -120,6 +121,7 @@ class ThreeRoundBurstDialog(QDialog):
         for exp in TargetExposure:
             self.exposure_combo.addItem(exp.name, exp)
         params_layout.addRow("Target Exposure:", self.exposure_combo)
+        self.cover_pf_spin = add_cover_pf_controls(params_layout)
         
         self.aim_spin = QSpinBox()
         self.aim_spin.setRange(0, 20)
@@ -341,7 +343,8 @@ class ThreeRoundBurstDialog(QDialog):
             shooter_speed_hex_per_impulse=shooter_speed,
             target_speed_hex_per_impulse=target_speed,
             reflexive_duck_shooter=shooter_duck,
-            reflexive_duck_target=target_duck
+            reflexive_duck_target=target_duck,
+            cover_pf=float(self.cover_pf_spin.value()) if hasattr(self, "cover_pf_spin") else 0.0,
         )
         
         results = CombatSimulator.three_round_burst(
@@ -470,7 +473,8 @@ class ThreeRoundBurstDialog(QDialog):
             shooter_speed_hex_per_impulse=shooter_speed,
             target_speed_hex_per_impulse=target_speed,
             reflexive_duck_shooter=shooter_duck,
-            reflexive_duck_target=target_duck
+            reflexive_duck_target=target_duck,
+            cover_pf=float(self.cover_pf_spin.value()) if hasattr(self, "cover_pf_spin") else 0.0,
         )
         
         eal, probabilities = CombatSimulatorProbabilities.calculate_three_round_burst_probabilities(

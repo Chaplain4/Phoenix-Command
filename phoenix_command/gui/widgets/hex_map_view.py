@@ -98,6 +98,7 @@ class HexMapView(QWidget):
     advance_impulse_requested = pyqtSignal()
     map_mode_changed = pyqtSignal(str)
     declare_shot_requested = pyqtSignal(str)
+    aim_hex_picked = pyqtSignal(int, int, str)  # q, r, layer_id
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -143,6 +144,8 @@ class HexMapView(QWidget):
         self._condition_visibility = ""
         self._pick_move_token_id: str | None = None
         self._pick_move_action: str | None = None
+        self._pick_aim_hex = False
+        self._fire_overlay_items: list = []
         self._combat_callbacks = None  # set by main window
 
         self._scene = HexMapScene()
@@ -419,6 +422,12 @@ class HexMapView(QWidget):
             )
             self._pick_move_token_id = None
             self._pick_move_action = None
+            return True
+
+        if self._pick_aim_hex:
+            layer = self._scene.map_state.get_active_layer()
+            self._pick_aim_hex = False
+            self.aim_hex_picked.emit(q, r, layer.id if layer else "")
             return True
 
         if self._mode == EditMode.RULER:
@@ -1296,6 +1305,93 @@ class HexMapView(QWidget):
 
     def get_impulse_combat_state(self) -> ImpulseCombatState:
         return self._impulse_combat
+
+    def begin_pick_aim_hex(self) -> None:
+        """Next combat click sets aim hex for grenade/AGL preview."""
+        self._pick_aim_hex = True
+
+    def clear_fire_overlay(self) -> None:
+        for item in self._fire_overlay_items:
+            if item.scene() is not None:
+                self._scene.removeItem(item)
+        self._fire_overlay_items.clear()
+
+    def set_fire_overlay(self, preview) -> None:
+        """Draw arc/pattern/aim markers for an open shot preview."""
+        from PyQt6.QtWidgets import QGraphicsEllipseItem, QGraphicsPolygonItem
+        from PyQt6.QtGui import QPolygonF
+        from phoenix_command.gui.utils.hex_geometry import axial_to_pixel
+        from phoenix_command.simulations.hex_tactical import facing_to_radians
+        import math
+
+        self.clear_fire_overlay()
+        if preview is None:
+            return
+        tokens = self._scene.token_state
+        grid = self._scene.map_state.grid
+        shooter = tokens.placements.get(preview.shooter_token_id)
+        if not shooter:
+            return
+
+        sx, sy = axial_to_pixel(shooter.q, shooter.r, grid)
+        size = grid.size
+
+        # Aim hex marker
+        if preview.aim_q is not None and preview.aim_r is not None:
+            ax, ay = axial_to_pixel(preview.aim_q, preview.aim_r, grid)
+            mark = QGraphicsEllipseItem(ax - size * 0.35, ay - size * 0.35, size * 0.7, size * 0.7)
+            mark.setPen(QPen(QColor(255, 80, 40, 220), 2))
+            mark.setBrush(QBrush(QColor(255, 100, 50, 60)))
+            mark.setZValue(80)
+            self._scene.addItem(mark)
+            self._fire_overlay_items.append(mark)
+
+        # Arc wedge for burst / AGL
+        if preview.fire_kind in ("burst", "shotgun_burst", "agl") or preview.fire_mode == "auto":
+            facing = facing_to_radians(shooter.facing)
+            half = math.radians(30.0)
+            if preview.arc_of_fire and preview.arc_of_fire > 0:
+                half = math.radians(max(15.0, min(90.0, float(preview.arc_of_fire) * 8)))
+            reach = size * 8
+            poly = QPolygonF([QPointF(sx, sy)])
+            steps = 16
+            for i in range(steps + 1):
+                a = facing - half + (2 * half) * i / steps
+                poly.append(QPointF(sx + math.cos(a) * reach, sy + math.sin(a) * reach))
+            wedge = QGraphicsPolygonItem(poly)
+            wedge.setPen(QPen(QColor(80, 160, 255, 180), 1.5))
+            wedge.setBrush(QBrush(QColor(80, 160, 255, 40)))
+            wedge.setZValue(75)
+            self._scene.addItem(wedge)
+            self._fire_overlay_items.append(wedge)
+
+        # Pattern circles around primary targets
+        if preview.fire_kind in ("shotgun", "shotgun_burst"):
+            for pid in preview.primary_ids():
+                tok = tokens.placements.get(pid)
+                if not tok:
+                    continue
+                tx, ty = axial_to_pixel(tok.q, tok.r, grid)
+                rad = size * 1.2
+                circ = QGraphicsEllipseItem(tx - rad, ty - rad, rad * 2, rad * 2)
+                circ.setPen(QPen(QColor(255, 200, 40, 200), 1.5))
+                circ.setBrush(QBrush(QColor(255, 200, 40, 35)))
+                circ.setZValue(76)
+                self._scene.addItem(circ)
+                self._fire_overlay_items.append(circ)
+
+        # Highlight selected target tokens
+        for tid in preview.primary_ids():
+            tok = tokens.placements.get(tid)
+            if not tok:
+                continue
+            tx, ty = axial_to_pixel(tok.q, tok.r, grid)
+            dot = QGraphicsEllipseItem(tx - size * 0.2, ty - size * 0.2, size * 0.4, size * 0.4)
+            dot.setPen(QPen(QColor(255, 40, 40, 230), 2))
+            dot.setBrush(QBrush(QColor(255, 40, 40, 80)))
+            dot.setZValue(81)
+            self._scene.addItem(dot)
+            self._fire_overlay_items.append(dot)
 
     def set_impulse_combat_state(self, state: ImpulseCombatState) -> None:
         self._impulse_combat = state

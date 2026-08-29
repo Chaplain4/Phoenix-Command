@@ -9,6 +9,7 @@ from phoenix_command.tables.catalogs.action_catalog import (
 from phoenix_command.tables.catalogs.barrier_catalog import (
     BUILTIN_BARRIERS,
     BarrierDef,
+    resolve_blocks_vision,
     resolve_protection_factor,
 )
 from phoenix_command.tables.catalogs.movement_catalog import (
@@ -27,6 +28,7 @@ __all__ = [
     "BUILTIN_BARRIERS",
     "BarrierDef",
     "resolve_protection_factor",
+    "resolve_blocks_vision",
     "MOVEMENT_BASE",
     "MOVEMENT_MODIFIERS",
     "TERRAIN_PRESETS",

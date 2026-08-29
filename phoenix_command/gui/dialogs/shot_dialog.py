@@ -166,6 +166,9 @@ class ShotDialog(QDialog):
         for exp in TargetExposure:
             self.exposure_combo.addItem(exp.name, exp)
         params_layout.addRow("Target Exposure:", self.exposure_combo)
+
+        from phoenix_command.gui.dialogs.cover_pf_controls import add_cover_pf_controls
+        self.cover_pf_spin = add_cover_pf_controls(params_layout)
         
         self.aim_spin = QSpinBox()
         self.aim_spin.setRange(0, 20)
@@ -454,7 +457,8 @@ class ShotDialog(QDialog):
             shooter_speed_hex_per_impulse=shooter_speed,
             target_speed_hex_per_impulse=target_speed,
             reflexive_duck_shooter=shooter_duck,
-            reflexive_duck_target=target_duck
+            reflexive_duck_target=target_duck,
+            cover_pf=float(self.cover_pf_spin.value()),
         )
         
         result = CombatSimulator.single_shot(
@@ -577,7 +581,8 @@ class ShotDialog(QDialog):
             shooter_speed_hex_per_impulse=shooter_speed,
             target_speed_hex_per_impulse=target_speed,
             reflexive_duck_shooter=shooter_duck,
-            reflexive_duck_target=target_duck
+            reflexive_duck_target=target_duck,
+            cover_pf=float(getattr(self, "cover_pf_spin", None).value() if hasattr(self, "cover_pf_spin") else 0),
         )
         
         eal, odds = CombatSimulatorProbabilities.calculate_single_shot_probability(

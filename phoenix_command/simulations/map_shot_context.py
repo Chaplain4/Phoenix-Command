@@ -100,6 +100,8 @@ def build_map_shot_context(
     target: TokenPlacement,
     target_rt: TokenCombatRuntime,
     map_state: MapState | None,
+    *,
+    pen: float | None = None,
 ) -> MapShotContext:
     """Derive range and shot modifiers from token positions on the map."""
     meters = (
@@ -119,7 +121,14 @@ def build_map_shot_context(
     line = line_hexes(shooter.q, shooter.r, target.q, target.r)
     visibility = _collect_visibility(map_state, shooter, target, line)
 
-    los = check_los(map_state, shooter, target, target_rt)
+    los = check_los(
+        map_state,
+        shooter,
+        target,
+        target_rt,
+        pen=pen,
+        shooter_stance=shooter_rt.stance,
+    )
 
     rel = relative_orientation(
         target.facing, target.q, target.r, shooter.q, shooter.r
@@ -131,7 +140,11 @@ def build_map_shot_context(
         exposure = TargetExposure.LOOKING_OVER_COVER
         visible = []
     elif los.through_opening:
-        exposure = TargetExposure.FIRING_OVER_COVER
+        # Prefer full stance exposure for nonblocking cover
+        if los.cover and los.cover.nonblocking:
+            exposure = STANCE_TO_EXPOSURE.get(target_rt.stance, TargetExposure.STANDING_EXPOSED)
+        else:
+            exposure = TargetExposure.FIRING_OVER_COVER
         visible = list(los.visible_exposures)
     else:
         exposure = STANCE_TO_EXPOSURE.get(target_rt.stance, TargetExposure.STANDING_EXPOSED)
@@ -144,6 +157,7 @@ def build_map_shot_context(
         # Prefer accumulated aim when tracking a specific target
         aim_ac = max(aim_ac, int(shooter_rt.aim_ac_accumulated) or aim_ac)
 
+    barriers = list(los.cover.crossings) if los.cover else []
     shot_params = ShotParameters(
         aim_time_ac=aim_ac,
         situation_stance_modifiers=[stance_mod],
@@ -151,6 +165,9 @@ def build_map_shot_context(
         target_orientation=orientation,
         shooter_speed_hex_per_impulse=shooter_speed,
         target_speed_hex_per_impulse=target_speed,
+        intervening_barriers=barriers or None,
+        shooter_stance=shooter_rt.stance,
+        target_stance=target_rt.stance,
     )
 
     notes = [f"Range {range_hexes} rule hex ({meters:.1f} m)"]

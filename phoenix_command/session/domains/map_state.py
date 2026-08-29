@@ -210,7 +210,8 @@ class Obstacle:
     thickness: float = 1.0  # inches per Table 7C
     protection_factor: float | None = None  # override; None = compute from catalog
     blocks_movement: bool = True
-    blocks_los: bool = True
+    # None = use material blocks_vision; bool = force optical LOS behavior
+    blocks_los: bool | None = None
 
     def to_dict(self) -> dict:
         result: dict[str, Any] = {
@@ -218,8 +219,9 @@ class Obstacle:
             "material": self.material,
             "thickness": self.thickness,
             "blocks_movement": self.blocks_movement,
-            "blocks_los": self.blocks_los,
         }
+        if self.blocks_los is not None:
+            result["blocks_los"] = self.blocks_los
         if self.protection_factor is not None:
             result["protection_factor"] = self.protection_factor
         return result
@@ -227,13 +229,16 @@ class Obstacle:
     @classmethod
     def from_dict(cls, data: dict) -> "Obstacle":
         pf = data.get("protection_factor")
+        blocks_los = data.get("blocks_los", None)
+        if blocks_los is not None:
+            blocks_los = bool(blocks_los)
         return cls(
             height=float(data.get("height", 1.0)),
             material=data.get("material", "common_furniture"),
             thickness=float(data.get("thickness", 1.0)),
             protection_factor=float(pf) if pf is not None else None,
             blocks_movement=bool(data.get("blocks_movement", True)),
-            blocks_los=bool(data.get("blocks_los", True)),
+            blocks_los=blocks_los,
         )
 
     def resolved_pf(self, custom_barriers: dict | None = None) -> float:
@@ -242,18 +247,23 @@ class Obstacle:
             self.material, self.thickness, custom_barriers, self.protection_factor
         )
 
+    def resolved_blocks_vision(self, custom_barriers: dict | None = None) -> bool:
+        from phoenix_command.tables.catalogs.barrier_catalog import resolve_blocks_vision
+        return resolve_blocks_vision(self.material, custom_barriers, self.blocks_los)
+
     def tooltip_text(self, custom_barriers: dict | None = None) -> str:
         from phoenix_command.tables.catalogs.barrier_catalog import BUILTIN_BARRIERS
         mat = BUILTIN_BARRIERS.get(self.material)
         name = mat.name if mat else self.material
         pf = self.resolved_pf(custom_barriers)
+        vision = self.resolved_blocks_vision(custom_barriers)
         return (
             f"Obstacle: {name}\n"
             f"Height: {self.height:.1f} m\n"
             f"Thickness: {self.thickness:.2f}\"\n"
             f"PF: {pf:.1f}\n"
             f"Blocks movement: {self.blocks_movement}\n"
-            f"Blocks LOS: {self.blocks_los}"
+            f"Blocks vision: {vision}"
         )
 
 
@@ -326,16 +336,21 @@ class WallSegment:
         )
 
     def tooltip_text(self, custom_barriers: dict | None = None) -> str:
-        from phoenix_command.tables.catalogs.barrier_catalog import BUILTIN_BARRIERS
+        from phoenix_command.tables.catalogs.barrier_catalog import (
+            BUILTIN_BARRIERS,
+            resolve_blocks_vision,
+        )
         mat = BUILTIN_BARRIERS.get(self.material)
         name = mat.name if mat else self.material
         pf = self.resolved_pf(custom_barriers)
+        vision = resolve_blocks_vision(self.material, custom_barriers)
         openings = ", ".join(f"{o.kind}({o.state})" for o in self.openings) or "none"
         return (
             f"Wall: {name}\n"
             f"Height: {self.height:.1f} m\n"
             f"Thickness: {self.thickness:.2f}\"\n"
             f"PF: {pf:.1f}\n"
+            f"Blocks vision: {vision}\n"
             f"Openings: {openings}"
         )
 
@@ -347,12 +362,14 @@ class CustomBarrierMaterial:
     id: str
     name: str
     protection_factor: float
+    blocks_vision: bool = True
 
     def to_dict(self) -> dict:
         return {
             "id": self.id,
             "name": self.name,
             "protection_factor": self.protection_factor,
+            "blocks_vision": self.blocks_vision,
         }
 
     @classmethod
@@ -361,6 +378,7 @@ class CustomBarrierMaterial:
             id=data.get("id", ""),
             name=data.get("name", ""),
             protection_factor=float(data.get("protection_factor", 0.0)),
+            blocks_vision=bool(data.get("blocks_vision", True)),
         )
 
 
