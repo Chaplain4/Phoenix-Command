@@ -182,9 +182,9 @@ def test_tof_schedule_and_due() -> None:
     engine = ImpulseCombatEngine(ic, tokens, MapState(), {})
     proj = engine.schedule_projectile("t1", "t2", 1, {"x": 1})
     assert proj.resolve_impulse == 1
-    due = engine.advance_impulse()
-    assert len(due) == 1
-    assert due[0].shot_snapshot["x"] == 1
+    due_proj, _due_grenades = engine.advance_impulse()
+    assert len(due_proj) == 1
+    assert due_proj[0].shot_snapshot["x"] == 1
     assert ic.pending_projectiles == []
 
 

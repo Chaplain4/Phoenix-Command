@@ -589,11 +589,13 @@ class MainWindow(QMainWindow):
         if not self._is_combat_authority():
             return
         engine = self._combat_engine()
-        due = engine.advance_impulse()
+        due_proj, due_grenades = engine.advance_impulse()
         ic = self._game_bridge.state.impulse_combat
         self.hex_map_view.set_impulse_combat_state(ic)
-        for proj in due:
+        for proj in due_proj:
             self._resolve_pending_projectile(proj)
+        for expl in due_grenades:
+            self._resolve_pending_grenade_explosion(expl)
         sel = ic.selected_token_id
         rt = ic.token_runtime.get(sel or "")
         ac_txt = f" AC {rt.ac_remaining:.1f}" if rt else ""
@@ -648,17 +650,33 @@ class MainWindow(QMainWindow):
         tof = 0
         ammo = None
         if char:
-            for item in char.equipment:
-                if isinstance(item, Weapon) and (
-                    not shooter_rt.held_weapon_name or item.name == shooter_rt.held_weapon_name
-                ):
-                    weapon = item
-                    break
+            from phoenix_command.models.gear import Grenade
+            if shooter_rt.held_grenade_name:
+                for item in char.equipment:
+                    if isinstance(item, Grenade) and item.name == shooter_rt.held_grenade_name:
+                        weapon = item
+                        ammo = item
+                        ammo_name = item.name
+                        break
+            if weapon is None:
+                for item in char.equipment:
+                    if isinstance(item, Weapon) and (
+                        not shooter_rt.held_weapon_name or item.name == shooter_rt.held_weapon_name
+                    ):
+                        weapon = item
+                        break
             if weapon is None:
                 for item in char.equipment:
                     if isinstance(item, Weapon):
                         weapon = item
                         break
+                if weapon is None:
+                    for item in char.equipment:
+                        if isinstance(item, Grenade):
+                            weapon = item
+                            ammo = item
+                            ammo_name = item.name
+                            break
             if weapon and weapon.ammunition_types:
                 from phoenix_command.models.gear import AmmoType as _AmmoType
                 raw = weapon.ammunition_types[0]
@@ -807,9 +825,17 @@ class MainWindow(QMainWindow):
         return weapon, ammo, ""
 
     def _execute_confirmed_preview(self, preview) -> tuple[bool, str]:
-        from phoenix_command.simulations.map_fire_dispatch import (
-            build_snapshot,
+        from phoenix_command.simulations.map_fire_dispatch import build_snapshot, explosive_result_to_dict
+        from phoenix_command.simulations.map_fire_targets import infer_fire_kind
+        from phoenix_command.simulations.map_fire_ac import (
+            apply_fire_ac,
+            clear_aim_state,
+            clear_grenade_hand,
+            plan_fire_ac,
+            sync_preview_from_plan,
+            validate_fire_ac,
         )
+        from phoenix_command.session.domains.impulse_combat_state import TokenCombatRuntime
 
         tokens = self.hex_map_view.get_token_state()
         shooter_tok = tokens.placements.get(preview.shooter_token_id)
@@ -824,6 +850,20 @@ class MainWindow(QMainWindow):
         if err:
             return False, err
 
+        ic = self._game_bridge.state.impulse_combat
+        shooter_rt = ic.token_runtime.get(preview.shooter_token_id, TokenCombatRuntime())
+        fire_kind = infer_fire_kind(preview.fire_mode, weapon, ammo)
+        plan = plan_fire_ac(preview, shooter_rt, fire_kind, weapon)
+        ok, msg = validate_fire_ac(plan, shooter_rt, fire_kind)
+        if not ok:
+            return False, msg
+
+        sync_preview_from_plan(preview, plan, shooter_rt)
+        apply_fire_ac(plan, shooter_rt)
+        clear_aim_state(shooter_rt)
+        if fire_kind == "grenade":
+            clear_grenade_hand(shooter_rt)
+
         primary_ids = preview.primary_ids()
         target_names = {}
         for tid in primary_ids:
@@ -837,7 +877,6 @@ class MainWindow(QMainWindow):
 
         snapshot = build_snapshot(preview, shooter.name, target_names)
 
-        ic = self._game_bridge.state.impulse_combat
         ic.shot_preview = None
         self.hex_map_view.clear_fire_overlay()
         self.hex_map_view.set_impulse_combat_state(ic)
@@ -855,6 +894,7 @@ class MainWindow(QMainWindow):
                 f"Shot in flight: {shooter.name} → {label}, TOF {preview.tof_impulses} impulse(s)"
             )
             self.statusBar().showMessage(f"Projectile in flight ({preview.tof_impulses} impulses)")
+            self._notify_game_state_changed(domain="impulse_combat", immediate=True)
             return True, "scheduled"
 
         outcome = self._dispatch_map_fire_with_blast_review(
@@ -867,7 +907,19 @@ class MainWindow(QMainWindow):
             self.hex_map_view.get_map_state(),
             ic.token_runtime,
         )
+        if outcome.fuse_impulses > 0 and outcome.explosive_results:
+            engine = self._combat_engine()
+            engine.schedule_grenade_explosion(
+                preview.shooter_token_id,
+                outcome.fuse_impulses,
+                preview.to_dict(),
+                [explosive_result_to_dict(e) for e in outcome.explosive_results],
+                preview.weapon_name,
+                preview.ammo_name,
+            )
+            self.hex_map_view.set_impulse_combat_state(ic)
         self._apply_map_fire_outcome(outcome)
+        self._notify_game_state_changed(domain="impulse_combat", immediate=True)
         return True, "resolved"
 
     def _on_blast_review_toggled(self, checked: bool) -> None:
@@ -1029,6 +1081,44 @@ class MainWindow(QMainWindow):
         )
         self._apply_map_fire_outcome(outcome)
 
+    def _resolve_pending_grenade_explosion(self, expl) -> None:
+        from phoenix_command.simulations.map_fire_dispatch import (
+            resolve_pending_grenade_explosion,
+        )
+        from phoenix_command.models.gear import Grenade
+
+        tokens = self.hex_map_view.get_token_state()
+        shooter_tok = tokens.placements.get(expl.shooter_token_id)
+        if not shooter_tok:
+            self.combat_log.append_system("Fused grenade: shooter gone")
+            return
+        chars = self._characters_by_name()
+        shooter = chars.get(shooter_tok.character_name or "")
+        if not shooter:
+            self.combat_log.append_system("Fused grenade: shooter character missing")
+            return
+
+        class _P:
+            weapon_name = expl.weapon_name
+            ammo_name = expl.ammo_name
+
+        weapon, ammo, err = self._resolve_weapon_ammo(shooter, _P())
+        if err:
+            self.combat_log.append_system(f"Fused grenade: {err}")
+            return
+        ic = self.hex_map_view.get_impulse_combat_state()
+        outcome = resolve_pending_grenade_explosion(
+            expl,
+            shooter,
+            weapon,
+            ammo or weapon,
+            tokens,
+            chars,
+            self.hex_map_view.get_map_state(),
+            ic.token_runtime,
+        )
+        self._apply_map_fire_outcome(outcome)
+
     def _maybe_show_shot_preview(self) -> None:
         from phoenix_command.gui.dialogs.map_shot_preview_dialog import MapShotPreviewDialog
 
@@ -1045,9 +1135,22 @@ class MainWindow(QMainWindow):
             tid: (tok.character_name or tok.label or tid)
             for tid, tok in tokens.placements.items()
         }
+        ic = self._game_bridge.state.impulse_combat
+        shooter_rt = ic.token_runtime.get(preview.shooter_token_id)
+        aim_accumulated = int(shooter_rt.aim_ac_accumulated) if shooter_rt else 0
+        is_hip = aim_accumulated <= 0 and preview.fire_kind not in (
+            "grenade",
+            "agl",
+            "explosive",
+        )
         if self._shot_preview_dialog is None:
             self._shot_preview_dialog = MapShotPreviewDialog(
-                preview, editable=editable, token_labels=labels, parent=self
+                preview,
+                editable=editable,
+                token_labels=labels,
+                aim_accumulated=aim_accumulated,
+                is_hip_fire=is_hip,
+                parent=self,
             )
             self._shot_preview_dialog.preview_updated.connect(self._on_preview_edited)
             self._shot_preview_dialog.confirmed.connect(self._on_preview_confirmed)
@@ -1058,7 +1161,11 @@ class MainWindow(QMainWindow):
             )
             self._shot_preview_dialog.show()
         else:
-            self._shot_preview_dialog.apply_remote_preview(preview)
+            self._shot_preview_dialog.apply_remote_preview(
+                preview,
+                aim_accumulated=aim_accumulated,
+                is_hip_fire=is_hip,
+            )
         self.hex_map_view.set_fire_overlay(preview)
 
     def _on_pick_aim_hex(self) -> None:

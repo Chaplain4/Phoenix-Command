@@ -378,8 +378,8 @@ class Grenade(Gear):
     country: Country
     grenade_type: GrenadeType
     length: float
-    arm_time: int
-    fuse_length: int #0 if impact fuse
+    arm_time: int  # AC to arm for throw (Table 7B)
+    fuse_length: int  # fuse in 2-second phases; 0 = impact fuse
     range: range
     explosive_data: list[ExplosiveData] = field(default_factory=list)
 

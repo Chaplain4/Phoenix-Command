@@ -22,6 +22,7 @@ from phoenix_command.models.hit_result_advanced import (
     TargetGroup,
 )
 from phoenix_command.session.domains.impulse_combat_state import (
+    PendingGrenadeExplosion,
     PendingShotPreview,
     TokenCombatRuntime,
 )
@@ -69,6 +70,78 @@ def _per_from_ctx(ctx) -> dict:
     }
 
 
+def explosive_result_to_dict(result: ExplosiveShotResult) -> dict:
+    return {
+        "hit": result.hit,
+        "eal": result.eal,
+        "odds": result.odds,
+        "roll": result.roll,
+        "scatter_hexes": result.scatter_hexes,
+        "is_long": result.is_long,
+        "elevation_failed": result.elevation_failed,
+    }
+
+
+def explosive_result_from_dict(data: dict) -> ExplosiveShotResult:
+    return ExplosiveShotResult(
+        hit=bool(data.get("hit", False)),
+        eal=int(data.get("eal", 0)),
+        odds=int(data.get("odds", 0)),
+        roll=int(data.get("roll", 0)),
+        scatter_hexes=int(data.get("scatter_hexes", 0)),
+        is_long=bool(data.get("is_long", True)),
+        elevation_failed=bool(data.get("elevation_failed", False)),
+    )
+
+
+def resolve_pending_grenade_explosion(
+    pending: PendingGrenadeExplosion,
+    shooter: Character,
+    weapon: Weapon | Grenade,
+    ammo: AmmoType | Grenade,
+    tokens: TokenState,
+    characters: dict[str, Character],
+    map_state: MapState | None,
+    token_runtime: dict | None = None,
+) -> MapFireOutcome:
+    """Apply blast damage for a fuse-delayed grenade."""
+    preview = PendingShotPreview.from_dict(pending.preview_snapshot)
+    explosive_results = [
+        explosive_result_from_dict(d) for d in pending.explosive_results
+    ]
+    outcome = MapFireOutcome(kind="grenade", explosive_results=explosive_results)
+    explosive_ammo = ammo if getattr(ammo, "explosive_data", None) else weapon
+    if not getattr(explosive_ammo, "explosive_data", None):
+        outcome.messages.append("Grenade exploded (no blast data)")
+        return outcome
+    outcome.blast_ammo = explosive_ammo
+    package = _build_blast_package(
+        preview,
+        tokens,
+        characters,
+        map_state,
+        token_runtime or {},
+        explosive_ammo,
+        explosive_results,
+    )
+    outcome.pending_blast = package
+    outcome.shot_results.extend(
+        apply_pending_blast_damage(
+            package,
+            explosive_ammo,
+            preview,
+            tokens,
+            characters,
+            map_state,
+            token_runtime,
+        )
+    )
+    outcome.messages.append(
+        f"Grenade explodes at ({preview.aim_q},{preview.aim_r})"
+    )
+    return outcome
+
+
 @dataclass
 class MapFireOutcome:
     """Result of resolving a map fire action."""
@@ -80,6 +153,7 @@ class MapFireOutcome:
     miss_reasons: list[str] = field(default_factory=list)
     pending_blast: PendingBlastPackage | None = None
     blast_ammo: AmmoType | Grenade | None = None
+    fuse_impulses: int = 0
 
 
 def enrich_preview_targets(
@@ -953,7 +1027,20 @@ def _dispatch_explosive(
                 f"scatter {blast_pass.scatter_hexes}"
             )
 
-    if apply_blast:
+    defer_blast = False
+    if (kind == "grenade" or isinstance(weapon, Grenade)) and isinstance(
+        explosive_ammo, Grenade
+    ):
+        fuse_phases = int(explosive_ammo.fuse_length or 0)
+        if fuse_phases > 0:
+            outcome.fuse_impulses = fuse_phases * 4
+            defer_blast = True
+            outcome.messages.append(
+                f"Grenade landed; fuse {fuse_phases} phase(s) "
+                f"({outcome.fuse_impulses} impulses)"
+            )
+
+    if apply_blast and not defer_blast:
         outcome.shot_results.extend(
             apply_pending_blast_damage(
                 package,

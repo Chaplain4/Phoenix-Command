@@ -267,12 +267,16 @@ class ThrownGrenadeDialog(QDialog):
             self.grenade_info_label.setText("")
             return
         max_range = grenade.range if isinstance(grenade.range, int) else grenade.range.stop - 1
-        fuse = f"{grenade.fuse_length} impulses" if grenade.fuse_length > 0 else "impact fuse"
+        fuse = (
+            f"{grenade.fuse_length} phase(s) ({grenade.fuse_length * 4} impulses)"
+            if grenade.fuse_length > 0
+            else "impact fuse"
+        )
         self.grenade_info_label.setText(
             f"Type: {grenade.grenade_type.value}\n"
             f"Weight: {grenade.weight} lbs\n"
             f"Max range: {max_range} hexes\n"
-            f"Arm time: {grenade.arm_time} impulses\n"
+            f"Arm time: {grenade.arm_time} AC\n"
             f"Fuse: {fuse}"
         )
 

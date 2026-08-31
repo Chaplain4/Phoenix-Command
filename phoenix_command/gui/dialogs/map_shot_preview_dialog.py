@@ -44,6 +44,9 @@ class MapShotPreviewDialog(QDialog):
         preview: PendingShotPreview,
         editable: bool = True,
         token_labels: dict[str, str] | None = None,
+        *,
+        aim_accumulated: int = 0,
+        is_hip_fire: bool = False,
         parent=None,
     ):
         super().__init__(parent)
@@ -52,6 +55,8 @@ class MapShotPreviewDialog(QDialog):
         self._preview = preview
         self._editable = editable
         self._token_labels = token_labels or {}
+        self._aim_accumulated = aim_accumulated
+        self._is_hip_fire = is_hip_fire
         self._setup_ui()
         self._load_preview()
         if not editable:
@@ -80,6 +85,8 @@ class MapShotPreviewDialog(QDialog):
         self.aim_spin = QSpinBox()
         self.aim_spin.setRange(0, 40)
         form.addRow("Aim Time (AC):", self.aim_spin)
+        self._aim_hint = QLabel("")
+        form.addRow("", self._aim_hint)
 
         self.exposure_combo = QComboBox()
         form.addRow("Target Exposure:", self.exposure_combo)
@@ -217,6 +224,17 @@ class MapShotPreviewDialog(QDialog):
         self.notes.setPlainText("\n".join(p.notes))
         self.range_spin.setValue(p.range_hexes)
         self.aim_spin.setValue(p.aim_time_ac)
+        if self._is_hip_fire:
+            self.aim_spin.setValue(1)
+            self.aim_spin.setEnabled(False)
+            self._aim_hint.setText("Hip fire — 1 AC aim time for EAL (−6 ALM)")
+        elif self._aim_accumulated > 0:
+            self.aim_spin.setMaximum(self._aim_accumulated)
+            self.aim_spin.setEnabled(self._editable)
+            self._aim_hint.setText(f"Aim AC spent on target: {self._aim_accumulated}")
+        else:
+            self.aim_spin.setEnabled(self._editable)
+            self._aim_hint.setText("")
         self.tof_label.setText(str(p.tof_impulses))
         self.weapon_label.setText(f"{p.weapon_name} / {p.ammo_name}" if p.ammo_name else p.weapon_name)
         cover_lines = list(p.cover_notes or [])
@@ -422,8 +440,18 @@ class MapShotPreviewDialog(QDialog):
         self.cancelled.emit(self._preview.preview_id)
         self.reject()
 
-    def apply_remote_preview(self, preview: PendingShotPreview) -> None:
+    def apply_remote_preview(
+        self,
+        preview: PendingShotPreview,
+        *,
+        aim_accumulated: int | None = None,
+        is_hip_fire: bool | None = None,
+    ) -> None:
         self._preview = preview
+        if aim_accumulated is not None:
+            self._aim_accumulated = aim_accumulated
+        if is_hip_fire is not None:
+            self._is_hip_fire = is_hip_fire
         self._load_preview()
 
     def closeEvent(self, event) -> None:

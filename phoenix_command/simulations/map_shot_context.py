@@ -153,15 +153,17 @@ def build_map_shot_context(
             exposure = TargetExposure.RUNNING
         visible = list(los.visible_exposures)
 
-    aim_ac = max(1, int(shooter_rt.aim_ac_accumulated)) if shooter_rt.aim_ac_accumulated else 2
+    aim_ac = max(1, int(shooter_rt.aim_ac_accumulated)) if shooter_rt.aim_ac_accumulated else 1
+    stance_mods = [stance_mod]
+    if not shooter_rt.aim_ac_accumulated:
+        stance_mods.append(SituationStanceModifier4B.FIRING_FROM_THE_HIP)
     if shooter_rt.aim_impulses > 0 and shooter_rt.aim_target_token_id:
-        # Prefer accumulated aim when tracking a specific target
         aim_ac = max(aim_ac, int(shooter_rt.aim_ac_accumulated) or aim_ac)
 
     barriers = list(los.cover.crossings) if los.cover else []
     shot_params = ShotParameters(
         aim_time_ac=aim_ac,
-        situation_stance_modifiers=[stance_mod],
+        situation_stance_modifiers=stance_mods,
         visibility_modifiers=visibility,
         target_orientation=orientation,
         shooter_speed_hex_per_impulse=shooter_speed,
@@ -175,6 +177,8 @@ def build_map_shot_context(
     notes.extend(los.notes)
     if shooter_rt.moved_this_impulse:
         notes.append("Shooter moved this impulse")
+    if not shooter_rt.aim_ac_accumulated:
+        notes.append("Hip fire (no aim AC spent)")
     if shooter_rt.aim_impulses:
         notes.append(f"Aimed {shooter_rt.aim_impulses} impulse(s) at target")
     bonus = second_shot_aim_bonus(

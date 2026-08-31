@@ -33,6 +33,9 @@ class TokenCombatRuntime:
     last_shot_r: int | None = None
     last_shot_layer_id: str = ""
     firing_stance_held: bool = False
+    impulse_burst_used: bool = False
+    held_grenade_name: str | None = None
+    grenade_armed: bool = False
 
     def status_label(self) -> str:
         parts: list[str] = []
@@ -54,6 +57,11 @@ class TokenCombatRuntime:
             parts.append(f"KD -{self.balance_ac_owed:.0f}AC")
         if self.recoil_ac_owed > 0:
             parts.append(f"recoil {self.recoil_ac_owed:.0f}AC")
+        if self.held_grenade_name:
+            parts.append(
+                f"grenade: {self.held_grenade_name}"
+                + (" armed" if self.grenade_armed else " in hand")
+            )
         return " | ".join(parts)
 
     def to_dict(self) -> dict:
@@ -82,6 +90,9 @@ class TokenCombatRuntime:
             "last_shot_r": self.last_shot_r,
             "last_shot_layer_id": self.last_shot_layer_id,
             "firing_stance_held": self.firing_stance_held,
+            "impulse_burst_used": self.impulse_burst_used,
+            "held_grenade_name": self.held_grenade_name,
+            "grenade_armed": self.grenade_armed,
         }
 
     @classmethod
@@ -115,6 +126,9 @@ class TokenCombatRuntime:
             last_shot_r=_opt_int("last_shot_r"),
             last_shot_layer_id=data.get("last_shot_layer_id", "") or "",
             firing_stance_held=bool(data.get("firing_stance_held", False)),
+            impulse_burst_used=bool(data.get("impulse_burst_used", False)),
+            held_grenade_name=data.get("held_grenade_name"),
+            grenade_armed=bool(data.get("grenade_armed", False)),
         )
 
 
@@ -133,7 +147,7 @@ class PendingShotPreview:
     stance_mods: list[str] = field(default_factory=list)
     visibility_mods: list[str] = field(default_factory=list)
     custom_eal_modifiers: list[dict] = field(default_factory=list)
-    aim_time_ac: int = 2
+    aim_time_ac: int = 1
     fire_mode: str = "single"
     weapon_name: str = ""
     ammo_name: str = ""
@@ -227,7 +241,7 @@ class PendingShotPreview:
             stance_mods=list(data.get("stance_mods", [])),
             visibility_mods=list(data.get("visibility_mods", [])),
             custom_eal_modifiers=list(data.get("custom_eal_modifiers", [])),
-            aim_time_ac=int(data.get("aim_time_ac", 2)),
+            aim_time_ac=int(data.get("aim_time_ac", 1)),
             fire_mode=data.get("fire_mode", "single"),
             weapon_name=data.get("weapon_name", ""),
             ammo_name=data.get("ammo_name", ""),
@@ -289,6 +303,45 @@ class PendingProjectile:
 
 
 @dataclass
+class PendingGrenadeExplosion:
+    """Timed grenade blast awaiting fuse resolution."""
+
+    explosion_id: str
+    resolve_phase: int
+    resolve_impulse: int
+    shooter_token_id: str
+    preview_snapshot: dict = field(default_factory=dict)
+    explosive_results: list[dict] = field(default_factory=list)
+    weapon_name: str = ""
+    ammo_name: str = ""
+
+    def to_dict(self) -> dict:
+        return {
+            "explosion_id": self.explosion_id,
+            "resolve_phase": self.resolve_phase,
+            "resolve_impulse": self.resolve_impulse,
+            "shooter_token_id": self.shooter_token_id,
+            "preview_snapshot": dict(self.preview_snapshot),
+            "explosive_results": list(self.explosive_results),
+            "weapon_name": self.weapon_name,
+            "ammo_name": self.ammo_name,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "PendingGrenadeExplosion":
+        return cls(
+            explosion_id=data.get("explosion_id", ""),
+            resolve_phase=int(data.get("resolve_phase", 1)),
+            resolve_impulse=int(data.get("resolve_impulse", 0)),
+            shooter_token_id=data.get("shooter_token_id", ""),
+            preview_snapshot=dict(data.get("preview_snapshot", {})),
+            explosive_results=list(data.get("explosive_results", [])),
+            weapon_name=data.get("weapon_name", ""),
+            ammo_name=data.get("ammo_name", ""),
+        )
+
+
+@dataclass
 class ImpulseCombatState:
     """Tactical combat clock and token runtime on the map."""
 
@@ -300,6 +353,7 @@ class ImpulseCombatState:
     selected_token_id: str | None = None
     shot_preview: PendingShotPreview | None = None
     pending_projectiles: list[PendingProjectile] = field(default_factory=list)
+    pending_grenade_explosions: list[PendingGrenadeExplosion] = field(default_factory=list)
 
     def to_dict(self) -> dict:
         return {
@@ -313,6 +367,9 @@ class ImpulseCombatState:
             "selected_token_id": self.selected_token_id,
             "shot_preview": self.shot_preview.to_dict() if self.shot_preview else None,
             "pending_projectiles": [p.to_dict() for p in self.pending_projectiles],
+            "pending_grenade_explosions": [
+                g.to_dict() for g in self.pending_grenade_explosions
+            ],
         }
 
     @classmethod
@@ -335,5 +392,9 @@ class ImpulseCombatState:
             pending_projectiles=[
                 PendingProjectile.from_dict(p)
                 for p in data.get("pending_projectiles", [])
+            ],
+            pending_grenade_explosions=[
+                PendingGrenadeExplosion.from_dict(g)
+                for g in data.get("pending_grenade_explosions", [])
             ],
         )

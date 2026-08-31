@@ -72,6 +72,41 @@ def test_token_runtime_json_round_trip() -> None:
     assert rt.hands_free is False
     assert rt.recoil_ac_owed == 1.0
     assert rt.firing_stance_held is True
+    assert rt.impulse_burst_used is False
+    assert rt.held_grenade_name is None
+    assert rt.grenade_armed is False
+
+
+def test_token_runtime_grenade_fields_round_trip() -> None:
+    rt = TokenCombatRuntime(
+        held_grenade_name="HG 78 Frag Grenade",
+        grenade_armed=True,
+        impulse_burst_used=True,
+    )
+    restored = TokenCombatRuntime.from_dict(rt.to_dict())
+    assert restored.held_grenade_name == "HG 78 Frag Grenade"
+    assert restored.grenade_armed is True
+    assert restored.impulse_burst_used is True
+
+
+def test_pending_grenade_explosion_round_trip() -> None:
+    from phoenix_command.session.domains.impulse_combat_state import PendingGrenadeExplosion
+
+    expl = PendingGrenadeExplosion(
+        explosion_id="e1",
+        resolve_phase=2,
+        resolve_impulse=1,
+        shooter_token_id="t1",
+        preview_snapshot={"preview_id": "p"},
+        explosive_results=[{"hit": True, "eal": 5, "odds": 50, "roll": 10}],
+        weapon_name="G",
+        ammo_name="G",
+    )
+    ic = ImpulseCombatState(map_mode="combat")
+    ic.pending_grenade_explosions.append(expl)
+    restored = ImpulseCombatState.from_dict(ic.to_dict())
+    assert len(restored.pending_grenade_explosions) == 1
+    assert restored.pending_grenade_explosions[0].resolve_phase == 2
 
 
 def test_token_runtime_legacy_defaults() -> None:
@@ -84,6 +119,9 @@ def test_token_runtime_legacy_defaults() -> None:
     assert rt.last_shot_r is None
     assert rt.last_shot_layer_id == ""
     assert rt.firing_stance_held is False
+    assert rt.impulse_burst_used is False
+    assert rt.held_grenade_name is None
+    assert rt.grenade_armed is False
 
 
 def test_game_state_json_round_trip_kd_runtime() -> None:

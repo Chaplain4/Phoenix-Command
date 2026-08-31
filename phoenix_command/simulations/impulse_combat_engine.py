@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from phoenix_command.models.character import Character
-from phoenix_command.models.gear import Weapon
+from phoenix_command.models.gear import Grenade, Weapon
 from phoenix_command.session.domains.impulse_combat_state import (
     ImpulseCombatState,
     TokenCombatRuntime,
@@ -99,17 +99,21 @@ class ImpulseCombatEngine:
                 rt.aimed_this_impulse = False
                 rt.moved_this_impulse = False
                 rt.hexes_moved_this_impulse = 0.0
+                rt.impulse_burst_used = False
+                if impulse_idx == 0:
+                    rt.held_grenade_name = None
+                    rt.grenade_armed = False
                 if rt.knockdown_phase == "falling":
                     rt.knockdown_phase = "grounded"
 
-    def advance_impulse(self) -> list:
-        """Move to next impulse (host only). Returns projectiles due on the new impulse."""
+    def advance_impulse(self) -> tuple[list, list]:
+        """Move to next impulse (host only). Returns (due projectiles, due grenades)."""
         self.impulse_combat.impulse += 1
         if self.impulse_combat.impulse >= 4:
             self.impulse_combat.impulse = 0
             self.impulse_combat.phase += 1
         self.refill_impulse_ac()
-        return self.pop_due_projectiles()
+        return self.pop_due_projectiles(), self.pop_due_grenade_explosions()
 
     def absolute_impulse_index(self) -> int:
         return (self.impulse_combat.phase - 1) * 4 + self.impulse_combat.impulse
@@ -154,6 +158,53 @@ class ImpulseCombatEngine:
         )
         self.impulse_combat.pending_projectiles.append(proj)
         return proj
+
+    def pop_due_grenade_explosions(self) -> list:
+        """Return and remove grenade blasts due at the current phase/impulse."""
+        from phoenix_command.session.domains.impulse_combat_state import PendingGrenadeExplosion
+
+        phase = self.impulse_combat.phase
+        impulse = self.impulse_combat.impulse
+        due: list[PendingGrenadeExplosion] = []
+        remaining: list[PendingGrenadeExplosion] = []
+        for expl in self.impulse_combat.pending_grenade_explosions:
+            if expl.resolve_phase < phase or (
+                expl.resolve_phase == phase and expl.resolve_impulse <= impulse
+            ):
+                due.append(expl)
+            else:
+                remaining.append(expl)
+        self.impulse_combat.pending_grenade_explosions = remaining
+        return due
+
+    def schedule_grenade_explosion(
+        self,
+        shooter_token_id: str,
+        fuse_impulses: int,
+        preview_snapshot: dict,
+        explosive_results: list[dict],
+        weapon_name: str,
+        ammo_name: str,
+    ):
+        from phoenix_command.session.domains.impulse_combat_state import PendingGrenadeExplosion
+        import uuid
+
+        abs_now = self.absolute_impulse_index()
+        abs_resolve = abs_now + max(1, int(fuse_impulses))
+        resolve_phase = abs_resolve // 4 + 1
+        resolve_impulse = abs_resolve % 4
+        expl = PendingGrenadeExplosion(
+            explosion_id=str(uuid.uuid4()),
+            resolve_phase=resolve_phase,
+            resolve_impulse=resolve_impulse,
+            shooter_token_id=shooter_token_id,
+            preview_snapshot=dict(preview_snapshot),
+            explosive_results=list(explosive_results),
+            weapon_name=weapon_name,
+            ammo_name=ammo_name,
+        )
+        self.impulse_combat.pending_grenade_explosions.append(expl)
+        return expl
 
     def can_control_token(self, player_id: str, token: TokenPlacement, is_host: bool) -> bool:
         if is_host:
@@ -211,13 +262,17 @@ class ImpulseCombatEngine:
             return self._apply_select_weapon(placement, args.get("weapon_name", ""))
         if action == "set_fire_mode":
             return self._apply_set_fire_mode(placement, args.get("fire_mode", "single"))
+        if action == "pick_up_grenade":
+            return self._apply_pick_up_grenade(placement, args.get("grenade_name"))
+        if action == "arm_grenade":
+            return self._apply_arm_grenade(placement)
         if action == "custom_action":
             return self._apply_custom_action(placement, float(args.get("ac", 1)), str(args.get("label", "Custom")))
         if action == "skip_impulse":
             return self._apply_skip(placement)
         if action in STANCE_ACTION_MAP:
             return self._apply_stance_change(placement, action)
-        if action in BUILTIN_ACTIONS:
+        if action in BUILTIN_ACTIONS and action != "pick_up_grenade":
             return self._apply_catalog_action(placement, action)
         return ActionResult(False, f"Unknown action: {action}")
 
@@ -326,6 +381,58 @@ class ImpulseCombatEngine:
             return ActionResult(False, "Weapon is not full-auto")
         rt.fire_mode = mode
         return ActionResult(True, f"Fire mode: {mode}")
+
+    def _apply_pick_up_grenade(
+        self, placement: TokenPlacement, grenade_name: str | None
+    ) -> ActionResult:
+        char = self.characters.get(placement.character_name or "")
+        if not char:
+            return ActionResult(False, "No character")
+        grenades = [i for i in char.equipment if isinstance(i, Grenade)]
+        if not grenades:
+            return ActionResult(False, "No grenade in equipment")
+        found = None
+        if grenade_name:
+            for g in grenades:
+                if g.name == grenade_name:
+                    found = g
+                    break
+        else:
+            found = grenades[0]
+        if not found:
+            return ActionResult(False, f"Grenade not found: {grenade_name}")
+        cost = float(BUILTIN_ACTIONS["pick_up_grenade"].cost)
+        rt = self.get_runtime(placement.token_id)
+        if rt.ac_remaining < cost:
+            return ActionResult(False, f"Need {cost} AC, have {rt.ac_remaining:.1f}")
+        rt.ac_remaining -= cost
+        rt.held_grenade_name = found.name
+        rt.grenade_armed = found.arm_time <= 0
+        return ActionResult(True, f"Picked up {found.name} ({cost:.0f} AC)", cost)
+
+    def _apply_arm_grenade(self, placement: TokenPlacement) -> ActionResult:
+        char = self.characters.get(placement.character_name or "")
+        if not char:
+            return ActionResult(False, "No character")
+        rt = self.get_runtime(placement.token_id)
+        if not rt.held_grenade_name:
+            return ActionResult(False, "No grenade in hand")
+        found = None
+        for item in char.equipment:
+            if isinstance(item, Grenade) and item.name == rt.held_grenade_name:
+                found = item
+                break
+        if not found:
+            return ActionResult(False, "Grenade no longer in equipment")
+        cost = float(found.arm_time or 0)
+        if cost <= 0:
+            rt.grenade_armed = True
+            return ActionResult(True, f"{found.name} ready (no arm time)")
+        if rt.ac_remaining < cost:
+            return ActionResult(False, f"Need {cost} AC to arm, have {rt.ac_remaining:.1f}")
+        rt.ac_remaining -= cost
+        rt.grenade_armed = True
+        return ActionResult(True, f"Armed {found.name} ({cost:.0f} AC)", cost)
 
     def _apply_custom_action(
         self, placement: TokenPlacement, ac: float, label: str
@@ -477,6 +584,15 @@ class ImpulseCombatEngine:
                     return item
         return ImpulseCombatEngine._first_weapon(char)
 
+    @staticmethod
+    def _held_grenade(char: Character | None, rt: TokenCombatRuntime) -> Grenade | None:
+        if not char or not rt.held_grenade_name:
+            return None
+        for item in char.equipment:
+            if isinstance(item, Grenade) and item.name == rt.held_grenade_name:
+                return item
+        return None
+
     def _owed(self, rt: TokenCombatRuntime) -> float:
         return max(0.0, rt.recoil_ac_owed) + max(0.0, rt.balance_ac_owed)
 
@@ -576,4 +692,14 @@ class ImpulseCombatEngine:
                 actions.append(
                     ("cycle", f"Cycle ({weapon.name})", float(weapon.actions_to_cycle))
                 )
+        grenades = [i for i in (char.equipment if char else []) if isinstance(i, Grenade)]
+        if grenades:
+            if not rt.held_grenade_name:
+                actions.append(("pick_up_grenade", "Pick up Grenade", 2.0))
+            else:
+                g = self._held_grenade(char, rt)
+                if g and not rt.grenade_armed and (g.arm_time or 0) > 0:
+                    actions.append(
+                        ("arm_grenade", f"Arm {g.name}", float(g.arm_time))
+                    )
         return actions
