@@ -368,6 +368,14 @@ def _shot_params_from_preview(
             aim_time = preview.aim_time_ac + second_shot_aim_bonus(
                 s_rt, target_tok.q, target_tok.r, target_tok.layer_id or ""
             )
+    duck_shooter = False
+    duck_target = False
+    if token_runtime:
+        s_rt = token_runtime.get(preview.shooter_token_id)
+        t_id = (target_tok.token_id if target_tok else None) or preview.target_token_id
+        t_rt = token_runtime.get(t_id) if t_id else None
+        duck_shooter = bool(getattr(s_rt, "ducking", False)) if s_rt else False
+        duck_target = bool(getattr(t_rt, "ducking", False)) if t_rt else False
     return ShotParameters(
         aim_time_ac=aim_time,
         situation_stance_modifiers=stance,
@@ -382,6 +390,8 @@ def _shot_params_from_preview(
         intervening_barriers=intervening_barriers,
         shooter_stance=shooter_stance,
         target_stance=target_stance,
+        reflexive_duck_shooter=duck_shooter,
+        reflexive_duck_target=duck_target,
     )
 
 

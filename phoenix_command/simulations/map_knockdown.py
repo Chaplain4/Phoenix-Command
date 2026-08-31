@@ -50,6 +50,7 @@ def apply_knock_down_effects(rt: TokenCombatRuntime, effects: list[KnockDownEffe
         rt.ac_remaining = 0.0
         rt.braced = False
         rt.firing_stance_held = False
+        rt.looking_over_cover = False
 
 
 def tokens_for_character(tokens: TokenState, name: str) -> list[str]:

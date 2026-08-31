@@ -36,6 +36,45 @@ class TokenCombatRuntime:
     impulse_burst_used: bool = False
     held_grenade_name: str | None = None
     grenade_armed: bool = False
+    pending_action_id: str | None = None
+    pending_progress_ac: float = 0.0
+    pending_total_cost_ac: float = 0.0
+    pending_args: dict = field(default_factory=dict)
+    looking_over_cover: bool = False
+    ducking: bool = False
+
+    def has_pending(self) -> bool:
+        if self.pending_action_id:
+            return True
+        return self.move_progress > 0 and self.move_target_q is not None
+
+    def pending_id(self) -> str | None:
+        if self.pending_action_id:
+            return self.pending_action_id
+        if self.move_progress > 0 and self.move_target_q is not None:
+            return "move"
+        return None
+
+    def clear_pending(self) -> None:
+        self.pending_action_id = None
+        self.pending_progress_ac = 0.0
+        self.pending_total_cost_ac = 0.0
+        self.pending_args = {}
+        self.move_progress = 0.0
+        self.move_target_q = None
+        self.move_target_r = None
+
+    def set_pending(
+        self,
+        action_id: str,
+        total_cost: float,
+        args: dict | None = None,
+        progress: float = 0.0,
+    ) -> None:
+        self.pending_action_id = action_id
+        self.pending_total_cost_ac = float(total_cost)
+        self.pending_progress_ac = float(progress)
+        self.pending_args = dict(args or {})
 
     def status_label(self) -> str:
         parts: list[str] = []
@@ -47,8 +86,17 @@ class TokenCombatRuntime:
         parts.append(f"AC {self.ac_remaining:.1f}")
         if self.aim_impulses:
             parts.append(f"aim×{self.aim_impulses}")
-        if self.move_progress > 0:
+        pid = self.pending_id()
+        if pid == "move" or (self.move_progress > 0 and self.move_target_q is not None):
             parts.append(f"move {self.move_progress * 100:.0f}%")
+        elif pid and self.pending_total_cost_ac > 0:
+            parts.append(
+                f"pending {pid} {self.pending_progress_ac:.0f}/{self.pending_total_cost_ac:.0f}"
+            )
+        if self.ducking:
+            parts.append("ducking")
+        if self.looking_over_cover:
+            parts.append("looking")
         if self.knockdown_phase == "falling":
             parts.append("falling")
         elif self.knockdown_phase == "grounded":
@@ -93,6 +141,12 @@ class TokenCombatRuntime:
             "impulse_burst_used": self.impulse_burst_used,
             "held_grenade_name": self.held_grenade_name,
             "grenade_armed": self.grenade_armed,
+            "pending_action_id": self.pending_action_id,
+            "pending_progress_ac": self.pending_progress_ac,
+            "pending_total_cost_ac": self.pending_total_cost_ac,
+            "pending_args": dict(self.pending_args),
+            "looking_over_cover": self.looking_over_cover,
+            "ducking": self.ducking,
         }
 
     @classmethod
@@ -101,6 +155,9 @@ class TokenCombatRuntime:
             raw = data.get(key)
             return int(raw) if raw is not None else None
 
+        pending_args = data.get("pending_args") or {}
+        if not isinstance(pending_args, dict):
+            pending_args = {}
         return cls(
             ac_remaining=float(data.get("ac_remaining", 0.0)),
             stance=data.get("stance", "standing"),
@@ -129,6 +186,12 @@ class TokenCombatRuntime:
             impulse_burst_used=bool(data.get("impulse_burst_used", False)),
             held_grenade_name=data.get("held_grenade_name"),
             grenade_armed=bool(data.get("grenade_armed", False)),
+            pending_action_id=data.get("pending_action_id"),
+            pending_progress_ac=float(data.get("pending_progress_ac", 0.0)),
+            pending_total_cost_ac=float(data.get("pending_total_cost_ac", 0.0)),
+            pending_args=dict(pending_args),
+            looking_over_cover=bool(data.get("looking_over_cover", False)),
+            ducking=bool(data.get("ducking", False)),
         )
 
 

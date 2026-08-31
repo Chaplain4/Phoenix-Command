@@ -171,6 +171,8 @@ def build_map_shot_context(
         intervening_barriers=barriers or None,
         shooter_stance=shooter_rt.stance,
         target_stance=target_rt.stance,
+        reflexive_duck_shooter=bool(shooter_rt.ducking),
+        reflexive_duck_target=bool(target_rt.ducking),
     )
 
     notes = [f"Range {range_hexes} rule hex ({meters:.1f} m)"]
@@ -181,6 +183,10 @@ def build_map_shot_context(
         notes.append("Hip fire (no aim AC spent)")
     if shooter_rt.aim_impulses:
         notes.append(f"Aimed {shooter_rt.aim_impulses} impulse(s) at target")
+    if shooter_rt.ducking:
+        notes.append("Shooter ducking (−10 SA)")
+    if target_rt.ducking:
+        notes.append("Target ducking (−5 SA)")
     bonus = second_shot_aim_bonus(
         shooter_rt, target.q, target.r, target.layer_id or ""
     )

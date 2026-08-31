@@ -51,7 +51,7 @@ class CombatMapBar(QWidget):
 
         self._status_label = QLabel("")
         self._status_label.setMinimumWidth(160)
-        self._status_label.setToolTip("AC remaining this impulse (and move progress)")
+        self._status_label.setToolTip("AC remaining this impulse (and pending progress)")
         row1.addWidget(self._status_label)
         row1.addStretch()
 
@@ -73,6 +73,17 @@ class CombatMapBar(QWidget):
         self._do_action_btn = QPushButton("Do Action")
         self._do_action_btn.clicked.connect(self._emit_action)
         row2.addWidget(self._do_action_btn)
+
+        self._duck_btn = QPushButton("Duck")
+        self._duck_btn.setToolTip("Defensive Duck (0 AC). Interrupts pending actions and aim.")
+        self._duck_btn.clicked.connect(self._emit_duck)
+        row2.addWidget(self._duck_btn)
+
+        self._abandon_btn = QPushButton("Abandon")
+        self._abandon_btn.setToolTip("Abandon unfinished action (progress lost).")
+        self._abandon_btn.clicked.connect(self._emit_abandon)
+        self._abandon_btn.setEnabled(False)
+        row2.addWidget(self._abandon_btn)
 
         self._shot_btn = QPushButton("Declare Shot")
         self._shot_btn.clicked.connect(self._emit_declare_shot)
@@ -103,6 +114,7 @@ class CombatMapBar(QWidget):
         rt = self._impulse_combat.token_runtime.get(self._selected_token_id or "")
         if rt:
             self._status_label.setText(rt.status_label())
+            self._abandon_btn.setEnabled(rt.has_pending())
             idx = self._fire_mode_combo.findData(rt.fire_mode)
             if idx >= 0:
                 self._fire_mode_combo.blockSignals(True)
@@ -110,6 +122,7 @@ class CombatMapBar(QWidget):
                 self._fire_mode_combo.blockSignals(False)
         else:
             self._status_label.setText("")
+            self._abandon_btn.setEnabled(False)
 
     def set_tokens(self, token_labels: dict[str, str]) -> None:
         current = self._token_combo.currentData()
@@ -164,6 +177,16 @@ class CombatMapBar(QWidget):
         if action_id == "set_fire_mode":
             args["fire_mode"] = self._fire_mode_combo.currentData()
         self.combat_action_requested.emit(self._selected_token_id, action_id, args)
+
+    def _emit_duck(self) -> None:
+        if self._selected_token_id:
+            self.combat_action_requested.emit(self._selected_token_id, "duck", {})
+
+    def _emit_abandon(self) -> None:
+        if self._selected_token_id:
+            self.combat_action_requested.emit(
+                self._selected_token_id, "abandon_pending", {}
+            )
 
     def _emit_declare_shot(self) -> None:
         if self._selected_token_id:

@@ -190,7 +190,7 @@ def test_qa_p_mid_fixture_recoil() -> None:
     assert state.impulse_combat.token_runtime["t2"].balance_ac_owed == 2.0
 
 
-def test_refill_clears_move_progress() -> None:
+def test_refill_keeps_move_progress() -> None:
     ic = ImpulseCombatState(map_mode="combat", impulse=0)
     tokens = TokenState()
     tok = TokenPlacement(token_id="t1", character_name="F", q=0, r=0)
@@ -204,10 +204,20 @@ def test_refill_clears_move_progress() -> None:
         agility=10,
         gun_combat_skill_level=3,
     )
-    rt = TokenCombatRuntime(ac_remaining=0.5, move_progress=0.29, move_target_q=1, move_target_r=0)
+    rt = TokenCombatRuntime(
+        ac_remaining=0.5,
+        move_progress=0.29,
+        move_target_q=1,
+        move_target_r=0,
+        pending_action_id="move",
+        pending_progress_ac=0.29,
+        pending_total_cost_ac=1.0,
+    )
     ic.token_runtime["t1"] = rt
     engine = ImpulseCombatEngine(ic, tokens, MapState(), {"F": char})
     engine.advance_impulse()
     rt2 = engine.get_runtime("t1")
-    assert rt2.move_progress == 0.0
-    assert rt2.move_target_q is None
+    assert rt2.move_progress == 0.29
+    assert rt2.move_target_q == 1
+    assert rt2.pending_action_id == "move"
+    assert rt2.ducking is False

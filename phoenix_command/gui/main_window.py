@@ -547,6 +547,8 @@ class MainWindow(QMainWindow):
         self.combat_log.append_system(message)
 
     def _on_combat_action_requested(self, token_id: str, action: str, args: dict) -> None:
+        from PyQt6.QtWidgets import QMessageBox
+
         if action == "select_weapon":
             args = dict(args)
             name = self._prompt_select_weapon(token_id)
@@ -558,6 +560,30 @@ class MainWindow(QMainWindow):
             target_id = self._pick_enemy_token_id(token_id)
             if target_id:
                 args["target_token_id"] = target_id
+
+        ic = self.hex_map_view.get_impulse_combat_state()
+        rt = ic.token_runtime.get(token_id)
+        if action == "duck" and rt and rt.has_pending():
+            pending = rt.pending_id() or "action"
+            reply = QMessageBox.question(
+                self,
+                "Duck interrupts action",
+                f"Duck will abandon pending {pending} and clear aim. Continue?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            )
+            if reply != QMessageBox.StandardButton.Yes:
+                return
+        if action == "abandon_pending":
+            pending = (rt.pending_id() if rt else None) or "action"
+            reply = QMessageBox.question(
+                self,
+                "Abandon pending",
+                f"Abandon pending {pending}? Progress will be lost.",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            )
+            if reply != QMessageBox.StandardButton.Yes:
+                return
+
         if self._session_role == "guest":
             import uuid
             intent = make_player_intent(self._player_id, str(uuid.uuid4()), token_id, action, args)
@@ -565,6 +591,28 @@ class MainWindow(QMainWindow):
                 self._p2p_guest.send_message(intent)
             return
         result = self._apply_combat_action(token_id, action, args, self._player_id, is_host=True)
+        if (
+            not result.success
+            and result.message.startswith("Abandon or continue pending")
+            and rt
+            and rt.has_pending()
+        ):
+            pending = rt.pending_id() or "action"
+            reply = QMessageBox.question(
+                self,
+                "Pending action",
+                f"{result.message}\nAbandon {pending} and retry?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            )
+            if reply == QMessageBox.StandardButton.Yes:
+                abandon = self._apply_combat_action(
+                    token_id, "abandon_pending", {}, self._player_id, is_host=True
+                )
+                self.combat_log.append_system(abandon.message)
+                if abandon.success:
+                    result = self._apply_combat_action(
+                        token_id, action, args, self._player_id, is_host=True
+                    )
         msg = result.message if result.message else "Action applied"
         self.statusBar().showMessage(msg)
         self.combat_log.append_system(msg)
@@ -707,6 +755,30 @@ class MainWindow(QMainWindow):
         self._notify_game_state_changed(immediate=True)
 
     def _on_declare_shot(self, shooter_token_id: str) -> None:
+        from PyQt6.QtWidgets import QMessageBox
+
+        ic = self.hex_map_view.get_impulse_combat_state()
+        rt = ic.token_runtime.get(shooter_token_id)
+        if rt and rt.has_pending():
+            pending = rt.pending_id() or "action"
+            reply = QMessageBox.question(
+                self,
+                "Pending action",
+                f"Token has pending {pending}. Abandon it to declare a shot?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            )
+            if reply != QMessageBox.StandardButton.Yes:
+                return
+            if self._session_role != "guest":
+                result = self._apply_combat_action(
+                    shooter_token_id, "abandon_pending", {}, self._player_id, is_host=True
+                )
+                self.combat_log.append_system(result.message)
+                if not result.success:
+                    self.statusBar().showMessage(result.message)
+                    return
+                self.hex_map_view._refresh_combat_ui()
+
         if self._session_role == "guest":
             import uuid
             intent = make_player_intent(
@@ -1331,8 +1403,19 @@ class MainWindow(QMainWindow):
             return
         self._game_bridge.state.impulse_combat.shot_preview = preview
         ok, msg = self._execute_confirmed_preview(preview)
+        if not ok:
+            fail = f"Shot failed: {msg}"
+            self.statusBar().showMessage(fail)
+            self.combat_log.append_system(fail)
+            preview.status = "open"
+            self._game_bridge.state.impulse_combat.shot_preview = preview
+            if self._shot_preview_dialog is not None:
+                self._shot_preview_dialog.reject_confirm_keep_open(msg)
+            return
+        if self._shot_preview_dialog is not None:
+            self._shot_preview_dialog.accept_after_confirm()
         self._shot_preview_dialog = None
-        self.statusBar().showMessage(msg if ok else f"Shot failed: {msg}")
+        self.statusBar().showMessage(msg)
         self._notify_game_state_changed(immediate=True)
 
     def _on_preview_cancelled(self, preview_id: str) -> None:

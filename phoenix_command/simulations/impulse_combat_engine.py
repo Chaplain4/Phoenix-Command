@@ -1,9 +1,9 @@
-"""Impulse combat action engine: AC spending, movement, reload."""
+"""Impulse combat action engine: AC spending, movement, reload, pending carry-over."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Callable
 
 from phoenix_command.models.character import Character
 from phoenix_command.models.gear import Grenade, Weapon
@@ -17,6 +17,7 @@ from phoenix_command.simulations.hex_tactical import (
     classify_movement_base,
     neighbor_direction_index,
 )
+from phoenix_command.simulations.map_fire_ac import clear_aim_state
 from phoenix_command.simulations.map_knockdown import HANDS_FREE_AC
 from phoenix_command.tables.catalogs.action_catalog import BUILTIN_ACTIONS
 from phoenix_command.tables.catalogs.movement_catalog import (
@@ -41,6 +42,45 @@ STANCE_ACTION_MAP = {
     "prone_to_kneeling": "kneeling",
     "prone_to_standing": "standing",
 }
+
+COVER_FIRING_STANCE_ACTIONS = frozenset(
+    {
+        "assume_firing_stance_cover",
+        "assume_hip_firing_stance_cover",
+    }
+)
+
+# Actions allowed while another pending action exists (without continue match).
+PENDING_EXEMPT = frozenset(
+    {
+        "abandon_pending",
+        "duck",
+        "recover",
+        "recover_hands",
+        "skip_impulse",
+        "set_fire_mode",
+    }
+)
+
+# Book: interrupting actions clear accumulated Aim Time.
+AIM_INTERRUPT_ACTIONS = frozenset(
+    {
+        "move",
+        "movement_while_braced",
+        "reload",
+        "cycle",
+        "select_weapon",
+        "pick_up_grenade",
+        "arm_grenade",
+        "brace_weapon",
+        "look_over_cover",
+        "duck",
+        "duck_from_firing",
+        "custom_action",
+        *STANCE_ACTION_MAP.keys(),
+        *COVER_FIRING_STANCE_ACTIONS,
+    }
+)
 
 
 @dataclass
@@ -100,10 +140,9 @@ class ImpulseCombatEngine:
                 rt.aimed_this_impulse = False
                 rt.moved_this_impulse = False
                 rt.hexes_moved_this_impulse = 0.0
-                rt.move_progress = 0.0
-                rt.move_target_q = None
-                rt.move_target_r = None
+                # Keep move_progress / pending_* across impulses (carry-over).
                 rt.impulse_burst_used = False
+                rt.ducking = False
                 if rt.knockdown_phase == "falling":
                     rt.knockdown_phase = "grounded"
 
@@ -230,8 +269,14 @@ class ImpulseCombatEngine:
             return ActionResult(False, "No control of this token")
 
         rt = self.get_runtime(token_id)
+        if action == "abandon_pending":
+            return self._apply_abandon_pending(placement)
+        if action == "duck":
+            return self._apply_free_duck(placement)
         if action == "recover":
-            return self._apply_recover(placement, float(args.get("ac", rt.recoil_ac_owed + rt.balance_ac_owed)))
+            return self._apply_recover(
+                placement, float(args.get("ac", rt.recoil_ac_owed + rt.balance_ac_owed))
+            )
         if action == "recover_hands":
             return self._apply_recover_hands(placement)
 
@@ -242,6 +287,10 @@ class ImpulseCombatEngine:
         if auto:
             return auto
 
+        conflict = self._pending_conflict(rt, action, args)
+        if conflict:
+            return conflict
+
         if action in ("move", "movement_while_braced"):
             return self._apply_move(
                 placement,
@@ -250,7 +299,7 @@ class ImpulseCombatEngine:
                 braced=action == "movement_while_braced",
             )
         if action == "brace_weapon":
-            return self._apply_simple_action(placement, "brace_weapon", set_braced=True)
+            return self._apply_brace(placement)
         if action == "aim":
             ac = float(args.get("ac", 1))
             target_id = args.get("target_token_id")
@@ -268,14 +317,145 @@ class ImpulseCombatEngine:
         if action == "arm_grenade":
             return self._apply_arm_grenade(placement)
         if action == "custom_action":
-            return self._apply_custom_action(placement, float(args.get("ac", 1)), str(args.get("label", "Custom")))
+            return self._apply_custom_action(
+                placement, float(args.get("ac", 1)), str(args.get("label", "Custom"))
+            )
         if action == "skip_impulse":
             return self._apply_skip(placement)
         if action in STANCE_ACTION_MAP:
             return self._apply_stance_change(placement, action)
+        if action == "duck_from_firing":
+            return self._apply_duck_from_firing(placement)
         if action in BUILTIN_ACTIONS and action != "pick_up_grenade":
             return self._apply_catalog_action(placement, action)
         return ActionResult(False, f"Unknown action: {action}")
+
+    def _pending_conflict(
+        self, rt: TokenCombatRuntime, action: str, args: dict[str, Any]
+    ) -> ActionResult | None:
+        if action in PENDING_EXEMPT:
+            return None
+        if not rt.has_pending():
+            return None
+        pending = rt.pending_id()
+        if action == pending or (
+            pending == "move" and action in ("move", "movement_while_braced")
+        ):
+            if pending == "move" and action in ("move", "movement_while_braced"):
+                tq = args.get("target_q")
+                tr = args.get("target_r")
+                if (
+                    tq is not None
+                    and tr is not None
+                    and rt.move_target_q is not None
+                    and (int(tq) != rt.move_target_q or int(tr) != rt.move_target_r)
+                ):
+                    return ActionResult(
+                        False, "Abandon or continue pending move first"
+                    )
+            return None
+        return ActionResult(
+            False, f"Abandon or continue pending {pending} first"
+        )
+
+    def _interrupt_aim_if_needed(self, rt: TokenCombatRuntime, action: str) -> None:
+        if action in AIM_INTERRUPT_ACTIONS:
+            clear_aim_state(rt)
+
+    def _apply_abandon_pending(self, placement: TokenPlacement) -> ActionResult:
+        rt = self.get_runtime(placement.token_id)
+        pending = rt.pending_id()
+        if not pending:
+            return ActionResult(False, "No pending action")
+        rt.clear_pending()
+        return ActionResult(True, f"Abandoned pending {pending}")
+
+    def _apply_free_duck(self, placement: TokenPlacement) -> ActionResult:
+        rt = self.get_runtime(placement.token_id)
+        pending = rt.pending_id()
+        clear_aim_state(rt)
+        if pending:
+            rt.clear_pending()
+        rt.firing_stance_held = False
+        rt.looking_over_cover = False
+        rt.ducking = True
+        msg = "Duck (0 AC)"
+        if pending:
+            msg += f" — interrupted {pending}"
+        return ActionResult(True, msg, 0.0)
+
+    def _apply_duck_from_firing(self, placement: TokenPlacement) -> ActionResult:
+        rt = self.get_runtime(placement.token_id)
+        if not (rt.firing_stance_held or rt.looking_over_cover):
+            return ActionResult(False, "Not in firing stance or looking over cover")
+
+        def _complete(runtime: TokenCombatRuntime) -> None:
+            runtime.firing_stance_held = False
+            runtime.looking_over_cover = False
+            runtime.ducking = True
+
+        return self._partial_spend(
+            placement,
+            "duck_from_firing",
+            1.0,
+            {},
+            on_complete=_complete,
+            label="Duck from firing/looking",
+            interrupt_aim=True,
+        )
+
+    def _partial_spend(
+        self,
+        placement: TokenPlacement,
+        action_id: str,
+        total_cost: float,
+        args: dict[str, Any],
+        *,
+        on_complete: Callable[[TokenCombatRuntime], None],
+        label: str,
+        interrupt_aim: bool = True,
+    ) -> ActionResult:
+        rt = self.get_runtime(placement.token_id)
+        total_cost = float(total_cost)
+        if total_cost <= 0:
+            if interrupt_aim:
+                self._interrupt_aim_if_needed(rt, action_id)
+            on_complete(rt)
+            return ActionResult(True, f"{label} (0 AC)", 0.0)
+
+        starting = rt.pending_action_id != action_id
+        if starting:
+            if interrupt_aim:
+                self._interrupt_aim_if_needed(rt, action_id)
+            rt.set_pending(action_id, total_cost, args, progress=0.0)
+
+        remaining = rt.pending_total_cost_ac - rt.pending_progress_ac
+        if remaining <= 1e-9:
+            on_complete(rt)
+            rt.pending_action_id = None
+            rt.pending_progress_ac = 0.0
+            rt.pending_total_cost_ac = 0.0
+            rt.pending_args = {}
+            return ActionResult(True, f"{label} complete", 0.0)
+
+        spend = min(rt.ac_remaining, remaining)
+        if spend <= 0:
+            return ActionResult(False, "No AC remaining")
+        rt.ac_remaining -= spend
+        rt.pending_progress_ac += spend
+        if rt.pending_progress_ac + 1e-9 >= rt.pending_total_cost_ac:
+            on_complete(rt)
+            done_cost = rt.pending_total_cost_ac
+            rt.pending_action_id = None
+            rt.pending_progress_ac = 0.0
+            rt.pending_total_cost_ac = 0.0
+            rt.pending_args = {}
+            return ActionResult(True, f"{label} complete ({done_cost:.0f} AC)", spend)
+        return ActionResult(
+            True,
+            f"{label} {rt.pending_progress_ac:.0f}/{rt.pending_total_cost_ac:.0f} AC",
+            spend,
+        )
 
     def _apply_catalog_action(self, placement: TokenPlacement, action_id: str) -> ActionResult:
         action_def = BUILTIN_ACTIONS.get(action_id)
@@ -290,36 +470,65 @@ class ImpulseCombatEngine:
             cost = float(weapon.reload_time)
         else:
             cost = float(cost_raw)
-        rt = self.get_runtime(placement.token_id)
-        if rt.ac_remaining < cost:
-            return ActionResult(False, f"Need {cost} AC, have {rt.ac_remaining:.1f}")
-        rt.ac_remaining -= cost
+
+        def _complete(rt: TokenCombatRuntime) -> None:
+            self._apply_catalog_completion(rt, action_id)
+
+        return self._partial_spend(
+            placement,
+            action_id,
+            cost,
+            {},
+            on_complete=_complete,
+            label=action_def.name,
+            interrupt_aim=action_id in AIM_INTERRUPT_ACTIONS,
+        )
+
+    def _apply_catalog_completion(self, rt: TokenCombatRuntime, action_id: str) -> None:
         if action_id == "brace_weapon":
             rt.braced = True
-        return ActionResult(True, f"{action_def.name} ({cost} AC)", cost)
+        elif action_id == "look_over_cover":
+            rt.looking_over_cover = True
+        elif action_id in COVER_FIRING_STANCE_ACTIONS:
+            rt.firing_stance_held = True
+            rt.looking_over_cover = True
+        elif action_id == "duck_from_firing":
+            rt.firing_stance_held = False
+            rt.looking_over_cover = False
+            rt.ducking = True
 
-    def _apply_simple_action(
-        self,
-        placement: TokenPlacement,
-        action_id: str,
-        set_braced: bool = False,
-    ) -> ActionResult:
-        result = self._apply_catalog_action(placement, action_id)
-        if result.success and set_braced:
-            self.get_runtime(placement.token_id).braced = True
-        return result
+    def _apply_brace(self, placement: TokenPlacement) -> ActionResult:
+        return self._partial_spend(
+            placement,
+            "brace_weapon",
+            float(BUILTIN_ACTIONS["brace_weapon"].cost),
+            {},
+            on_complete=lambda rt: setattr(rt, "braced", True),
+            label="Brace Weapon",
+            interrupt_aim=True,
+        )
 
     def _apply_stance_change(self, placement: TokenPlacement, action_id: str) -> ActionResult:
-        result = self._apply_catalog_action(placement, action_id)
-        if result.success:
-            rt = self.get_runtime(placement.token_id)
+        cost = float(BUILTIN_ACTIONS[action_id].cost)
+
+        def _complete(rt: TokenCombatRuntime) -> None:
             rt.stance = STANCE_ACTION_MAP[action_id]
             rt.braced = False
             rt.firing_stance_held = False
+            rt.looking_over_cover = False
             if rt.knockdown_phase == "grounded" and rt.stance in ("kneeling", "standing"):
                 rt.knockdown_phase = "none"
                 rt.hands_free = True
-        return result
+
+        return self._partial_spend(
+            placement,
+            action_id,
+            cost,
+            {},
+            on_complete=_complete,
+            label=BUILTIN_ACTIONS[action_id].name,
+            interrupt_aim=True,
+        )
 
     def _apply_aim(
         self,
@@ -362,10 +571,12 @@ class ImpulseCombatEngine:
         if not found:
             return ActionResult(False, f"Weapon not found: {weapon_name}")
         rt = self.get_runtime(placement.token_id)
+        self._interrupt_aim_if_needed(rt, "select_weapon")
         rt.held_weapon_name = found.name
         rt.weapon_cycled = found.actions_to_cycle is None
         rt.fire_mode = "single"
         rt.firing_stance_held = False
+        rt.looking_over_cover = False
         return ActionResult(True, f"Selected {found.name}")
 
     def _apply_set_fire_mode(self, placement: TokenPlacement, mode: str) -> ActionResult:
@@ -403,13 +614,22 @@ class ImpulseCombatEngine:
         if not found:
             return ActionResult(False, f"Grenade not found: {grenade_name}")
         cost = float(BUILTIN_ACTIONS["pick_up_grenade"].cost)
-        rt = self.get_runtime(placement.token_id)
-        if rt.ac_remaining < cost:
-            return ActionResult(False, f"Need {cost} AC, have {rt.ac_remaining:.1f}")
-        rt.ac_remaining -= cost
-        rt.held_grenade_name = found.name
-        rt.grenade_armed = found.arm_time <= 0
-        return ActionResult(True, f"Picked up {found.name} ({cost:.0f} AC)", cost)
+        name = found.name
+        arm_ready = found.arm_time <= 0
+
+        def _complete(rt: TokenCombatRuntime) -> None:
+            rt.held_grenade_name = name
+            rt.grenade_armed = arm_ready
+
+        return self._partial_spend(
+            placement,
+            "pick_up_grenade",
+            cost,
+            {"grenade_name": name},
+            on_complete=_complete,
+            label=f"Pick up {name}",
+            interrupt_aim=True,
+        )
 
     def _apply_arm_grenade(self, placement: TokenPlacement) -> ActionResult:
         char = self.characters.get(placement.character_name or "")
@@ -429,24 +649,32 @@ class ImpulseCombatEngine:
         if cost <= 0:
             rt.grenade_armed = True
             return ActionResult(True, f"{found.name} ready (no arm time)")
-        if rt.ac_remaining < cost:
-            return ActionResult(False, f"Need {cost} AC to arm, have {rt.ac_remaining:.1f}")
-        rt.ac_remaining -= cost
-        rt.grenade_armed = True
-        return ActionResult(True, f"Armed {found.name} ({cost:.0f} AC)", cost)
+        name = found.name
+        return self._partial_spend(
+            placement,
+            "arm_grenade",
+            cost,
+            {},
+            on_complete=lambda runtime: setattr(runtime, "grenade_armed", True),
+            label=f"Arm {name}",
+            interrupt_aim=True,
+        )
 
     def _apply_custom_action(
         self, placement: TokenPlacement, ac: float, label: str
     ) -> ActionResult:
-        rt = self.get_runtime(placement.token_id)
         ac = max(0.0, ac)
         if ac <= 0:
             return ActionResult(False, "Custom action needs AC > 0")
-        spend = min(ac, rt.ac_remaining)
-        if spend <= 0:
-            return ActionResult(False, "No AC remaining")
-        rt.ac_remaining -= spend
-        return ActionResult(True, f"{label} ({spend} AC)", spend)
+        return self._partial_spend(
+            placement,
+            "custom_action",
+            ac,
+            {"label": label},
+            on_complete=lambda _rt: None,
+            label=label,
+            interrupt_aim=True,
+        )
 
     def _apply_skip(self, placement: TokenPlacement) -> ActionResult:
         rt = self.get_runtime(placement.token_id)
@@ -461,11 +689,15 @@ class ImpulseCombatEngine:
         if not weapon:
             return ActionResult(False, "No weapon in hands")
         cost = float(weapon.reload_time)
-        if rt.ac_remaining < cost:
-            return ActionResult(False, f"Reload needs {cost} AC")
-        rt.ac_remaining -= cost
-        rt.weapon_cycled = True
-        return ActionResult(True, f"Reload {weapon.name} ({cost} AC)", cost)
+        return self._partial_spend(
+            placement,
+            "reload",
+            cost,
+            {},
+            on_complete=lambda runtime: setattr(runtime, "weapon_cycled", True),
+            label=f"Reload {weapon.name}",
+            interrupt_aim=True,
+        )
 
     def _apply_cycle(self, placement: TokenPlacement) -> ActionResult:
         char = self.characters.get(placement.character_name or "")
@@ -474,11 +706,15 @@ class ImpulseCombatEngine:
         if not weapon or weapon.actions_to_cycle is None:
             return ActionResult(False, "Weapon does not require cycling")
         cost = float(weapon.actions_to_cycle)
-        if rt.ac_remaining < cost:
-            return ActionResult(False, f"Cycle needs {cost} AC")
-        rt.ac_remaining -= cost
-        rt.weapon_cycled = True
-        return ActionResult(True, f"Cycle {weapon.name} ({cost} AC)", cost)
+        return self._partial_spend(
+            placement,
+            "cycle",
+            cost,
+            {},
+            on_complete=lambda runtime: setattr(runtime, "weapon_cycled", True),
+            label=f"Cycle {weapon.name}",
+            interrupt_aim=True,
+        )
 
     def _apply_move(
         self,
@@ -517,24 +753,45 @@ class ImpulseCombatEngine:
         if rt.move_target_q != target_q or rt.move_target_r != target_r:
             if rt.move_progress > 0:
                 return ActionResult(False, "Finish current move first")
+            self._interrupt_aim_if_needed(rt, "move")
             rt.move_target_q = target_q
             rt.move_target_r = target_r
             rt.move_progress = 0.0
+            rt.pending_action_id = "move"
+            rt.pending_total_cost_ac = hex_cost
+            rt.pending_progress_ac = 0.0
+            rt.pending_args = {"target_q": target_q, "target_r": target_r, "braced": braced}
+        elif rt.pending_action_id != "move":
+            rt.pending_action_id = "move"
+            rt.pending_total_cost_ac = hex_cost
+            rt.pending_args = {"target_q": target_q, "target_r": target_r, "braced": braced}
 
-        spend = min(ac_available, hex_cost)
+        remaining_frac = max(0.0, 1.0 - rt.move_progress)
+        remaining_ac = remaining_frac * hex_cost if hex_cost else 0.0
+        spend = min(ac_available, remaining_ac)
+        if spend <= 0 and remaining_frac > 0:
+            return ActionResult(False, "No AC remaining")
+
         rt.ac_remaining -= spend
         if hex_cost > 0:
             rt.move_progress += spend / hex_cost
+            rt.pending_progress_ac = rt.move_progress * hex_cost
+            rt.pending_total_cost_ac = hex_cost
         rt.moved_this_impulse = True
         rt.firing_stance_held = False
+        rt.looking_over_cover = False
         rt.hexes_moved_this_impulse += spend / hex_cost if hex_cost else 0
 
-        if rt.move_progress >= 1.0:
+        if rt.move_progress >= 1.0 - 1e-9:
             placement.q = target_q
             placement.r = target_r
             rt.move_progress = 0.0
             rt.move_target_q = None
             rt.move_target_r = None
+            rt.pending_action_id = None
+            rt.pending_progress_ac = 0.0
+            rt.pending_total_cost_ac = 0.0
+            rt.pending_args = {}
             if braced:
                 rt.braced = True
             msg = f"Moved to ({target_q},{target_r})"
@@ -608,7 +865,7 @@ class ImpulseCombatEngine:
         return amount - left
 
     def _knockdown_block(self, rt: TokenCombatRuntime, action: str) -> ActionResult | None:
-        if action in ("skip_impulse", "set_fire_mode"):
+        if action in ("skip_impulse", "set_fire_mode", "duck", "abandon_pending"):
             return None
         if rt.knockdown_phase == "falling":
             return ActionResult(False, "Knocked off feet this impulse")
@@ -617,7 +874,14 @@ class ImpulseCombatEngine:
         return None
 
     def _auto_pay_owed(self, rt: TokenCombatRuntime, action: str) -> ActionResult | None:
-        if action in ("skip_impulse", "set_fire_mode", "recover", "recover_hands"):
+        if action in (
+            "skip_impulse",
+            "set_fire_mode",
+            "recover",
+            "recover_hands",
+            "duck",
+            "abandon_pending",
+        ):
             return None
         owed = self._owed(rt)
         if owed <= 0:
@@ -663,25 +927,50 @@ class ImpulseCombatEngine:
         rt = self.get_runtime(token_id)
         char = self.characters.get(placement.character_name or "")
         if rt.knockdown_phase == "falling":
-            return [("skip_impulse", "Skip Impulse", 0)]
+            return [
+                ("duck", "Duck", 0),
+                ("skip_impulse", "Skip Impulse", 0),
+            ]
         actions: list[tuple[str, str, float | str]] = []
+        if rt.has_pending():
+            pid = rt.pending_id() or "action"
+            actions.append(("abandon_pending", f"Abandon pending ({pid})", 0))
         owed = self._owed(rt)
         if owed > 0:
             actions.append(("recover", f"Recover recoil/balance ({owed:.0f} AC)", owed))
         if rt.knockdown_phase == "grounded" and not rt.hands_free:
             actions.append(("recover_hands", "Use hands (roll)", HANDS_FREE_AC))
+            actions.append(("duck", "Duck", 0))
             actions.append(("skip_impulse", "Skip Impulse", 0))
             return actions
-        actions.extend([
-            ("move", "Move", "var"),
-            ("movement_while_braced", "Movement While Braced", "var"),
-            ("brace_weapon", "Brace Weapon", 1),
-            ("aim", "Aim", "var"),
-            ("custom_action", "Custom Action", "var"),
-            ("skip_impulse", "Skip Impulse", 0),
-            ("set_fire_mode", "Set Fire Mode", 0),
-            ("select_weapon", "Select Weapon", 0),
-        ])
+        actions.extend(
+            [
+                ("duck", "Duck", 0),
+                ("move", "Move", "var"),
+                ("movement_while_braced", "Movement While Braced", "var"),
+                ("brace_weapon", "Brace Weapon", 1),
+                ("aim", "Aim", "var"),
+                ("custom_action", "Custom Action", "var"),
+                ("skip_impulse", "Skip Impulse", 0),
+                ("set_fire_mode", "Set Fire Mode", 0),
+                ("select_weapon", "Select Weapon", 0),
+                ("look_over_cover", "Look Over or Around Cover", 1),
+                (
+                    "assume_firing_stance_cover",
+                    "Assume Firing Stance (Cover)",
+                    2,
+                ),
+                (
+                    "assume_hip_firing_stance_cover",
+                    "Assume Hip Firing Stance (Cover)",
+                    1,
+                ),
+            ]
+        )
+        if rt.firing_stance_held or rt.looking_over_cover:
+            actions.append(
+                ("duck_from_firing", "Duck from Firing Stance / Looking", 1)
+            )
         for action_id, new_stance in STANCE_ACTION_MAP.items():
             if rt.stance != new_stance:
                 cost = BUILTIN_ACTIONS[action_id].cost

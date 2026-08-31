@@ -484,7 +484,19 @@ class MapShotPreviewDialog(QDialog):
         p = self._collect()
         p.status = "confirmed"
         self.confirmed.emit(p)
+        # Parent closes via accept() only after successful resolve.
+
+    def accept_after_confirm(self) -> None:
+        """Close dialog after host successfully resolved Confirm."""
         self.accept()
+
+    def reject_confirm_keep_open(self, reason: str = "") -> None:
+        """Undo confirmed status so the shooter can fix AC / params and retry."""
+        self._preview.status = "open"
+        if reason:
+            self.setWindowTitle(f"Shot Preview — Map Combat ({reason})")
+        else:
+            self.setWindowTitle("Shot Preview — Map Combat")
 
     def _on_cancel(self) -> None:
         self.cancelled.emit(self._preview.preview_id)
