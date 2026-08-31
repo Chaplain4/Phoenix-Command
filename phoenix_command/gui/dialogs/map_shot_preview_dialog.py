@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtGui import QGuiApplication
 from PyQt6.QtWidgets import (
     QComboBox,
     QDialog,
@@ -15,11 +16,13 @@ from PyQt6.QtWidgets import (
     QListWidget,
     QListWidgetItem,
     QPushButton,
+    QScrollArea,
     QSpinBox,
     QTableWidget,
     QTableWidgetItem,
     QTextEdit,
     QVBoxLayout,
+    QWidget,
 )
 
 from phoenix_command.models.enums import (
@@ -52,7 +55,12 @@ class MapShotPreviewDialog(QDialog):
     ):
         super().__init__(parent)
         self.setWindowTitle("Shot Preview — Map Combat")
-        self.setMinimumSize(600, 720)
+        self.setMinimumWidth(600)
+        screen = QGuiApplication.primaryScreen()
+        max_h = 720
+        if screen:
+            max_h = min(720, int(screen.availableGeometry().height() * 0.85))
+        self.setMaximumHeight(max_h)
         self._preview = preview
         self._editable = editable
         self._token_labels = token_labels or {}
@@ -68,7 +76,13 @@ class MapShotPreviewDialog(QDialog):
         return self._token_labels.get(token_id, token_id)
 
     def _setup_ui(self) -> None:
-        layout = QVBoxLayout(self)
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(0, 0, 0, 0)
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        content = QWidget()
+        layout = QVBoxLayout(content)
 
         self.kind_label = QLabel("")
         layout.addWidget(self.kind_label)
@@ -201,6 +215,9 @@ class MapShotPreviewDialog(QDialog):
         self.cancel_btn.clicked.connect(self._on_cancel)
         self.apply_btn.clicked.connect(self._on_apply)
         layout.addWidget(buttons)
+
+        scroll.setWidget(content)
+        outer.addWidget(scroll)
 
     def _on_mode_changed(self) -> None:
         self._update_mode_visibility()

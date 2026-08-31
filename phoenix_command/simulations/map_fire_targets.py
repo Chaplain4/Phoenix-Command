@@ -196,11 +196,13 @@ def is_pellet_ammo(ammo) -> bool:
 
 
 def default_ammo_for_weapon(weapon, fire_mode: str = "single"):
-    """Pick ammo for map preview; prefer pellets when firing shotgun auto."""
+    """Pick ammo for map preview; prefer pellets for shotgun weapons and auto."""
+    from phoenix_command.models.enums import WeaponType
     from phoenix_command.models.gear import AmmoType
 
     types = getattr(weapon, "ammunition_types", None) or []
-    if fire_mode == "auto":
+    is_shotgun = getattr(weapon, "weapon_type", None) == WeaponType.SHOTGUN
+    if fire_mode == "auto" or is_shotgun:
         for raw in types:
             if isinstance(raw, AmmoType) and is_pellet_ammo(raw):
                 return raw

@@ -104,9 +104,6 @@ class ImpulseCombatEngine:
                 rt.move_target_q = None
                 rt.move_target_r = None
                 rt.impulse_burst_used = False
-                if impulse_idx == 0:
-                    rt.held_grenade_name = None
-                    rt.grenade_armed = False
                 if rt.knockdown_phase == "falling":
                     rt.knockdown_phase = "grounded"
 

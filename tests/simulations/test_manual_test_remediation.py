@@ -12,7 +12,11 @@ from phoenix_command.session.domains.token_state import TokenPlacement, TokenSta
 from phoenix_command.session.domains.map_state import MapState, WallSegment, hex_wall_key
 from phoenix_command.simulations.impulse_combat_engine import ImpulseCombatEngine
 from phoenix_command.simulations.map_fire_dispatch import enrich_preview_targets, filter_ids_by_los
-from phoenix_command.simulations.map_fire_targets import default_ammo_for_weapon, is_pellet_ammo
+from phoenix_command.simulations.map_fire_targets import (
+    default_ammo_for_weapon,
+    infer_fire_kind,
+    is_pellet_ammo,
+)
 from phoenix_command.simulations.map_los import check_los
 from phoenix_command.item_database.weapons import spas12
 
@@ -68,12 +72,63 @@ def test_filter_ids_by_los_respects_pen() -> None:
     assert not check_los(ms, shooter, target, pen=pen).blocked
 
 
-def test_default_ammo_prefers_pellets_for_auto() -> None:
+def test_grenade_ammo_has_no_get_pen() -> None:
+    """Grenade as ammo must not be passed to get_pen (O1 retest)."""
+    grenade = Grenade(
+        name="Test Grenade",
+        country=Country.USSR,
+        grenade_type=GrenadeType.FRAG,
+        weight=1.0,
+        length=4.0,
+        arm_time=3,
+        fuse_length=1,
+        range=10,
+    )
+    assert not hasattr(grenade, "get_pen")
+    pen = None
+    if hasattr(grenade, "get_pen"):
+        pen = float(grenade.get_pen(1))
+    assert pen is None
+
+
+def test_default_ammo_prefers_pellets_for_shotgun() -> None:
     auto_ammo = default_ammo_for_weapon(spas12, "auto")
     single_ammo = default_ammo_for_weapon(spas12, "single")
     assert auto_ammo is not None and single_ammo is not None
     assert is_pellet_ammo(auto_ammo)
-    assert not is_pellet_ammo(single_ammo)
+    assert is_pellet_ammo(single_ammo)
+    assert infer_fire_kind("single", spas12, single_ammo) == "shotgun"
+
+
+def test_grenade_hold_survives_phase_advance() -> None:
+    ic = ImpulseCombatState(map_mode="combat", impulse=3, phase=1)
+    tokens = TokenState()
+    tok = TokenPlacement(token_id="t1", character_name="G", q=0, r=0)
+    tokens.placements["t1"] = tok
+    char = Character(
+        name="G",
+        strength=14,
+        intelligence=14,
+        will=12,
+        health=12,
+        agility=14,
+        gun_combat_skill_level=10,
+    )
+    from phoenix_command.item_database.grenades import rgd_5
+    char.add_gear(rgd_5)
+    ic.token_runtime["t1"] = TokenCombatRuntime(ac_remaining=1.0, held_grenade_name=rgd_5.name)
+    engine = ImpulseCombatEngine(ic, tokens, MapState(), {"G": char})
+    engine.advance_impulse()
+    rt = engine.get_runtime("t1")
+    assert rt.held_grenade_name == rgd_5.name
+    assert ic.phase == 2
+    assert ic.impulse == 0
+
+
+def test_default_ammo_prefers_pellets_for_auto() -> None:
+    auto_ammo = default_ammo_for_weapon(spas12, "auto")
+    assert auto_ammo is not None
+    assert is_pellet_ammo(auto_ammo)
 
 
 def test_kneeling_to_standing_available() -> None:

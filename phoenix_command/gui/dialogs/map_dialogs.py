@@ -7,7 +7,7 @@ import uuid
 from pathlib import Path
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QIcon, QPixmap
+from PyQt6.QtGui import QGuiApplication, QIcon, QPixmap
 from PyQt6.QtWidgets import (
     QButtonGroup,
     QCheckBox,
@@ -24,6 +24,7 @@ from PyQt6.QtWidgets import (
     QListWidget,
     QMessageBox,
     QPushButton,
+    QScrollArea,
     QSpinBox,
     QTableWidget,
     QTableWidgetItem,
@@ -664,10 +665,18 @@ class TokenDialog(QDialog):
     ):
         super().__init__(parent)
         self.setWindowTitle("Token Properties")
+        screen = QGuiApplication.primaryScreen()
+        if screen:
+            self.setMaximumHeight(int(screen.availableGeometry().height() * 0.85))
         tok = token or TokenPlacement(token_id=str(uuid.uuid4()))
         self._scale_x = tok.scale_x
         self._scale_y = tok.scale_y
-        layout = QFormLayout(self)
+        outer = QVBoxLayout(self)
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        content = QWidget()
+        layout = QFormLayout(content)
 
         self.label_edit = QLineEdit(tok.label)
         layout.addRow("Label:", self.label_edit)
@@ -787,6 +796,8 @@ class TokenDialog(QDialog):
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
         layout.addRow(buttons)
+        scroll.setWidget(content)
+        outer.addWidget(scroll)
 
     def _refresh_image_preview(self) -> None:
         if not self._image_b64:

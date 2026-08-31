@@ -568,7 +568,25 @@ class MainWindow(QMainWindow):
         msg = result.message if result.message else "Action applied"
         self.statusBar().showMessage(msg)
         self.combat_log.append_system(msg)
+        if action == "pick_up_grenade" and result.success:
+            ic = self.hex_map_view.get_impulse_combat_state()
+            rt = ic.token_runtime.get(token_id)
+            tok = self.hex_map_view.get_token_state().placements.get(token_id)
+            if rt and rt.held_grenade_name and not rt.grenade_armed and tok and tok.character_name:
+                char = self._characters_by_name().get(tok.character_name)
+                arm_cost = 0
+                if char:
+                    from phoenix_command.models.gear import Grenade
+                    for item in char.equipment:
+                        if isinstance(item, Grenade) and item.name == rt.held_grenade_name:
+                            arm_cost = int(item.arm_time or 0)
+                            break
+                if arm_cost > 0:
+                    hint = f"Grenade in hand — Arm ({arm_cost} AC) then Declare Shot"
+                    self.statusBar().showMessage(hint)
+                    self.combat_log.append_system(hint)
         if result.success:
+            self.hex_map_view._refresh_combat_ui()
             self._notify_game_state_changed(domain="impulse_combat")
 
     def _prompt_select_weapon(self, token_id: str) -> str | None:
@@ -762,7 +780,9 @@ class MainWindow(QMainWindow):
             1,
             round(rules_hexes(axial_distance(shooter.q, shooter.r, target.q, target.r) * mph)),
         )
-        pen = float(ammo.get_pen(approx_range)) if ammo else None
+        pen = None
+        if ammo is not None and hasattr(ammo, "get_pen"):
+            pen = float(ammo.get_pen(approx_range))
 
         ctx = build_map_shot_context(
             shooter,
@@ -774,7 +794,7 @@ class MainWindow(QMainWindow):
         )
         if ctx.los and ctx.los.blocked:
             return None, "No LOS to target"
-        if weapon and weapon.ballistic_data:
+        if weapon and getattr(weapon, "ballistic_data", None):
             tof = int(weapon.ballistic_data.get_time_of_flight(ctx.range_rule_hexes) or 0)
 
         cover = ctx.los.cover if ctx.los else None
