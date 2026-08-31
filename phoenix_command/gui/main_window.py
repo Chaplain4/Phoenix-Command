@@ -1074,7 +1074,7 @@ class MainWindow(QMainWindow):
             self.hex_map_view.get_map_state(),
             ic.token_runtime,
         )
-        if outcome.fuse_impulses > 0 and outcome.explosive_results:
+        if outcome.fuse_impulses > 0 and outcome.explosive_results and not outcome.blast_cancelled:
             engine = self._combat_engine()
             engine.schedule_grenade_explosion(
                 preview.shooter_token_id,
@@ -1083,6 +1083,7 @@ class MainWindow(QMainWindow):
                 [explosive_result_to_dict(e) for e in outcome.explosive_results],
                 preview.weapon_name,
                 preview.ammo_name,
+                blast_mod_overrides=outcome.blast_mod_overrides,
             )
             self.hex_map_view.set_impulse_combat_state(ic, rebuild=False)
         self._apply_map_fire_outcome(outcome)
@@ -1110,6 +1111,7 @@ class MainWindow(QMainWindow):
         from phoenix_command.simulations.map_fire_dispatch import (
             apply_pending_blast_damage,
             dispatch_map_fire,
+            serialize_blast_mod_overrides,
         )
 
         review = get_show_blast_modifier_dialog()
@@ -1126,6 +1128,7 @@ class MainWindow(QMainWindow):
         )
         package = outcome.pending_blast
         has_victims = package and any(p.victims for p in package.passes)
+        fuse_deferred = outcome.fuse_impulses > 0
         if review and has_victims and outcome.blast_ammo:
             from phoenix_command.gui.dialogs.map_blast_review_dialog import (
                 MapBlastReviewDialog,
@@ -1133,20 +1136,31 @@ class MainWindow(QMainWindow):
 
             dlg = MapBlastReviewDialog(package, tokens, parent=self)
             if dlg.exec() == QDialog.DialogCode.Accepted:
-                outcome.shot_results.extend(
-                    apply_pending_blast_damage(
-                        package,
-                        outcome.blast_ammo,
-                        preview,
-                        tokens,
-                        chars,
-                        map_state,
-                        token_runtime,
-                        dlg.mod_overrides(),
+                mods = dlg.mod_overrides()
+                if fuse_deferred:
+                    # Defer PD until fuse due; keep reviewed mods for resolve.
+                    outcome.blast_mod_overrides = serialize_blast_mod_overrides(mods)
+                    outcome.messages.append(
+                        "Blast modifiers saved; damage deferred until fuse expires"
                     )
-                )
+                else:
+                    outcome.shot_results.extend(
+                        apply_pending_blast_damage(
+                            package,
+                            outcome.blast_ammo,
+                            preview,
+                            tokens,
+                            chars,
+                            map_state,
+                            token_runtime,
+                            mods,
+                        )
+                    )
             else:
                 outcome.messages.append("Blast damage cancelled")
+                if fuse_deferred:
+                    outcome.blast_cancelled = True
+                    outcome.fuse_impulses = 0
         return outcome
 
     def _apply_map_fire_outcome(self, outcome) -> None:

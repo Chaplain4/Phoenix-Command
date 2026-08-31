@@ -2,8 +2,19 @@
 
 from __future__ import annotations
 
-from PyQt6.QtCore import pyqtSignal
-from PyQt6.QtWidgets import QComboBox, QHBoxLayout, QLabel, QPushButton, QSpinBox, QVBoxLayout, QWidget
+from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtWidgets import (
+    QComboBox,
+    QFrame,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QScrollArea,
+    QSizePolicy,
+    QSpinBox,
+    QVBoxLayout,
+    QWidget,
+)
 
 from phoenix_command.session.domains.impulse_combat_state import ImpulseCombatState
 
@@ -24,7 +35,20 @@ class CombatMapBar(QWidget):
         self._available_actions: list[tuple[str, str, float | str]] = []
         self._selected_token_id: str | None = None
 
-        layout = QVBoxLayout(self)
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(0, 0, 0, 0)
+        outer.setSpacing(0)
+
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        scroll.setMaximumHeight(72)
+        scroll.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+
+        inner = QWidget()
+        layout = QVBoxLayout(inner)
         layout.setContentsMargins(4, 2, 4, 2)
         layout.setSpacing(2)
 
@@ -45,17 +69,27 @@ class CombatMapBar(QWidget):
         row1.addWidget(QLabel("|"))
 
         self._token_combo = QComboBox()
+        self._token_combo.setSizeAdjustPolicy(
+            QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon
+        )
+        self._token_combo.setMinimumContentsLength(6)
         self._token_combo.currentIndexChanged.connect(self._on_token_changed)
         row1.addWidget(QLabel("Token:"))
         row1.addWidget(self._token_combo)
 
         self._status_label = QLabel("")
-        self._status_label.setMinimumWidth(160)
+        self._status_label.setMinimumWidth(0)
+        self._status_label.setMaximumWidth(220)
+        self._status_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         self._status_label.setToolTip("AC remaining this impulse (and pending progress)")
         row1.addWidget(self._status_label)
         row1.addStretch()
 
         self._action_combo = QComboBox()
+        self._action_combo.setSizeAdjustPolicy(
+            QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon
+        )
+        self._action_combo.setMinimumContentsLength(10)
         row2.addWidget(QLabel("Action:"))
         row2.addWidget(self._action_combo)
 
@@ -96,6 +130,10 @@ class CombatMapBar(QWidget):
         row2.addStretch()
         layout.addLayout(row1)
         layout.addLayout(row2)
+        scroll.setWidget(inner)
+        outer.addWidget(scroll)
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self.setMinimumWidth(0)
         self.setVisible(False)
 
     def set_host(self, is_host: bool) -> None:
@@ -113,7 +151,12 @@ class CombatMapBar(QWidget):
     def _refresh_status(self) -> None:
         rt = self._impulse_combat.token_runtime.get(self._selected_token_id or "")
         if rt:
-            self._status_label.setText(rt.status_label())
+            full = rt.status_label()
+            self._status_label.setText(full)
+            self._status_label.setToolTip(full)
+            metrics = self._status_label.fontMetrics()
+            elided = metrics.elidedText(full, Qt.TextElideMode.ElideRight, 220)
+            self._status_label.setText(elided)
             self._abandon_btn.setEnabled(rt.has_pending())
             idx = self._fire_mode_combo.findData(rt.fire_mode)
             if idx >= 0:
@@ -122,6 +165,7 @@ class CombatMapBar(QWidget):
                 self._fire_mode_combo.blockSignals(False)
         else:
             self._status_label.setText("")
+            self._status_label.setToolTip("AC remaining this impulse (and pending progress)")
             self._abandon_btn.setEnabled(False)
 
     def set_tokens(self, token_labels: dict[str, str]) -> None:

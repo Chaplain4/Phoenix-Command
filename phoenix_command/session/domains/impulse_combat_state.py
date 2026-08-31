@@ -377,6 +377,8 @@ class PendingGrenadeExplosion:
     explosive_results: list[dict] = field(default_factory=list)
     weapon_name: str = ""
     ammo_name: str = ""
+    # token_id -> list of BlastModifier.name from optional review at throw time
+    blast_mod_overrides: dict[str, list[str]] = field(default_factory=dict)
 
     def to_dict(self) -> dict:
         return {
@@ -388,10 +390,18 @@ class PendingGrenadeExplosion:
             "explosive_results": list(self.explosive_results),
             "weapon_name": self.weapon_name,
             "ammo_name": self.ammo_name,
+            "blast_mod_overrides": {
+                k: list(v) for k, v in self.blast_mod_overrides.items()
+            },
         }
 
     @classmethod
     def from_dict(cls, data: dict) -> "PendingGrenadeExplosion":
+        raw_mods = data.get("blast_mod_overrides") or {}
+        mods: dict[str, list[str]] = {}
+        if isinstance(raw_mods, dict):
+            for k, v in raw_mods.items():
+                mods[str(k)] = [str(x) for x in (v or [])]
         return cls(
             explosion_id=data.get("explosion_id", ""),
             resolve_phase=int(data.get("resolve_phase", 1)),
@@ -401,6 +411,7 @@ class PendingGrenadeExplosion:
             explosive_results=list(data.get("explosive_results", [])),
             weapon_name=data.get("weapon_name", ""),
             ammo_name=data.get("ammo_name", ""),
+            blast_mod_overrides=mods,
         )
 
 

@@ -1137,10 +1137,15 @@ class HexMapView(QWidget):
         self.map_changed.emit()
 
     def _token_move_via_stair(self, token: TokenPlacement, choose_only: bool = False) -> bool:
-        layer = self._scene.map_state.get_active_layer()
+        # Stairs live on the token's layer, not necessarily the active layer.
+        layer = self._scene.map_state.get_layer(token.layer_id or "")
+        if layer is None:
+            layer = self._scene.map_state.get_active_layer()
         key = f"{token.q},{token.r}"
-        stairs = layer.stairs.get(key)
+        stairs = layer.stairs.get(key) if layer else None
         if not stairs:
+            return False
+        if stairs.target_layer_id == token.layer_id:
             return False
         if choose_only:
             return True

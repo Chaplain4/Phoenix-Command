@@ -126,6 +126,7 @@ def resolve_pending_grenade_explosion(
         explosive_results,
     )
     outcome.pending_blast = package
+    mod_overrides = _deserialize_blast_mod_overrides(pending.blast_mod_overrides)
     outcome.shot_results.extend(
         apply_pending_blast_damage(
             package,
@@ -135,12 +136,46 @@ def resolve_pending_grenade_explosion(
             characters,
             map_state,
             token_runtime,
+            mod_overrides or None,
         )
     )
     outcome.messages.append(
         f"Grenade explodes at ({preview.aim_q},{preview.aim_r})"
     )
     return outcome
+
+
+def serialize_blast_mod_overrides(
+    overrides: dict[str, list] | None,
+) -> dict[str, list[str]]:
+    """Store BlastModifier lists as names for PendingGrenadeExplosion."""
+    if not overrides:
+        return {}
+    out: dict[str, list[str]] = {}
+    for tid, mods in overrides.items():
+        names: list[str] = []
+        for m in mods or []:
+            names.append(m.name if hasattr(m, "name") else str(m))
+        out[str(tid)] = names
+    return out
+
+
+def _deserialize_blast_mod_overrides(
+    raw: dict[str, list[str]] | None,
+) -> dict[str, list[BlastModifier]]:
+    if not raw:
+        return {}
+    out: dict[str, list[BlastModifier]] = {}
+    for tid, names in raw.items():
+        mods: list[BlastModifier] = []
+        for name in names or []:
+            try:
+                mods.append(BlastModifier[str(name)])
+            except KeyError:
+                continue
+        if mods:
+            out[str(tid)] = mods
+    return out
 
 
 @dataclass
@@ -155,6 +190,9 @@ class MapFireOutcome:
     pending_blast: PendingBlastPackage | None = None
     blast_ammo: AmmoType | Grenade | None = None
     fuse_impulses: int = 0
+    # Serialized review mods (token_id -> BlastModifier names); used when fuse defers blast
+    blast_mod_overrides: dict[str, list[str]] = field(default_factory=dict)
+    blast_cancelled: bool = False
 
 
 def enrich_preview_targets(

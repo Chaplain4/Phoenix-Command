@@ -225,6 +225,7 @@ class ImpulseCombatEngine:
         explosive_results: list[dict],
         weapon_name: str,
         ammo_name: str,
+        blast_mod_overrides: dict[str, list[str]] | None = None,
     ):
         from phoenix_command.session.domains.impulse_combat_state import PendingGrenadeExplosion
         import uuid
@@ -242,6 +243,7 @@ class ImpulseCombatEngine:
             explosive_results=list(explosive_results),
             weapon_name=weapon_name,
             ammo_name=ammo_name,
+            blast_mod_overrides=dict(blast_mod_overrides or {}),
         )
         self.impulse_combat.pending_grenade_explosions.append(expl)
         return expl

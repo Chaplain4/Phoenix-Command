@@ -832,8 +832,7 @@ class TokenDialog(QDialog):
             return
         self._image_b64, self._image_mime = load_image_as_b64(path)
         self._active_preset_id = None
-        for btn in self._preset_buttons.values():
-            btn.setChecked(False)
+        self._clear_preset_selection()
         self.image_label.setText(Path(path).name)
         self._refresh_image_preview()
 
@@ -841,9 +840,15 @@ class TokenDialog(QDialog):
         self._image_b64 = ""
         self._image_mime = "image/png"
         self._active_preset_id = None
+        self._clear_preset_selection()
+        self._refresh_image_preview()
+
+    def _clear_preset_selection(self) -> None:
+        """Uncheck all presets (exclusive QButtonGroup blocks zero-checked otherwise)."""
+        self._preset_group.setExclusive(False)
         for btn in self._preset_buttons.values():
             btn.setChecked(False)
-        self._refresh_image_preview()
+        self._preset_group.setExclusive(True)
 
     def get_token(self) -> TokenPlacement:
         return TokenPlacement(
