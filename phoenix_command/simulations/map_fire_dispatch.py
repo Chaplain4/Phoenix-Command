@@ -45,6 +45,7 @@ from phoenix_command.simulations.map_fire_targets import (
     tokens_in_pattern,
 )
 from phoenix_command.simulations.map_los import check_los
+from phoenix_command.simulations.map_shot_context import build_map_shot_context
 from phoenix_command.simulations.map_knockdown import (
     apply_shooter_after_fire,
     apply_shot_knockdowns,
@@ -218,7 +219,7 @@ def enrich_preview_targets(
         if preview.arc_of_fire is not None and preview.arc_of_fire > 0:
             half_angle = max(15.0, min(90.0, float(preview.arc_of_fire) * 8))
         infos = tokens_in_arc(
-            shooter, tokens, map_state, runtime, half_angle_deg=half_angle
+            shooter, tokens, map_state, runtime, half_angle_deg=half_angle, ammo=ammo
         )
         clear = [i for i in infos if i.los_clear] or infos
         preview.target_token_ids = [i.token_id for i in clear]
@@ -528,15 +529,24 @@ def filter_ids_by_los(
     tokens: TokenState,
     map_state: MapState | None,
     token_runtime: dict,
+    ammo: AmmoType | None = None,
 ) -> tuple[list[str], list[str]]:
     """Return (clear_ids, blocked_ids)."""
+    mph = map_state.grid.meters_per_hex if map_state else 1.0
     clear, blocked = [], []
     for tid in token_ids:
         tok = tokens.placements.get(tid)
         if not tok:
             blocked.append(tid)
             continue
-        los = check_los(map_state, shooter_tok, tok, token_runtime.get(tid))
+        pen: float | None = None
+        if ammo is not None and hasattr(ammo, "get_pen"):
+            dist_m = axial_distance(shooter_tok.q, shooter_tok.r, tok.q, tok.r) * mph
+            range_hex = max(1, round(rules_hexes(dist_m)))
+            pen = float(ammo.get_pen(range_hex))
+        los = check_los(
+            map_state, shooter_tok, tok, token_runtime.get(tid), pen=pen
+        )
         if los.blocked:
             blocked.append(tid)
         else:
@@ -623,7 +633,7 @@ def dispatch_map_fire(
 
     if not skip_los_filter and shooter_tok:
         clear, blocked = filter_ids_by_los(
-            shooter_tok, primary_ids, tokens, map_state, runtime
+            shooter_tok, primary_ids, tokens, map_state, runtime, ammo=ammo
         )
         for tid in blocked:
             name = (tokens.placements.get(tid) or TokenPlacement(token_id=tid)).character_name or tid
@@ -682,7 +692,7 @@ def dispatch_map_fire(
         sec_ids = list(preview.secondary_by_primary.get(tid, []))
         if shooter_tok and not skip_los_filter:
             sec_clear, sec_blocked = filter_ids_by_los(
-                shooter_tok, sec_ids, tokens, map_state, runtime
+                shooter_tok, sec_ids, tokens, map_state, runtime, ammo=ammo
             )
             for sid in sec_blocked:
                 sn = (tokens.placements.get(sid) or TokenPlacement(token_id=sid)).character_name or sid
@@ -727,7 +737,7 @@ def dispatch_map_fire(
             sec_ids = list(preview.secondary_by_primary.get(pid, []))
             if shooter_tok and not skip_los_filter:
                 sec_ids, blocked = filter_ids_by_los(
-                    shooter_tok, sec_ids, tokens, map_state, runtime
+                    shooter_tok, sec_ids, tokens, map_state, runtime, ammo=ammo
                 )
                 for sid in blocked:
                     sn = (tokens.placements.get(sid) or TokenPlacement(token_id=sid)).character_name or sid

@@ -47,6 +47,7 @@ class MapShotPreviewDialog(QDialog):
         *,
         aim_accumulated: int = 0,
         is_hip_fire: bool = False,
+        ammo_options: list[str] | None = None,
         parent=None,
     ):
         super().__init__(parent)
@@ -57,6 +58,7 @@ class MapShotPreviewDialog(QDialog):
         self._token_labels = token_labels or {}
         self._aim_accumulated = aim_accumulated
         self._is_hip_fire = is_hip_fire
+        self._ammo_options = ammo_options or []
         self._setup_ui()
         self._load_preview()
         if not editable:
@@ -125,6 +127,10 @@ class MapShotPreviewDialog(QDialog):
 
         self.weapon_label = QLabel("")
         form.addRow("Weapon:", self.weapon_label)
+
+        self.ammo_combo = QComboBox()
+        self.ammo_combo.currentIndexChanged.connect(self._on_ammo_changed)
+        form.addRow("Ammo:", self.ammo_combo)
 
         self.cover_notes = QTextEdit()
         self.cover_notes.setReadOnly(True)
@@ -199,6 +205,14 @@ class MapShotPreviewDialog(QDialog):
     def _on_mode_changed(self) -> None:
         self._update_mode_visibility()
 
+    def _on_ammo_changed(self) -> None:
+        if not self._editable or not self._ammo_options:
+            return
+        name = self.ammo_combo.currentData()
+        if name:
+            self._preview.ammo_name = name
+            self.preview_updated.emit(self._collect())
+
     def _update_mode_visibility(self) -> None:
         kind = self._preview.fire_kind or "single"
         mode = self.fire_mode_combo.currentData() or self._preview.fire_mode
@@ -236,7 +250,24 @@ class MapShotPreviewDialog(QDialog):
             self.aim_spin.setEnabled(self._editable)
             self._aim_hint.setText("")
         self.tof_label.setText(str(p.tof_impulses))
-        self.weapon_label.setText(f"{p.weapon_name} / {p.ammo_name}" if p.ammo_name else p.weapon_name)
+        self.weapon_label.setText(p.weapon_name)
+        self.ammo_combo.blockSignals(True)
+        self.ammo_combo.clear()
+        if self._ammo_options:
+            for name in self._ammo_options:
+                self.ammo_combo.addItem(name, name)
+            if p.ammo_name:
+                aidx = self.ammo_combo.findData(p.ammo_name)
+                if aidx >= 0:
+                    self.ammo_combo.setCurrentIndex(aidx)
+            self.ammo_combo.setEnabled(self._editable and len(self._ammo_options) > 1)
+        elif p.ammo_name:
+            self.ammo_combo.addItem(p.ammo_name, p.ammo_name)
+            self.ammo_combo.setEnabled(False)
+        else:
+            self.ammo_combo.addItem("—", "")
+            self.ammo_combo.setEnabled(False)
+        self.ammo_combo.blockSignals(False)
         cover_lines = list(p.cover_notes or [])
         if p.estimated_cover_pf:
             cover_lines.append(f"Estimated max cover PF on body ≈ {p.estimated_cover_pf:.1f}")
@@ -379,6 +410,8 @@ class MapShotPreviewDialog(QDialog):
         p.exposure = p.selected_exposure
         p.orientation = self.orient_combo.currentData() or p.orientation
         p.fire_mode = self.fire_mode_combo.currentData() or p.fire_mode
+        if self._ammo_options:
+            p.ammo_name = self.ammo_combo.currentData() or p.ammo_name
         arc_val = self.arc_spin.value()
         p.arc_of_fire = None if arc_val <= 0 else float(arc_val)
         p.continuous_burst_impulses = self.cont_burst_spin.value()

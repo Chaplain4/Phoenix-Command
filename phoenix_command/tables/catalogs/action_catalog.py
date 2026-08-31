@@ -41,6 +41,7 @@ _register([
     ActionDef("standing_to_kneeling", "Go from Standing to Kneeling", "Actions", 1),
     ActionDef("standing_to_prone", "Go from Standing to Prone", "Actions", 2),
     ActionDef("kneeling_to_prone", "Go from Kneeling to Prone", "Actions", 1),
+    ActionDef("kneeling_to_standing", "Go from Kneeling to Standing", "Actions", 1),
     ActionDef("prone_to_kneeling", "Go from Prone to Kneeling", "Actions", 2),
     ActionDef("prone_to_standing", "Go from Prone to Standing", "Actions", 3),
     ActionDef("kick_open_door", "Kick Open a Door", "Actions", 2),

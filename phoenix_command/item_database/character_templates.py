@@ -118,6 +118,20 @@ auto_grenade_fighter.add_gear(ags_17),
 auto_grenade_fighter.add_gear(Gear(name="Clothing", weight=5.0, description="Standard field clothing")),
 auto_grenade_fighter.add_gear(ammo_30mm_he_ags)
 
+manual_test_high_ca = Character(
+    strength=14,
+    intelligence=14,
+    will=12,
+    health=12,
+    agility=14,
+    gun_combat_skill_level=10,
+    name="Manual Test High CA",
+)
+manual_test_high_ca.add_gear(m16a2)
+manual_test_high_ca.add_gear(Gear(name="Clothing", weight=5.0, description="Standard field clothing"))
+for _ in range(3):
+    manual_test_high_ca.add_gear(ammo_556nato_m16a2_fmj)
+
 character_templates = [
     ak74_fighter,
     dragunov_fighter,
@@ -127,4 +141,5 @@ character_templates = [
     m16a2_fighter,
     auto_shotgun_fighter,
     auto_grenade_fighter,
+    manual_test_high_ca,
 ]

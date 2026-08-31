@@ -99,6 +99,7 @@ class HexMapView(QWidget):
     map_mode_changed = pyqtSignal(str)
     declare_shot_requested = pyqtSignal(str)
     aim_hex_picked = pyqtSignal(int, int, str)  # q, r, layer_id
+    combat_status_hint = pyqtSignal(str)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -144,6 +145,7 @@ class HexMapView(QWidget):
         self._condition_visibility = ""
         self._pick_move_token_id: str | None = None
         self._pick_move_action: str | None = None
+        self._combat_ruler_armed = False
         self._pick_aim_hex = False
         self._fire_overlay_items: list = []
         self._combat_callbacks = None  # set by main window
@@ -176,6 +178,7 @@ class HexMapView(QWidget):
         self._combat_bar.combat_action_requested.connect(self._on_combat_action)
         self._combat_bar.token_selected.connect(self._on_combat_token_selected)
         self._combat_bar.declare_shot_requested.connect(self.declare_shot_requested.emit)
+        self._combat_bar.ruler_requested.connect(self._on_combat_ruler_requested)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(self._toolbar)
@@ -321,7 +324,9 @@ class HexMapView(QWidget):
                 self._pan_start = event.position()
                 return True
             if event.button() == Qt.MouseButton.LeftButton and (
-                self._mode == EditMode.RULER or self._can_edit_map()
+                self._mode == EditMode.RULER
+                or self._combat_ruler_armed
+                or self._can_edit_map()
             ):
                 return self._on_lmb_press(pos.x(), pos.y())
             if event.button() == Qt.MouseButton.LeftButton and self._impulse_combat.map_mode == "combat":
@@ -338,7 +343,11 @@ class HexMapView(QWidget):
                     self._view.verticalScrollBar().value() - int(delta.y())
                 )
                 return True
-            if (self._mode == EditMode.RULER or self._can_edit_map()) and (
+            if (
+                self._mode == EditMode.RULER
+                or self._combat_ruler_armed
+                or self._can_edit_map()
+            ) and (
                 self._painting
                 or self._rubber_drag
                 or self._ruler.dragging
@@ -354,6 +363,7 @@ class HexMapView(QWidget):
                 return True
             if event.button() == Qt.MouseButton.LeftButton and (
                 self._mode == EditMode.RULER
+                or self._combat_ruler_armed
                 or self._can_edit_map()
                 or self._annotations.painting
                 or self._rubber_drag
@@ -430,7 +440,7 @@ class HexMapView(QWidget):
             self.aim_hex_picked.emit(q, r, layer.id if layer else "")
             return True
 
-        if self._mode == EditMode.RULER:
+        if self._mode == EditMode.RULER or self._combat_ruler_armed:
             self._ruler.begin(q, r)
             return True
 
@@ -612,6 +622,7 @@ class HexMapView(QWidget):
 
         if self._ruler.dragging:
             self._ruler.finish()
+            self._combat_ruler_armed = False
             return True
 
         if self._painting:
@@ -1048,6 +1059,8 @@ class HexMapView(QWidget):
             self.map_changed.emit()
 
     def _rebuild_scene(self) -> None:
+        # Scene.rebuild() clears all items; drop overlay refs without removeItem.
+        self._fire_overlay_items.clear()
         self._ruler.clear()
         self._annotations.invalidate()
         # Gizmo is a scene item — cleared by rebuild(); drop dangling ref.
@@ -1152,10 +1165,15 @@ class HexMapView(QWidget):
 
         token.layer_id = target_id
         self._scene.map_state.active_layer_id = target_id
+        self._scene.map_state.hide_inactive_layers = False
         self._scene.token_state.placements[token.token_id] = token
+        target_layer = self._scene.map_state.get_layer(target_id)
+        layer_name = target_layer.name if target_layer else target_id
         self._refresh_layer_combo()
+        self._hide_inactive_check.setChecked(False)
         self._rebuild_scene()
         self.map_changed.emit()
+        self.combat_status_hint.emit(f"Token moved to layer {layer_name}")
         return True
 
     # --- Mode / dialogs ---
@@ -1312,8 +1330,11 @@ class HexMapView(QWidget):
 
     def clear_fire_overlay(self) -> None:
         for item in self._fire_overlay_items:
-            if item.scene() is not None:
-                self._scene.removeItem(item)
+            try:
+                if item.scene() is not None:
+                    self._scene.removeItem(item)
+            except RuntimeError:
+                pass
         self._fire_overlay_items.clear()
 
     def set_fire_overlay(self, preview) -> None:
@@ -1393,7 +1414,9 @@ class HexMapView(QWidget):
             self._scene.addItem(dot)
             self._fire_overlay_items.append(dot)
 
-    def set_impulse_combat_state(self, state: ImpulseCombatState) -> None:
+    def set_impulse_combat_state(
+        self, state: ImpulseCombatState, *, rebuild: bool = True
+    ) -> None:
         self._impulse_combat = state
         self._impulse_combat.selected_token_id = state.selected_token_id
         status = {
@@ -1412,7 +1435,8 @@ class HexMapView(QWidget):
         self._category_panel.setVisible(self._editable and not in_combat)
         self._map_mode_panel.set_mode(state.map_mode)
         self._map_mode_panel.set_host(self._session_role != "guest")
-        self._rebuild_scene()
+        if rebuild:
+            self._rebuild_scene()
 
     def set_session_context(
         self,
@@ -1439,10 +1463,11 @@ class HexMapView(QWidget):
         for tid, tok in self._scene.token_state.placements.items():
             if self._session_role == "guest" and tok.controlled_by != self._player_id:
                 continue
-            label = tok.label or tok.character_name or tid[:8]
-            if tok.side_id:
-                label = f"[{tok.side_id}] {label}"
-            labels[tid] = label
+            base = tok.label or tok.character_name or tid[:8]
+            if tok.side_id and not base.lower().startswith(f"[{tok.side_id}]"):
+                if tok.side_id.lower() not in base.lower():
+                    base = f"[{tok.side_id}] {base}"
+            labels[tid] = base
         self._combat_bar.set_tokens(labels)
         sel = self._impulse_combat.selected_token_id
         if not sel or sel not in labels:
@@ -1470,10 +1495,16 @@ class HexMapView(QWidget):
         self._refresh_combat_ui()
         self._refresh_gizmo()
 
+    def _on_combat_ruler_requested(self) -> None:
+        self._combat_ruler_armed = True
+        self.combat_status_hint.emit("Ruler: drag on map, release to measure")
+
     def _on_combat_action(self, token_id: str, action: str, args: dict) -> None:
         if action in ("move", "movement_while_braced"):
             self._pick_move_token_id = token_id
             self._pick_move_action = action
+            label = "Movement While Braced" if action == "movement_while_braced" else "Move"
+            self.combat_status_hint.emit(f"{label}: click an adjacent hex on the map")
             return
         self.combat_action_requested.emit(token_id, action, args)
 

@@ -174,6 +174,7 @@ class MainWindow(QMainWindow):
         self.hex_map_view.map_mode_changed.connect(self._on_map_mode_changed)
         self.hex_map_view.declare_shot_requested.connect(self._on_declare_shot)
         self.hex_map_view.aim_hex_picked.connect(self._on_aim_hex_picked)
+        self.hex_map_view.combat_status_hint.connect(self._on_combat_status_hint)
         self.hex_map_view.set_action_provider(self._token_available_actions)
         self._shot_preview_dialog = None
         self._center_tabs.addTab(self.combat_zone, "Combat")
@@ -182,6 +183,9 @@ class MainWindow(QMainWindow):
 
         self.combat_log = CombatLogWidget()
         center_splitter.addWidget(self.combat_log)
+        center_splitter.setStretchFactor(0, 4)
+        center_splitter.setStretchFactor(1, 1)
+        center_splitter.setSizes([560, 140])
 
         main_splitter.addWidget(center_splitter)
 
@@ -531,10 +535,16 @@ class MainWindow(QMainWindow):
         engine = self._combat_engine()
         result = engine.apply_action(token_id, action, args, player_id, is_host)
         if result.success:
-            self.hex_map_view.set_impulse_combat_state(self._game_bridge.state.impulse_combat)
+            self.hex_map_view.set_impulse_combat_state(
+                self._game_bridge.state.impulse_combat, rebuild=False
+            )
             if state := self._game_bridge.state.tokens:
                 self.hex_map_view.set_token_state(state)
         return result
+
+    def _on_combat_status_hint(self, message: str) -> None:
+        self.statusBar().showMessage(message)
+        self.combat_log.append_system(message)
 
     def _on_combat_action_requested(self, token_id: str, action: str, args: dict) -> None:
         if action == "select_weapon":
@@ -555,7 +565,9 @@ class MainWindow(QMainWindow):
                 self._p2p_guest.send_message(intent)
             return
         result = self._apply_combat_action(token_id, action, args, self._player_id, is_host=True)
-        self.statusBar().showMessage(result.message if result.message else "Action applied")
+        msg = result.message if result.message else "Action applied"
+        self.statusBar().showMessage(msg)
+        self.combat_log.append_system(msg)
         if result.success:
             self._notify_game_state_changed(domain="impulse_combat")
 
@@ -575,6 +587,78 @@ class MainWindow(QMainWindow):
         choice, ok = QInputDialog.getItem(self, "Select Weapon", "Weapon:", names, 0, False)
         return choice if ok else None
 
+    def _prompt_fire_gear(self, char, shooter_rt):
+        """Choose weapon or grenade when Declare Shot and both are available."""
+        from PyQt6.QtWidgets import QInputDialog
+        from phoenix_command.models.gear import Grenade, Weapon
+
+        if shooter_rt.held_grenade_name:
+            for item in char.equipment:
+                if isinstance(item, Grenade) and item.name == shooter_rt.held_grenade_name:
+                    return item, item
+        weapons = [i for i in char.equipment if isinstance(i, Weapon)]
+        grenades = [i for i in char.equipment if isinstance(i, Grenade)]
+        if grenades and weapons:
+            options = [f"Weapon: {w.name}" for w in weapons] + [
+                f"Grenade: {g.name}" for g in grenades
+            ]
+            choice, ok = QInputDialog.getItem(
+                self, "Declare Shot", "Fire with:", options, 0, False
+            )
+            if not ok:
+                return None, None
+            if choice.startswith("Grenade:"):
+                gname = choice.split(": ", 1)[1]
+                g = next(x for x in grenades if x.name == gname)
+                return g, g
+            wname = choice.split(": ", 1)[1]
+            w = next(x for x in weapons if x.name == wname)
+            return w, None
+        if weapons:
+            w = weapons[0]
+            if shooter_rt.held_weapon_name:
+                for item in weapons:
+                    if item.name == shooter_rt.held_weapon_name:
+                        w = item
+                        break
+            return w, None
+        if grenades:
+            return grenades[0], grenades[0]
+        return None, None
+
+    def _ammo_options_for_weapon(self, weapon) -> list[str]:
+        from phoenix_command.models.gear import AmmoType
+
+        names: list[str] = []
+        for raw in getattr(weapon, "ammunition_types", None) or []:
+            if isinstance(raw, AmmoType):
+                names.append(raw.name)
+        return names
+
+    def _re_enrich_shot_preview(self, preview):
+        from phoenix_command.session.domains.impulse_combat_state import TokenCombatRuntime
+
+        tokens = self.hex_map_view.get_token_state()
+        shooter = tokens.placements.get(preview.shooter_token_id)
+        if not shooter or not shooter.character_name:
+            return preview
+        char = self._characters_by_name().get(shooter.character_name)
+        if not char:
+            return preview
+        weapon, ammo, _err = self._resolve_weapon_ammo(char, preview)
+        ic = self.hex_map_view.get_impulse_combat_state()
+        from phoenix_command.simulations.map_fire_dispatch import enrich_preview_targets
+
+        return enrich_preview_targets(
+            preview,
+            shooter,
+            tokens,
+            self.hex_map_view.get_map_state(),
+            ic.token_runtime,
+            weapon,
+            ammo,
+        )
+
     def _pick_enemy_token_id(self, shooter_id: str) -> str | None:
         tokens = self.hex_map_view.get_token_state()
         shooter = tokens.placements.get(shooter_id)
@@ -591,7 +675,7 @@ class MainWindow(QMainWindow):
         engine = self._combat_engine()
         due_proj, due_grenades = engine.advance_impulse()
         ic = self._game_bridge.state.impulse_combat
-        self.hex_map_view.set_impulse_combat_state(ic)
+        self.hex_map_view.set_impulse_combat_state(ic, rebuild=False)
         for proj in due_proj:
             self._resolve_pending_projectile(proj)
         for expl in due_grenades:
@@ -651,35 +735,21 @@ class MainWindow(QMainWindow):
         ammo = None
         if char:
             from phoenix_command.models.gear import Grenade
-            if shooter_rt.held_grenade_name:
-                for item in char.equipment:
-                    if isinstance(item, Grenade) and item.name == shooter_rt.held_grenade_name:
-                        weapon = item
-                        ammo = item
-                        ammo_name = item.name
-                        break
+            from phoenix_command.simulations.map_fire_targets import default_ammo_for_weapon
+
+            weapon, grenade_ammo = self._prompt_fire_gear(char, shooter_rt)
             if weapon is None:
-                for item in char.equipment:
-                    if isinstance(item, Weapon) and (
-                        not shooter_rt.held_weapon_name or item.name == shooter_rt.held_weapon_name
-                    ):
-                        weapon = item
-                        break
-            if weapon is None:
-                for item in char.equipment:
-                    if isinstance(item, Weapon):
-                        weapon = item
-                        break
-                if weapon is None:
-                    for item in char.equipment:
-                        if isinstance(item, Grenade):
-                            weapon = item
-                            ammo = item
-                            ammo_name = item.name
-                            break
-            if weapon and weapon.ammunition_types:
+                return None, "No weapon or grenade available"
+            if grenade_ammo is not None:
+                ammo = grenade_ammo
+                ammo_name = grenade_ammo.name
+            elif isinstance(weapon, Grenade):
+                ammo = weapon
+                ammo_name = weapon.name
+            elif getattr(weapon, "ammunition_types", None):
                 from phoenix_command.models.gear import AmmoType as _AmmoType
-                raw = weapon.ammunition_types[0]
+
+                raw = default_ammo_for_weapon(weapon, shooter_rt.fire_mode)
                 ammo = raw if isinstance(raw, _AmmoType) else None
                 ammo_name = ammo.name if ammo else str(raw)
 
@@ -760,7 +830,9 @@ class MainWindow(QMainWindow):
             return False, err
         self._game_bridge.state.impulse_combat = self.hex_map_view.get_impulse_combat_state()
         self._game_bridge.state.impulse_combat.shot_preview = preview
-        self.hex_map_view.set_impulse_combat_state(self._game_bridge.state.impulse_combat)
+        self.hex_map_view.set_impulse_combat_state(
+            self._game_bridge.state.impulse_combat, rebuild=False
+        )
         return True, ""
 
     def _can_edit_preview(self, player_id: str) -> bool:
@@ -782,8 +854,11 @@ class MainWindow(QMainWindow):
         else:
             preview = PendingShotPreview.from_dict(preview_data)
         preview.status = "open"
+        preview = self._re_enrich_shot_preview(preview)
         self._game_bridge.state.impulse_combat.shot_preview = preview
-        self.hex_map_view.set_impulse_combat_state(self._game_bridge.state.impulse_combat)
+        self.hex_map_view.set_impulse_combat_state(
+            self._game_bridge.state.impulse_combat, rebuild=False
+        )
         return True, ""
 
     def _host_confirm_shot(self, player_id: str):
@@ -879,7 +954,7 @@ class MainWindow(QMainWindow):
 
         ic.shot_preview = None
         self.hex_map_view.clear_fire_overlay()
-        self.hex_map_view.set_impulse_combat_state(ic)
+        self.hex_map_view.set_impulse_combat_state(ic, rebuild=False)
 
         if preview.tof_impulses and preview.tof_impulses > 0:
             engine = self._combat_engine()
@@ -917,8 +992,9 @@ class MainWindow(QMainWindow):
                 preview.weapon_name,
                 preview.ammo_name,
             )
-            self.hex_map_view.set_impulse_combat_state(ic)
+            self.hex_map_view.set_impulse_combat_state(ic, rebuild=False)
         self._apply_map_fire_outcome(outcome)
+        self.hex_map_view._refresh_combat_ui()
         self._notify_game_state_changed(domain="impulse_combat", immediate=True)
         return True, "resolved"
 
@@ -1143,6 +1219,17 @@ class MainWindow(QMainWindow):
             "agl",
             "explosive",
         )
+        ammo_options: list[str] = []
+        shooter_tok = tokens.placements.get(preview.shooter_token_id)
+        if shooter_tok and shooter_tok.character_name:
+            char = self._characters_by_name().get(shooter_tok.character_name)
+            if char:
+                from phoenix_command.models.gear import Weapon
+
+                for item in char.equipment:
+                    if isinstance(item, Weapon) and item.name == preview.weapon_name:
+                        ammo_options = self._ammo_options_for_weapon(item)
+                        break
         if self._shot_preview_dialog is None:
             self._shot_preview_dialog = MapShotPreviewDialog(
                 preview,
@@ -1150,6 +1237,7 @@ class MainWindow(QMainWindow):
                 token_labels=labels,
                 aim_accumulated=aim_accumulated,
                 is_hip_fire=is_hip,
+                ammo_options=ammo_options,
                 parent=self,
             )
             self._shot_preview_dialog.preview_updated.connect(self._on_preview_edited)
@@ -1161,6 +1249,7 @@ class MainWindow(QMainWindow):
             )
             self._shot_preview_dialog.show()
         else:
+            self._shot_preview_dialog._ammo_options = ammo_options
             self._shot_preview_dialog.apply_remote_preview(
                 preview,
                 aim_accumulated=aim_accumulated,
@@ -1241,7 +1330,9 @@ class MainWindow(QMainWindow):
             self._shot_preview_dialog = None
             return
         self._game_bridge.state.impulse_combat.shot_preview = None
-        self.hex_map_view.set_impulse_combat_state(self._game_bridge.state.impulse_combat)
+        self.hex_map_view.set_impulse_combat_state(
+            self._game_bridge.state.impulse_combat, rebuild=False
+        )
         self._shot_preview_dialog = None
         self._notify_game_state_changed(domain="impulse_combat", immediate=True)
 

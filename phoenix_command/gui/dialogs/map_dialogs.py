@@ -622,6 +622,7 @@ class MapLayerManagerDialog(QDialog):
             return
         layer = MapLayer(name=name, kind="floor", elevation=len(self._map_state.layers))
         self._map_state.layers.append(layer)
+        self._map_state.active_layer_id = layer.id
         self.list_widget.addItem(self._layer_list_label(layer))
         self.list_widget.setCurrentRow(self.list_widget.count() - 1)
 
@@ -719,6 +720,7 @@ class TokenDialog(QDialog):
 
         self._image_b64 = tok.image_b64
         self._image_mime = tok.image_mime
+        self._active_preset_id: str | None = None
 
         image_box = QVBoxLayout()
         self._preset_buttons: dict[str, QToolButton] = {}
@@ -750,6 +752,9 @@ class TokenDialog(QDialog):
                 self._preset_group.addButton(btn)
             row.addStretch()
             image_box.addLayout(row)
+
+        for btn in self._preset_buttons.values():
+            btn.setChecked(False)
 
         preview_row = QHBoxLayout()
         self.image_preview = QLabel()
@@ -803,6 +808,7 @@ class TokenDialog(QDialog):
         except KeyError:
             QMessageBox.warning(self, "Token Image", f"Preset '{preset_id}' not found.")
             return
+        self._active_preset_id = preset_id
         for pid, btn in self._preset_buttons.items():
             btn.setChecked(pid == preset_id)
         self._refresh_image_preview()
@@ -814,6 +820,7 @@ class TokenDialog(QDialog):
         if not path:
             return
         self._image_b64, self._image_mime = load_image_as_b64(path)
+        self._active_preset_id = None
         for btn in self._preset_buttons.values():
             btn.setChecked(False)
         self.image_label.setText(Path(path).name)
@@ -822,6 +829,7 @@ class TokenDialog(QDialog):
     def _clear_image(self) -> None:
         self._image_b64 = ""
         self._image_mime = "image/png"
+        self._active_preset_id = None
         for btn in self._preset_buttons.values():
             btn.setChecked(False)
         self._refresh_image_preview()

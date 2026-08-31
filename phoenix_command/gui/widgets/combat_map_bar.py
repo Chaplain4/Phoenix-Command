@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from PyQt6.QtCore import pyqtSignal
-from PyQt6.QtWidgets import QComboBox, QHBoxLayout, QLabel, QPushButton, QSpinBox, QWidget
+from PyQt6.QtWidgets import QComboBox, QHBoxLayout, QLabel, QPushButton, QSpinBox, QVBoxLayout, QWidget
 
 from phoenix_command.session.domains.impulse_combat_state import ImpulseCombatState
 
@@ -15,6 +15,7 @@ class CombatMapBar(QWidget):
     combat_action_requested = pyqtSignal(str, str, dict)  # token_id, action, args
     token_selected = pyqtSignal(str)
     declare_shot_requested = pyqtSignal(str)  # shooter token_id
+    ruler_requested = pyqtSignal()
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
@@ -23,54 +24,67 @@ class CombatMapBar(QWidget):
         self._available_actions: list[tuple[str, str, float | str]] = []
         self._selected_token_id: str | None = None
 
-        layout = QHBoxLayout(self)
+        layout = QVBoxLayout(self)
         layout.setContentsMargins(4, 2, 4, 2)
+        layout.setSpacing(2)
+
+        row1 = QHBoxLayout()
+        row1.setContentsMargins(0, 0, 0, 0)
+        row2 = QHBoxLayout()
+        row2.setContentsMargins(0, 0, 0, 0)
 
         self._phase_label = QLabel("Phase 1")
-        layout.addWidget(self._phase_label)
+        row1.addWidget(self._phase_label)
         self._impulse_label = QLabel("Impulse 1/4")
-        layout.addWidget(self._impulse_label)
+        row1.addWidget(self._impulse_label)
 
         self._next_impulse_btn = QPushButton("Next Impulse")
         self._next_impulse_btn.clicked.connect(self.advance_impulse_requested.emit)
-        layout.addWidget(self._next_impulse_btn)
+        row1.addWidget(self._next_impulse_btn)
 
-        layout.addWidget(QLabel("|"))
+        row1.addWidget(QLabel("|"))
 
         self._token_combo = QComboBox()
         self._token_combo.currentIndexChanged.connect(self._on_token_changed)
-        layout.addWidget(QLabel("Token:"))
-        layout.addWidget(self._token_combo)
+        row1.addWidget(QLabel("Token:"))
+        row1.addWidget(self._token_combo)
 
         self._status_label = QLabel("")
-        self._status_label.setMinimumWidth(200)
+        self._status_label.setMinimumWidth(160)
         self._status_label.setToolTip("AC remaining this impulse (and move progress)")
-        layout.addWidget(self._status_label)
+        row1.addWidget(self._status_label)
+        row1.addStretch()
 
         self._action_combo = QComboBox()
-        layout.addWidget(QLabel("Action:"))
-        layout.addWidget(self._action_combo)
+        row2.addWidget(QLabel("Action:"))
+        row2.addWidget(self._action_combo)
 
         self._aim_spin = QSpinBox()
         self._aim_spin.setRange(1, 20)
         self._aim_spin.setValue(1)
-        layout.addWidget(QLabel("AC:"))
-        layout.addWidget(self._aim_spin)
+        row2.addWidget(QLabel("AC:"))
+        row2.addWidget(self._aim_spin)
 
         self._fire_mode_combo = QComboBox()
         for mode in ("single", "3rb", "auto"):
             self._fire_mode_combo.addItem(mode, mode)
-        layout.addWidget(self._fire_mode_combo)
+        row2.addWidget(self._fire_mode_combo)
 
         self._do_action_btn = QPushButton("Do Action")
         self._do_action_btn.clicked.connect(self._emit_action)
-        layout.addWidget(self._do_action_btn)
+        row2.addWidget(self._do_action_btn)
 
         self._shot_btn = QPushButton("Declare Shot")
         self._shot_btn.clicked.connect(self._emit_declare_shot)
-        layout.addWidget(self._shot_btn)
+        row2.addWidget(self._shot_btn)
 
-        layout.addStretch()
+        self._ruler_btn = QPushButton("Ruler")
+        self._ruler_btn.clicked.connect(self.ruler_requested.emit)
+        row2.addWidget(self._ruler_btn)
+
+        row2.addStretch()
+        layout.addLayout(row1)
+        layout.addLayout(row2)
         self.setVisible(False)
 
     def set_host(self, is_host: bool) -> None:

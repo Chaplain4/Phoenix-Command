@@ -37,6 +37,7 @@ STANCE_ACTION_MAP = {
     "standing_to_kneeling": "kneeling",
     "standing_to_prone": "prone",
     "kneeling_to_prone": "prone",
+    "kneeling_to_standing": "standing",
     "prone_to_kneeling": "kneeling",
     "prone_to_standing": "standing",
 }
@@ -99,6 +100,9 @@ class ImpulseCombatEngine:
                 rt.aimed_this_impulse = False
                 rt.moved_this_impulse = False
                 rt.hexes_moved_this_impulse = 0.0
+                rt.move_progress = 0.0
+                rt.move_target_q = None
+                rt.move_target_r = None
                 rt.impulse_burst_used = False
                 if impulse_idx == 0:
                     rt.held_grenade_name = None

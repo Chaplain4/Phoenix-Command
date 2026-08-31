@@ -71,6 +71,7 @@ def tokens_in_arc(
     max_range_hexes: float = 50.0,
     half_angle_deg: float = 30.0,
     same_layer_only: bool = False,
+    ammo=None,
 ) -> list[FireTargetInfo]:
     """
     Enemy tokens roughly in the shooter's facing cone.
@@ -100,7 +101,12 @@ def tokens_in_arc(
 
         shooter_rt = runtime.get(shooter.token_id, TokenCombatRuntime())
         target_rt = runtime.get(tok.token_id, TokenCombatRuntime())
-        ctx = build_map_shot_context(shooter, shooter_rt, tok, target_rt, map_state)
+        pen: float | None = None
+        if ammo is not None and hasattr(ammo, "get_pen"):
+            pen = float(ammo.get_pen(range_hex))
+        ctx = build_map_shot_context(
+            shooter, shooter_rt, tok, target_rt, map_state, pen=pen
+        )
         los = ctx.los
         out.append(
             FireTargetInfo(
@@ -174,11 +180,6 @@ def tokens_in_blast(
     return result
 
 
-def suggest_arc_hexes(max_range: int = 10) -> float:
-    """Default arc of fire in rule hexes for UI when auto."""
-    return float(max(1, max_range // 5))
-
-
 def is_pellet_ammo(ammo) -> bool:
     if ammo is None:
         return False
@@ -192,6 +193,26 @@ def is_pellet_ammo(ammo) -> bool:
         if getattr(bd, "base_pellet_hit_chance", None) is not None:
             return True
     return False
+
+
+def default_ammo_for_weapon(weapon, fire_mode: str = "single"):
+    """Pick ammo for map preview; prefer pellets when firing shotgun auto."""
+    from phoenix_command.models.gear import AmmoType
+
+    types = getattr(weapon, "ammunition_types", None) or []
+    if fire_mode == "auto":
+        for raw in types:
+            if isinstance(raw, AmmoType) and is_pellet_ammo(raw):
+                return raw
+    for raw in types:
+        if isinstance(raw, AmmoType):
+            return raw
+    return types[0] if types else None
+
+
+def suggest_arc_hexes(max_range: int = 10) -> float:
+    """Default arc of fire in rule hexes for UI when auto."""
+    return float(max(1, max_range // 5))
 
 
 def infer_fire_kind(fire_mode: str, weapon, ammo) -> str:

@@ -1,0 +1,166 @@
+{
+  "schema_version": 1,
+  "revision": 0,
+  "meta": {
+    "session_name": "",
+    "host_name": "",
+    "connected_guests": [],
+    "players": [],
+    "actions": {
+      "custom_actions": {}
+    }
+  },
+  "combat": {
+    "characters": [],
+    "combat_zone": {
+      "shooter_name": null,
+      "target_names": []
+    },
+    "selected_character_name": null,
+    "combat_log": [],
+    "detailed_log": []
+  },
+  "impulse_combat": {
+    "map_mode": "combat",
+    "phase": 2,
+    "impulse": 1,
+    "sides": {},
+    "token_runtime": {
+      "t1": {
+        "ac_remaining": 1.0,
+        "stance": "standing",
+        "braced": false,
+        "held_weapon_name": "M16A2",
+        "fire_mode": "single",
+        "aim_ac_this_impulse": 0.0,
+        "aim_ac_accumulated": 0.0,
+        "aim_target_token_id": null,
+        "aim_impulses": 0,
+        "moved_this_impulse": false,
+        "hexes_moved_this_impulse": 0.0,
+        "move_progress": 0.0,
+        "move_target_q": null,
+        "move_target_r": null,
+        "weapon_cycled": true,
+        "aimed_this_impulse": false,
+        "balance_ac_owed": 0.0,
+        "knockdown_phase": "none",
+        "hands_free": true,
+        "recoil_ac_owed": 1.0,
+        "last_shot_q": null,
+        "last_shot_r": null,
+        "last_shot_layer_id": "",
+        "firing_stance_held": false,
+        "impulse_burst_used": false,
+        "held_grenade_name": null,
+        "grenade_armed": false
+      },
+      "t2": {
+        "ac_remaining": 1.0,
+        "stance": "kneeling",
+        "braced": false,
+        "held_weapon_name": null,
+        "fire_mode": "single",
+        "aim_ac_this_impulse": 0.0,
+        "aim_ac_accumulated": 0.0,
+        "aim_target_token_id": null,
+        "aim_impulses": 0,
+        "moved_this_impulse": false,
+        "hexes_moved_this_impulse": 0.0,
+        "move_progress": 0.0,
+        "move_target_q": null,
+        "move_target_r": null,
+        "weapon_cycled": true,
+        "aimed_this_impulse": false,
+        "balance_ac_owed": 2.0,
+        "knockdown_phase": "none",
+        "hands_free": true,
+        "recoil_ac_owed": 0.0,
+        "last_shot_q": null,
+        "last_shot_r": null,
+        "last_shot_layer_id": "",
+        "firing_stance_held": false,
+        "impulse_burst_used": false,
+        "held_grenade_name": null,
+        "grenade_armed": false
+      }
+    },
+    "selected_token_id": null,
+    "shot_preview": null,
+    "pending_projectiles": [],
+    "pending_grenade_explosions": []
+  },
+  "map": {
+    "grid": {
+      "orientation": "flat",
+      "size": 24.0,
+      "origin_x": 0.0,
+      "origin_y": 0.0,
+      "meters_per_hex": 1.0,
+      "cols": 20,
+      "rows": 20
+    },
+    "layers": [
+      {
+        "id": "33dc0b87-8108-4913-8187-02618a9dd8e9",
+        "name": "Ground",
+        "kind": "ground",
+        "elevation": 0,
+        "background": null,
+        "annotations_b64": "",
+        "annotations_mime": "image/png",
+        "terrain": {},
+        "obstacles": {},
+        "walls": {},
+        "stairs": {},
+        "conditions": {},
+        "default_visibility": "GOOD_VISIBILITY",
+        "visible": true,
+        "opacity": 1.0
+      }
+    ],
+    "active_layer_id": "33dc0b87-8108-4913-8187-02618a9dd8e9",
+    "hide_inactive_layers": false,
+    "custom_barriers": {}
+  },
+  "tokens": {
+    "placements": {
+      "t1": {
+        "token_id": "t1",
+        "character_name": "Shooter",
+        "layer_id": "33dc0b87-8108-4913-8187-02618a9dd8e9",
+        "q": 0,
+        "r": 0,
+        "facing": 0,
+        "facing_resolution": 12,
+        "status_markers": [],
+        "image_b64": "",
+        "image_mime": "image/png",
+        "label": "T1",
+        "size": 0.35,
+        "scale_x": 1.0,
+        "scale_y": 1.0,
+        "side_id": "alpha",
+        "controlled_by": null
+      },
+      "t2": {
+        "token_id": "t2",
+        "character_name": "Target",
+        "layer_id": "33dc0b87-8108-4913-8187-02618a9dd8e9",
+        "q": 4,
+        "r": 0,
+        "facing": 0,
+        "facing_resolution": 12,
+        "status_markers": [],
+        "image_b64": "",
+        "image_mime": "image/png",
+        "label": "T2",
+        "size": 0.35,
+        "scale_x": 1.0,
+        "scale_y": 1.0,
+        "side_id": "bravo",
+        "controlled_by": null
+      }
+    }
+  }
+}

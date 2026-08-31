@@ -77,7 +77,7 @@ def test_los_blocked_by_hex_wall() -> None:
     target = TokenPlacement(token_id="t", q=2, r=0, layer_id=layer.id)
     result = check_los(map_state, shooter, target)
     assert result.blocked
-    assert any("hex wall" in note for note in result.notes)
+    assert any("Hex wall" in note for note in result.notes)
 
 
 def test_los_through_open_window() -> None:
@@ -104,7 +104,7 @@ def test_los_through_window_on_hex_wall_edge() -> None:
         openings=[
             Opening(
                 kind="window",
-                state="closed",
+                state="open",
                 position=0.5,
                 sill_height=0.9,
                 head_height=2.1,
@@ -112,11 +112,15 @@ def test_los_through_window_on_hex_wall_edge() -> None:
         ]
     )
     shooter = TokenPlacement(token_id="s", q=0, r=0, layer_id=layer.id)
-    target = TokenPlacement(token_id="t", q=2, r=0, layer_id=layer.id)
+    target = TokenPlacement(token_id="t", q=3, r=0, layer_id=layer.id)
     result = check_los(map_state, shooter, target, TokenCombatRuntime(stance="standing"))
-    assert result.clear
-    assert result.through_opening
-    assert not result.blocked
+    # Optical-only LOS is blocked by hex-wall cell; ballistic (PEN > PF) clears.
+    assert result.blocked
+    result_pen = check_los(
+        map_state, shooter, target, TokenCombatRuntime(stance="standing"), pen=14.0
+    )
+    assert result_pen.clear
+    assert not result_pen.blocked
 
 
 def test_cross_layer_visible_cover_exposures() -> None:
