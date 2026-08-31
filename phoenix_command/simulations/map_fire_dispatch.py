@@ -188,7 +188,11 @@ def enrich_preview_targets(
         max_blast_m = 20.0
         if ammo and getattr(ammo, "explosive_data", None):
             max_blast_m = max(
-                (d.range_hexes * 2.0 for d in ammo.explosive_data),
+                (
+                    d.range_hexes * 2.0
+                    for d in ammo.explosive_data
+                    if d.range_hexes is not None
+                ),
                 default=20.0,
             )
         victims = tokens_in_blast(

@@ -72,6 +72,30 @@ def test_filter_ids_by_los_respects_pen() -> None:
     assert not check_los(ms, shooter, target, pen=pen).blocked
 
 
+def test_enrich_preview_targets_grenade_none_range_hexes() -> None:
+    """Contact band (range_hexes=None) must not crash max blast radius (O1)."""
+    from phoenix_command.item_database.grenades import rgd_5
+
+    preview = PendingShotPreview(
+        preview_id="p1",
+        shooter_token_id="s",
+        target_token_id="t",
+        proposed_by="host",
+        aim_q=3,
+        aim_r=0,
+    )
+    ms = MapState()
+    layer = ms.ensure_default_layer()
+    shooter = TokenPlacement(token_id="s", q=0, r=0, layer_id=layer.id, character_name="G")
+    target = TokenPlacement(token_id="t", q=3, r=0, layer_id=layer.id, character_name="T")
+    tokens = TokenState(placements={"s": shooter, "t": target})
+    result = enrich_preview_targets(
+        preview, shooter, tokens, ms, {}, rgd_5, rgd_5
+    )
+    assert result.fire_kind == "grenade"
+    assert "t" in result.target_token_ids
+
+
 def test_grenade_ammo_has_no_get_pen() -> None:
     """Grenade as ammo must not be passed to get_pen (O1 retest)."""
     grenade = Grenade(
