@@ -228,6 +228,17 @@ def test_layer_stair_round_trip():
     assert restored.stairs["0,0"].source_layer_id == "layer-a"
 
 
+def test_layer_has_ceiling_round_trip():
+    layer = MapLayer(name="Shed", kind="ground", has_ceiling=True)
+    data = layer.to_dict()
+    assert data["has_ceiling"] is True
+    restored = MapLayer.from_dict(data)
+    assert restored.has_ceiling is True
+    auto = MapLayer(name="Floor", kind="floor")
+    assert "has_ceiling" not in auto.to_dict()
+    assert MapLayer.from_dict(auto.to_dict()).has_ceiling is None
+
+
 def test_opening_height_round_trip():
     opening = Opening(
         kind="window",

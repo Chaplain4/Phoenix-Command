@@ -17,6 +17,7 @@ from phoenix_command.simulations.hex_tactical import (
     classify_movement_base,
     neighbor_direction_index,
 )
+from phoenix_command.simulations.map_knockdown import HANDS_FREE_AC
 from phoenix_command.tables.catalogs.action_catalog import BUILTIN_ACTIONS
 from phoenix_command.tables.catalogs.movement_catalog import (
     TERRAIN_PRESETS,
@@ -98,6 +99,8 @@ class ImpulseCombatEngine:
                 rt.aimed_this_impulse = False
                 rt.moved_this_impulse = False
                 rt.hexes_moved_this_impulse = 0.0
+                if rt.knockdown_phase == "falling":
+                    rt.knockdown_phase = "grounded"
 
     def advance_impulse(self) -> list:
         """Move to next impulse (host only). Returns projectiles due on the new impulse."""
@@ -174,6 +177,19 @@ class ImpulseCombatEngine:
         if not self.can_control_token(player_id, placement, is_host):
             return ActionResult(False, "No control of this token")
 
+        rt = self.get_runtime(token_id)
+        if action == "recover":
+            return self._apply_recover(placement, float(args.get("ac", rt.recoil_ac_owed + rt.balance_ac_owed)))
+        if action == "recover_hands":
+            return self._apply_recover_hands(placement)
+
+        blocked = self._knockdown_block(rt, action)
+        if blocked:
+            return blocked
+        auto = self._auto_pay_owed(rt, action)
+        if auto:
+            return auto
+
         if action in ("move", "movement_while_braced"):
             return self._apply_move(
                 placement,
@@ -243,6 +259,10 @@ class ImpulseCombatEngine:
             rt = self.get_runtime(placement.token_id)
             rt.stance = STANCE_ACTION_MAP[action_id]
             rt.braced = False
+            rt.firing_stance_held = False
+            if rt.knockdown_phase == "grounded" and rt.stance in ("kneeling", "standing"):
+                rt.knockdown_phase = "none"
+                rt.hands_free = True
         return result
 
     def _apply_aim(
@@ -289,6 +309,7 @@ class ImpulseCombatEngine:
         rt.held_weapon_name = found.name
         rt.weapon_cycled = found.actions_to_cycle is None
         rt.fire_mode = "single"
+        rt.firing_stance_held = False
         return ActionResult(True, f"Selected {found.name}")
 
     def _apply_set_fire_mode(self, placement: TokenPlacement, mode: str) -> ActionResult:
@@ -397,6 +418,7 @@ class ImpulseCombatEngine:
         if hex_cost > 0:
             rt.move_progress += spend / hex_cost
         rt.moved_this_impulse = True
+        rt.firing_stance_held = False
         rt.hexes_moved_this_impulse += spend / hex_cost if hex_cost else 0
 
         if rt.move_progress >= 1.0:
@@ -455,6 +477,67 @@ class ImpulseCombatEngine:
                     return item
         return ImpulseCombatEngine._first_weapon(char)
 
+    def _owed(self, rt: TokenCombatRuntime) -> float:
+        return max(0.0, rt.recoil_ac_owed) + max(0.0, rt.balance_ac_owed)
+
+    def _consume_owed(self, rt: TokenCombatRuntime, amount: float) -> float:
+        left = amount
+        take = min(max(0.0, rt.recoil_ac_owed), left)
+        rt.recoil_ac_owed -= take
+        left -= take
+        take = min(max(0.0, rt.balance_ac_owed), left)
+        rt.balance_ac_owed -= take
+        left -= take
+        return amount - left
+
+    def _knockdown_block(self, rt: TokenCombatRuntime, action: str) -> ActionResult | None:
+        if action in ("skip_impulse", "set_fire_mode"):
+            return None
+        if rt.knockdown_phase == "falling":
+            return ActionResult(False, "Knocked off feet this impulse")
+        if rt.knockdown_phase == "grounded" and not rt.hands_free:
+            return ActionResult(False, "Must spend 3 AC to use hands first")
+        return None
+
+    def _auto_pay_owed(self, rt: TokenCombatRuntime, action: str) -> ActionResult | None:
+        if action in ("skip_impulse", "set_fire_mode", "recover", "recover_hands"):
+            return None
+        owed = self._owed(rt)
+        if owed <= 0:
+            return None
+        if rt.ac_remaining < owed:
+            return ActionResult(False, f"Need {owed:.0f} AC to recover (recoil/balance) first")
+        spent = self._consume_owed(rt, owed)
+        rt.ac_remaining -= spent
+        return None
+
+    def _apply_recover(self, placement: TokenPlacement, ac: float) -> ActionResult:
+        rt = self.get_runtime(placement.token_id)
+        if rt.knockdown_phase == "falling":
+            return ActionResult(False, "Knocked off feet this impulse")
+        owed = self._owed(rt)
+        if owed <= 0:
+            return ActionResult(False, "Nothing to recover")
+        ac = max(0.0, ac)
+        spend = min(ac, owed, rt.ac_remaining)
+        if spend <= 0:
+            return ActionResult(False, "No AC remaining")
+        paid = self._consume_owed(rt, spend)
+        rt.ac_remaining -= paid
+        return ActionResult(True, f"Recover {paid:.1f} AC", paid)
+
+    def _apply_recover_hands(self, placement: TokenPlacement) -> ActionResult:
+        rt = self.get_runtime(placement.token_id)
+        if rt.knockdown_phase == "falling":
+            return ActionResult(False, "Knocked off feet this impulse")
+        if rt.hands_free:
+            return ActionResult(False, "Hands already free")
+        if rt.ac_remaining < HANDS_FREE_AC:
+            return ActionResult(False, f"Need {HANDS_FREE_AC:.0f} AC to use hands")
+        rt.ac_remaining -= HANDS_FREE_AC
+        rt.hands_free = True
+        return ActionResult(True, "Rolled to use hands (3 AC)", HANDS_FREE_AC)
+
     def available_actions(self, token_id: str) -> list[tuple[str, str, float | str]]:
         """Return (action_id, label, cost) for token action menu."""
         placement = self.tokens.placements.get(token_id)
@@ -462,7 +545,17 @@ class ImpulseCombatEngine:
             return []
         rt = self.get_runtime(token_id)
         char = self.characters.get(placement.character_name or "")
-        actions: list[tuple[str, str, float | str]] = [
+        if rt.knockdown_phase == "falling":
+            return [("skip_impulse", "Skip Impulse", 0)]
+        actions: list[tuple[str, str, float | str]] = []
+        owed = self._owed(rt)
+        if owed > 0:
+            actions.append(("recover", f"Recover recoil/balance ({owed:.0f} AC)", owed))
+        if rt.knockdown_phase == "grounded" and not rt.hands_free:
+            actions.append(("recover_hands", "Use hands (roll)", HANDS_FREE_AC))
+            actions.append(("skip_impulse", "Skip Impulse", 0))
+            return actions
+        actions.extend([
             ("move", "Move", "var"),
             ("movement_while_braced", "Movement While Braced", "var"),
             ("brace_weapon", "Brace Weapon", 1),
@@ -471,7 +564,7 @@ class ImpulseCombatEngine:
             ("skip_impulse", "Skip Impulse", 0),
             ("set_fire_mode", "Set Fire Mode", 0),
             ("select_weapon", "Select Weapon", 0),
-        ]
+        ])
         for action_id, new_stance in STANCE_ACTION_MAP.items():
             if rt.stance != new_stance:
                 cost = BUILTIN_ACTIONS[action_id].cost

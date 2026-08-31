@@ -309,3 +309,104 @@ def test_enrich_preview_sets_burst_targets() -> None:
     )
     assert enriched.fire_kind == "burst"
     assert "e1" in enriched.target_token_ids or "e2" in enriched.target_token_ids
+
+
+def test_dispatch_grenade_scatter_center_not_aim() -> None:
+    from phoenix_command.item_database.grenades import hg_78
+    from phoenix_command.models.hit_result_advanced import ExplosiveShotResult
+
+    tokens, shooter = _tokens_line()
+    chars = {n: _char(n) for n in ("Shooter", "Enemy1", "Enemy2")}
+    map_state = MapState()
+    map_state.ensure_default_layer()
+    preview = PendingShotPreview(
+        preview_id="p",
+        shooter_token_id="s",
+        target_token_id="e1",
+        proposed_by="host",
+        fire_mode="single",
+        fire_kind="grenade",
+        aim_q=3,
+        aim_r=0,
+        weapon_name=hg_78.name,
+    )
+    centers: list[tuple[int, int]] = []
+
+    def fake_blast(cq, cr, *args, **kwargs):
+        centers.append((cq, cr))
+        return []
+
+    miss = ExplosiveShotResult(
+        hit=False, eal=10, odds=50, roll=90, scatter_hexes=2, is_long=True
+    )
+    with patch(
+        "phoenix_command.simulations.map_fire_dispatch.CombatSimulator.thrown_grenade",
+        return_value=miss,
+    ):
+        with patch(
+            "phoenix_command.simulations.map_fire_dispatch.tokens_in_blast",
+            side_effect=fake_blast,
+        ):
+            dispatch_map_fire(
+                preview,
+                chars["Shooter"],
+                hg_78,
+                hg_78,
+                tokens,
+                chars,
+                map_state,
+                {},
+            )
+    assert centers == [(5, 0)]
+
+
+def test_dispatch_agl_two_centers() -> None:
+    from phoenix_command.item_database.grenades import hg_78
+    from phoenix_command.models.hit_result_advanced import ExplosiveShotResult
+
+    tokens, shooter = _tokens_line()
+    chars = {n: _char(n) for n in ("Shooter", "Enemy1", "Enemy2")}
+    map_state = MapState()
+    map_state.ensure_default_layer()
+    preview = PendingShotPreview(
+        preview_id="p",
+        shooter_token_id="s",
+        target_token_id="e1",
+        proposed_by="host",
+        fire_mode="auto",
+        aim_q=3,
+        aim_r=0,
+        weapon_name=hg_78.name,
+    )
+    centers: list[tuple[int, int]] = []
+
+    def fake_blast(cq, cr, *args, **kwargs):
+        centers.append((cq, cr))
+        return []
+
+    results = [
+        ExplosiveShotResult(hit=True, eal=10, odds=50, roll=10, scatter_hexes=0),
+        ExplosiveShotResult(hit=False, eal=10, odds=50, roll=90, scatter_hexes=1, is_long=True),
+    ]
+    with patch(
+        "phoenix_command.simulations.map_fire_dispatch.CombatSimulator.automatic_grenade_launcher_burst",
+        return_value=results,
+    ):
+        with patch(
+            "phoenix_command.simulations.map_fire_dispatch.tokens_in_blast",
+            side_effect=fake_blast,
+        ):
+            outcome = dispatch_map_fire(
+                preview,
+                chars["Shooter"],
+                hg_78,
+                hg_78,
+                tokens,
+                chars,
+                map_state,
+                {},
+            )
+    assert outcome.kind == "agl"
+    assert centers == [(3, 0), (4, 0)]
+    assert outcome.pending_blast is not None
+    assert len(outcome.pending_blast.passes) == 2

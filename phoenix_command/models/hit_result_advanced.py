@@ -3,6 +3,7 @@ from typing import List, Optional, TYPE_CHECKING
 
 from phoenix_command.models.enums import AdvancedHitLocation, SituationStanceModifier4B, VisibilityModifier4C, TargetOrientation, IncapacitationEffect, TargetExposure
 from phoenix_command.models.recovery import Recovery
+from phoenix_command.tables.advanced_rules.knock_down import KnockDownEffect
 
 if TYPE_CHECKING:
     from phoenix_command.models.character import Character
@@ -51,6 +52,7 @@ class ShotResult:
     recovery: Optional[Recovery] = None
     incapacitation_time_phases: Optional[int] = None
     log: Optional[str] = None
+    knock_down: Optional[KnockDownEffect] = None
 
 
 @dataclass

@@ -17,6 +17,7 @@ from phoenix_command.session.domains.map_state import MapLayer, MapState, rules_
 from phoenix_command.session.domains.token_state import TokenPlacement
 from phoenix_command.simulations.hex_tactical import line_hexes, relative_orientation
 from phoenix_command.simulations.map_los import LosResult, check_los
+from phoenix_command.simulations.map_knockdown import second_shot_aim_bonus
 
 
 @dataclass
@@ -176,6 +177,11 @@ def build_map_shot_context(
         notes.append("Shooter moved this impulse")
     if shooter_rt.aim_impulses:
         notes.append(f"Aimed {shooter_rt.aim_impulses} impulse(s) at target")
+    bonus = second_shot_aim_bonus(
+        shooter_rt, target.q, target.r, target.layer_id or ""
+    )
+    if bonus:
+        notes.append("Second shot +1 AC (same hex, stance held)")
 
     return MapShotContext(
         range_rule_hexes=range_hexes,

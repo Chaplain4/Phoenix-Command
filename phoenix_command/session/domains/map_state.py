@@ -390,6 +390,8 @@ class MapLayer:
     name: str = "Ground"
     kind: str = "ground"  # ground, floor, basement, trench
     elevation: int = 0
+    # None = auto from kind (floor/basement → ceiling); True/False = override
+    has_ceiling: bool | None = None
     background: BackgroundImage | None = None
     annotations_b64: str = ""  # freehand PNG overlay; does not alter background
     annotations_mime: str = "image/png"
@@ -403,7 +405,7 @@ class MapLayer:
     opacity: float = 1.0
 
     def to_dict(self) -> dict:
-        return {
+        result = {
             "id": self.id,
             "name": self.name,
             "kind": self.kind,
@@ -420,14 +422,24 @@ class MapLayer:
             "visible": self.visible,
             "opacity": self.opacity,
         }
+        if self.has_ceiling is not None:
+            result["has_ceiling"] = self.has_ceiling
+        return result
 
     @classmethod
     def from_dict(cls, data: dict) -> "MapLayer":
+        raw_ceiling = data.get("has_ceiling", None)
+        has_ceiling: bool | None
+        if raw_ceiling is None:
+            has_ceiling = None
+        else:
+            has_ceiling = bool(raw_ceiling)
         return cls(
             id=data.get("id", str(uuid.uuid4())),
             name=data.get("name", "Ground"),
             kind=data.get("kind", "ground"),
             elevation=int(data.get("elevation", 0)),
+            has_ceiling=has_ceiling,
             background=BackgroundImage.from_dict(data.get("background")),
             annotations_b64=data.get("annotations_b64", "") or "",
             annotations_mime=data.get("annotations_mime", "image/png") or "image/png",

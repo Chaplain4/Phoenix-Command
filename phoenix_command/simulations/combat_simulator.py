@@ -1,6 +1,7 @@
 """Combat simulation for Phoenix Command."""
 
 import random
+from dataclasses import replace
 from typing import Optional, List
 
 from phoenix_command.models.character import Character
@@ -54,8 +55,9 @@ class CombatSimulator:
         if not hit:
             return ShotResult(hit=False, eal=eal, odds=odds, roll=roll, target=target, log="\n".join(log))
         
-        damage_result, incap_effect, recovery, incap_time = CombatSimulatorUtils.process_hit(
-            target, ammo, range_hexes, target_exposure, shot_params, is_front_shot, log
+        damage_result, incap_effect, recovery, incap_time, knock_down = CombatSimulatorUtils.process_hit(
+            target, ammo, range_hexes, target_exposure, shot_params, is_front_shot, log,
+            weapon_knock_down=int(getattr(weapon, "knock_down", 0) or 0),
         )
         
         return ShotResult(
@@ -68,7 +70,8 @@ class CombatSimulator:
             incapacitation_effect=incap_effect,
             recovery=recovery,
             incapacitation_time_phases=incap_time,
-            log="\n".join(log)
+            log="\n".join(log),
+            knock_down=knock_down,
         )
 
     @staticmethod
@@ -123,20 +126,21 @@ class CombatSimulator:
         log.append("  Pattern HIT, processing pellets...")
         
         results = CombatSimulatorUtils.process_shotgun_pattern(
-            ammo, targets, ranges, exposures, shot_params_list, is_front_shots, data.base_pellet_hit_chance, log
+            ammo, targets, ranges, exposures, shot_params_list, is_front_shots,
+            data.base_pellet_hit_chance, log,
+            weapon_knock_down=int(getattr(weapon, "knock_down", 0) or 0),
         )
         
         if not results:
             results = [ShotResult(hit=False, eal=eal, odds=odds, roll=roll, target=targets[primary_target_idx], log="\n".join(log))]
         else:
             if results[0].log:
-                results[0] = ShotResult(
-                    hit=results[0].hit, eal=eal, odds=odds, roll=roll,
-                    target=results[0].target, damage_result=results[0].damage_result,
-                    incapacitation_effect=results[0].incapacitation_effect,
-                    recovery=results[0].recovery,
-                    incapacitation_time_phases=results[0].incapacitation_time_phases,
-                    log="\n".join(log) + "\n" + results[0].log
+                results[0] = replace(
+                    results[0],
+                    eal=eal,
+                    odds=odds,
+                    roll=roll,
+                    log="\n".join(log) + "\n" + results[0].log,
                 )
         
         return results
@@ -200,19 +204,16 @@ class CombatSimulator:
         for idx, hits, target, rng, exposure, shot_params, front, eal, odds, roll in target_hits:
             hit_results = CombatSimulatorUtils.process_target_hits(
                 target, ammo, rng, exposure, shot_params, front, hits, log,
-                eal=eal, odds=odds, roll=roll
+                eal=eal, odds=odds, roll=roll,
+                weapon_knock_down=int(getattr(weapon, "knock_down", 0) or 0),
             )
             results.extend(hit_results)
         
         # Add header log to first result or create miss results
         if results:
-            results[0] = ShotResult(
-                hit=results[0].hit, eal=results[0].eal, odds=results[0].odds, roll=results[0].roll,
-                target=results[0].target, damage_result=results[0].damage_result,
-                incapacitation_effect=results[0].incapacitation_effect,
-                recovery=results[0].recovery,
-                incapacitation_time_phases=results[0].incapacitation_time_phases,
-                log="\n".join(log) + "\n" + (results[0].log or "")
+            results[0] = replace(
+                results[0],
+                log="\n".join(log) + "\n" + (results[0].log or ""),
             )
         else:
             # Create miss results with actual eal, odds, roll for each target
@@ -265,8 +266,9 @@ class CombatSimulator:
         results = []
         for i in range(hits):
             hit_log = [f"--- 3RB Hit {i+1}/{hits} ---"]
-            damage_result, incap_effect, recovery, incap_time = CombatSimulatorUtils.process_hit(
-                target, ammo, range_hexes, target_exposure, shot_params, is_front_shot, hit_log
+            damage_result, incap_effect, recovery, incap_time, knock_down = CombatSimulatorUtils.process_hit(
+                target, ammo, range_hexes, target_exposure, shot_params, is_front_shot, hit_log,
+                weapon_knock_down=int(getattr(weapon, "knock_down", 0) or 0),
             )
             log.extend(hit_log)
             results.append(ShotResult(
@@ -279,19 +281,13 @@ class CombatSimulator:
                 incapacitation_effect=incap_effect,
                 recovery=recovery,
                 incapacitation_time_phases=incap_time,
-                log="\n".join(hit_log)
+                log="\n".join(hit_log),
+                knock_down=knock_down,
             ))
         
         # Add header log to first result
         if results:
-            results[0] = ShotResult(
-                hit=results[0].hit, eal=results[0].eal, odds=results[0].odds, roll=results[0].roll,
-                target=results[0].target, damage_result=results[0].damage_result,
-                incapacitation_effect=results[0].incapacitation_effect,
-                recovery=results[0].recovery,
-                incapacitation_time_phases=results[0].incapacitation_time_phases,
-                log="\n".join(log)
-            )
+            results[0] = replace(results[0], log="\n".join(log))
         
         return results
 
@@ -356,19 +352,16 @@ class CombatSimulator:
                 log.append(f"--- Pattern {pattern_num+1}/{patterns} at {target.name} ---")
                 pattern_results = CombatSimulatorUtils.process_shotgun_pattern(
                     ammo, all_targets, all_ranges, all_exposures, all_params, all_fronts,
-                    data.base_pellet_hit_chance, log
+                    data.base_pellet_hit_chance, log,
+                    weapon_knock_down=int(getattr(weapon, "knock_down", 0) or 0),
                 )
                 results.extend(pattern_results)
 
         # Add header log to first result or create miss result
         if results:
-            results[0] = ShotResult(
-                hit=results[0].hit, eal=results[0].eal, odds=results[0].odds, roll=results[0].roll,
-                target=results[0].target, damage_result=results[0].damage_result,
-                incapacitation_effect=results[0].incapacitation_effect,
-                recovery=results[0].recovery,
-                incapacitation_time_phases=results[0].incapacitation_time_phases,
-                log="\n".join(log) + "\n" + (results[0].log or "")
+            results[0] = replace(
+                results[0],
+                log="\n".join(log) + "\n" + (results[0].log or ""),
             )
         else:
             log.append("No targets hit")
@@ -624,8 +617,10 @@ class CombatSimulator:
             
             log.append(f"  BSHC: {bshc}, Base concussion: {base_concussion}")
 
-            # Process shrapnel hits
-            if bshc is not None:
+            # Process shrapnel hits (Table 5B: behind solid cover is immune)
+            if BlastModifier.BEHIND_SOLID_COVER in modifiers:
+                log.append("  Shrapnel skipped (behind solid cover)")
+            elif bshc is not None:
                 shrapnel_results = CombatSimulatorUtils.process_shrapnel_hits(
                     target, ammo, range_hex, exposure, params, front, bshc, log
                 )
@@ -641,13 +636,9 @@ class CombatSimulator:
 
         # Add header log to first result or create empty result
         if results:
-            results[0] = ShotResult(
-                hit=results[0].hit, eal=results[0].eal, odds=results[0].odds, roll=results[0].roll,
-                target=results[0].target, damage_result=results[0].damage_result,
-                incapacitation_effect=results[0].incapacitation_effect,
-                recovery=results[0].recovery,
-                incapacitation_time_phases=results[0].incapacitation_time_phases,
-                log="\n".join(log) + "\n" + (results[0].log or "")
+            results[0] = replace(
+                results[0],
+                log="\n".join(log) + "\n" + (results[0].log or ""),
             )
 
         return results

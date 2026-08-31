@@ -25,6 +25,14 @@ class TokenCombatRuntime:
     move_target_r: int | None = None
     weapon_cycled: bool = True
     aimed_this_impulse: bool = False
+    balance_ac_owed: float = 0.0
+    knockdown_phase: str = "none"  # none | falling | grounded
+    hands_free: bool = True
+    recoil_ac_owed: float = 0.0
+    last_shot_q: int | None = None
+    last_shot_r: int | None = None
+    last_shot_layer_id: str = ""
+    firing_stance_held: bool = False
 
     def status_label(self) -> str:
         parts: list[str] = []
@@ -38,6 +46,14 @@ class TokenCombatRuntime:
             parts.append(f"aim×{self.aim_impulses}")
         if self.move_progress > 0:
             parts.append(f"move {self.move_progress * 100:.0f}%")
+        if self.knockdown_phase == "falling":
+            parts.append("falling")
+        elif self.knockdown_phase == "grounded":
+            parts.append("grounded" if self.hands_free else "grounded (hands)")
+        if self.balance_ac_owed > 0:
+            parts.append(f"KD -{self.balance_ac_owed:.0f}AC")
+        if self.recoil_ac_owed > 0:
+            parts.append(f"recoil {self.recoil_ac_owed:.0f}AC")
         return " | ".join(parts)
 
     def to_dict(self) -> dict:
@@ -58,12 +74,22 @@ class TokenCombatRuntime:
             "move_target_r": self.move_target_r,
             "weapon_cycled": self.weapon_cycled,
             "aimed_this_impulse": self.aimed_this_impulse,
+            "balance_ac_owed": self.balance_ac_owed,
+            "knockdown_phase": self.knockdown_phase,
+            "hands_free": self.hands_free,
+            "recoil_ac_owed": self.recoil_ac_owed,
+            "last_shot_q": self.last_shot_q,
+            "last_shot_r": self.last_shot_r,
+            "last_shot_layer_id": self.last_shot_layer_id,
+            "firing_stance_held": self.firing_stance_held,
         }
 
     @classmethod
     def from_dict(cls, data: dict) -> "TokenCombatRuntime":
-        mtq = data.get("move_target_q")
-        mtr = data.get("move_target_r")
+        def _opt_int(key: str) -> int | None:
+            raw = data.get(key)
+            return int(raw) if raw is not None else None
+
         return cls(
             ac_remaining=float(data.get("ac_remaining", 0.0)),
             stance=data.get("stance", "standing"),
@@ -77,10 +103,18 @@ class TokenCombatRuntime:
             moved_this_impulse=bool(data.get("moved_this_impulse", False)),
             hexes_moved_this_impulse=float(data.get("hexes_moved_this_impulse", 0.0)),
             move_progress=float(data.get("move_progress", 0.0)),
-            move_target_q=int(mtq) if mtq is not None else None,
-            move_target_r=int(mtr) if mtr is not None else None,
+            move_target_q=_opt_int("move_target_q"),
+            move_target_r=_opt_int("move_target_r"),
             weapon_cycled=bool(data.get("weapon_cycled", True)),
             aimed_this_impulse=bool(data.get("aimed_this_impulse", False)),
+            balance_ac_owed=float(data.get("balance_ac_owed", 0.0)),
+            knockdown_phase=data.get("knockdown_phase", "none") or "none",
+            hands_free=bool(data.get("hands_free", True)),
+            recoil_ac_owed=float(data.get("recoil_ac_owed", 0.0)),
+            last_shot_q=_opt_int("last_shot_q"),
+            last_shot_r=_opt_int("last_shot_r"),
+            last_shot_layer_id=data.get("last_shot_layer_id", "") or "",
+            firing_stance_held=bool(data.get("firing_stance_held", False)),
         )
 
 

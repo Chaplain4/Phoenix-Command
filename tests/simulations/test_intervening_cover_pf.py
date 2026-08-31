@@ -46,7 +46,7 @@ def test_manual_cover_pf_stops_round():
         cover_pf=20.0,
     )
     log: list[str] = []
-    dmg, incap, recovery, incap_time = CombatSimulatorUtils.process_hit(
+    dmg, incap, recovery, incap_time, _kd = CombatSimulatorUtils.process_hit(
         target,
         _ammo(10.0),
         10,

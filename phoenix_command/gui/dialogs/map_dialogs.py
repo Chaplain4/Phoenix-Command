@@ -529,13 +529,22 @@ class MapLayerManagerDialog(QDialog):
         self.list_widget = QListWidget()
         self.list_widget.currentRowChanged.connect(self._on_layer_selected)
         for layer in map_state.layers:
-            vis = "" if layer.visible else " [hidden]"
-            self.list_widget.addItem(f"{layer.name} ({layer.kind}, elev {layer.elevation}){vis}")
+            self.list_widget.addItem(self._layer_list_label(layer))
         layout.addWidget(self.list_widget)
 
         self.visible_check = QCheckBox("Layer visible")
         self.visible_check.toggled.connect(self._on_visible_toggled)
         layout.addWidget(self.visible_check)
+
+        ceil_row = QHBoxLayout()
+        ceil_row.addWidget(QLabel("Ceiling / roof:"))
+        self.ceiling_combo = QComboBox()
+        self.ceiling_combo.addItem("Auto (from kind)", None)
+        self.ceiling_combo.addItem("Yes", True)
+        self.ceiling_combo.addItem("No", False)
+        self.ceiling_combo.currentIndexChanged.connect(self._on_ceiling_changed)
+        ceil_row.addWidget(self.ceiling_combo)
+        layout.addLayout(ceil_row)
 
         btn_row = QHBoxLayout()
         add_btn = QPushButton("Add Layer")
@@ -560,6 +569,16 @@ class MapLayerManagerDialog(QDialog):
         if map_state.layers:
             self.list_widget.setCurrentRow(0)
 
+    def _layer_list_label(self, layer: MapLayer) -> str:
+        vis = "" if layer.visible else " [hidden]"
+        if layer.has_ceiling is True:
+            roof = ", roof"
+        elif layer.has_ceiling is False:
+            roof = ", open-top"
+        else:
+            roof = ""
+        return f"{layer.name} ({layer.kind}, elev {layer.elevation}{roof}){vis}"
+
     def _on_layer_selected(self, row: int) -> None:
         layer = self._layer_at(row)
         if layer is None:
@@ -567,16 +586,27 @@ class MapLayerManagerDialog(QDialog):
         self.visible_check.blockSignals(True)
         self.visible_check.setChecked(layer.visible)
         self.visible_check.blockSignals(False)
+        self.ceiling_combo.blockSignals(True)
+        idx = self.ceiling_combo.findData(layer.has_ceiling)
+        if idx < 0:
+            idx = 0
+        self.ceiling_combo.setCurrentIndex(idx)
+        self.ceiling_combo.blockSignals(False)
 
     def _on_visible_toggled(self, checked: bool) -> None:
         layer = self._current_layer()
         if layer:
             layer.visible = checked
-            row = self.list_widget.currentRow()
-            vis = "" if layer.visible else " [hidden]"
-            self.list_widget.currentItem().setText(
-                f"{layer.name} ({layer.kind}, elev {layer.elevation}){vis}"
-            )
+            self.list_widget.currentItem().setText(self._layer_list_label(layer))
+
+    def _on_ceiling_changed(self, _index: int) -> None:
+        layer = self._current_layer()
+        if not layer:
+            return
+        layer.has_ceiling = self.ceiling_combo.currentData()
+        item = self.list_widget.currentItem()
+        if item:
+            item.setText(self._layer_list_label(layer))
 
     def _layer_at(self, row: int) -> MapLayer | None:
         if 0 <= row < len(self._map_state.layers):
@@ -592,7 +622,7 @@ class MapLayerManagerDialog(QDialog):
             return
         layer = MapLayer(name=name, kind="floor", elevation=len(self._map_state.layers))
         self._map_state.layers.append(layer)
-        self.list_widget.addItem(f"{layer.name} ({layer.kind}, elev {layer.elevation})")
+        self.list_widget.addItem(self._layer_list_label(layer))
         self.list_widget.setCurrentRow(self.list_widget.count() - 1)
 
     def _rename_layer(self):
@@ -602,10 +632,7 @@ class MapLayerManagerDialog(QDialog):
         name, ok = QInputDialog.getText(self, "Rename Layer", "Layer name:", text=layer.name)
         if ok and name:
             layer.name = name
-            vis = "" if layer.visible else " [hidden]"
-            self.list_widget.currentItem().setText(
-                f"{layer.name} ({layer.kind}, elev {layer.elevation}){vis}"
-            )
+            self.list_widget.currentItem().setText(self._layer_list_label(layer))
 
     def _edit_background(self):
         layer = self._current_layer()

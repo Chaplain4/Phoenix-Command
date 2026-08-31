@@ -14,7 +14,20 @@ def test_impulse_combat_round_trip() -> None:
         phase=2,
         impulse=1,
         sides={"alpha": "Alpha"},
-        token_runtime={"t1": TokenCombatRuntime(ac_remaining=1.5, braced=True)},
+        token_runtime={
+            "t1": TokenCombatRuntime(
+                ac_remaining=1.5,
+                braced=True,
+                balance_ac_owed=2.0,
+                knockdown_phase="grounded",
+                hands_free=False,
+                recoil_ac_owed=1.0,
+                last_shot_q=3,
+                last_shot_r=4,
+                last_shot_layer_id="ground",
+                firing_stance_held=True,
+            )
+        },
         selected_token_id="t1",
     )
     restored = ImpulseCombatState.from_dict(ic.to_dict())
@@ -22,6 +35,91 @@ def test_impulse_combat_round_trip() -> None:
     assert restored.phase == 2
     assert restored.token_runtime["t1"].ac_remaining == 1.5
     assert restored.token_runtime["t1"].braced is True
+    rt = restored.token_runtime["t1"]
+    assert rt.balance_ac_owed == 2.0
+    assert rt.knockdown_phase == "grounded"
+    assert rt.hands_free is False
+    assert rt.recoil_ac_owed == 1.0
+    assert rt.last_shot_q == 3
+    assert rt.last_shot_r == 4
+    assert rt.last_shot_layer_id == "ground"
+    assert rt.firing_stance_held is True
+
+
+def _kd_runtime() -> TokenCombatRuntime:
+    return TokenCombatRuntime(
+        ac_remaining=1.5,
+        braced=True,
+        balance_ac_owed=2.0,
+        knockdown_phase="grounded",
+        hands_free=False,
+        recoil_ac_owed=1.0,
+        last_shot_q=3,
+        last_shot_r=4,
+        last_shot_layer_id="ground",
+        firing_stance_held=True,
+    )
+
+
+def test_token_runtime_json_round_trip() -> None:
+    import json
+
+    raw = json.loads(json.dumps(_kd_runtime().to_dict()))
+    rt = TokenCombatRuntime.from_dict(raw)
+    assert rt.last_shot_q == 3
+    assert rt.last_shot_r == 4
+    assert rt.knockdown_phase == "grounded"
+    assert rt.hands_free is False
+    assert rt.recoil_ac_owed == 1.0
+    assert rt.firing_stance_held is True
+
+
+def test_token_runtime_legacy_defaults() -> None:
+    rt = TokenCombatRuntime.from_dict({"ac_remaining": 2})
+    assert rt.knockdown_phase == "none"
+    assert rt.hands_free is True
+    assert rt.balance_ac_owed == 0.0
+    assert rt.recoil_ac_owed == 0.0
+    assert rt.last_shot_q is None
+    assert rt.last_shot_r is None
+    assert rt.last_shot_layer_id == ""
+    assert rt.firing_stance_held is False
+
+
+def test_game_state_json_round_trip_kd_runtime() -> None:
+    from phoenix_command.session.serialization import (
+        game_state_from_json,
+        game_state_to_json,
+    )
+
+    state = GameState()
+    state.impulse_combat.map_mode = "combat"
+    state.impulse_combat.token_runtime["t1"] = _kd_runtime()
+    restored = game_state_from_json(game_state_to_json(state))
+    rt = restored.impulse_combat.token_runtime["t1"]
+    assert restored.impulse_combat.map_mode == "combat"
+    assert rt.last_shot_r == 4
+    assert rt.recoil_ac_owed == 1.0
+    assert rt.knockdown_phase == "grounded"
+
+
+def test_full_state_sync_preserves_kd_runtime() -> None:
+    from phoenix_command.session.sync_protocol import (
+        apply_message_to_state,
+        make_full_state_message,
+    )
+
+    state = GameState()
+    state.revision = 1
+    state.impulse_combat.token_runtime["t1"] = _kd_runtime()
+    guest = GameState()
+    guest.revision = 0
+    result = apply_message_to_state(guest, make_full_state_message(state))
+    rt = result.impulse_combat.token_runtime["t1"]
+    assert rt.recoil_ac_owed == 1.0
+    assert rt.knockdown_phase == "grounded"
+    assert rt.last_shot_q == 3
+    assert rt.last_shot_r == 4
 
 
 def test_token_side_and_control() -> None:

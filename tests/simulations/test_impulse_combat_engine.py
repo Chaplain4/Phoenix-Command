@@ -113,3 +113,52 @@ def test_cycle_cost() -> None:
 
 def test_meter_scale_halves_rulebook_cost() -> None:
     assert METER_SCALE == 0.5
+
+
+def test_falling_blocks_aim() -> None:
+    engine, _ = _engine(ac=5.0)
+    rt = engine.get_runtime("t1")
+    rt.knockdown_phase = "falling"
+    result = engine.apply_action("t1", "aim", {"ac": 1})
+    assert not result.success
+    assert "off feet" in result.message.lower()
+
+
+def test_recover_pays_recoil_then_aim() -> None:
+    engine, _ = _engine(ac=5.0)
+    rt = engine.get_runtime("t1")
+    rt.recoil_ac_owed = 1.0
+    result = engine.apply_action("t1", "aim", {"ac": 2})
+    assert result.success
+    assert rt.recoil_ac_owed == 0.0
+    assert rt.ac_remaining == 2.0  # 5 - 1 recover - 2 aim
+
+
+def test_recover_hands_after_grounded() -> None:
+    engine, _ = _engine(ac=5.0)
+    rt = engine.get_runtime("t1")
+    rt.knockdown_phase = "grounded"
+    rt.hands_free = False
+    rt.stance = "prone"
+    blocked = engine.apply_action("t1", "aim", {"ac": 1})
+    assert not blocked.success
+    ok = engine.apply_action("t1", "recover_hands", {})
+    assert ok.success
+    assert rt.hands_free is True
+    assert rt.ac_remaining == 2.0
+
+
+def test_move_breaks_firing_stance() -> None:
+    engine, _ = _engine(ac=5.0)
+    rt = engine.get_runtime("t1")
+    rt.firing_stance_held = True
+    engine.apply_action("t1", "move", {"target_q": 1, "target_r": 0})
+    assert rt.firing_stance_held is False
+
+
+def test_refill_promotes_falling_to_grounded() -> None:
+    engine, _ = _engine()
+    rt = engine.get_runtime("t1")
+    rt.knockdown_phase = "falling"
+    engine.refill_impulse_ac()
+    assert rt.knockdown_phase == "grounded"

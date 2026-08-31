@@ -14,6 +14,11 @@ from phoenix_command.tables.advanced_rules.effective_min_arc import EffectiveMin
 from phoenix_command.tables.core.table4_advanced_odds_of_hitting import Table4AdvancedOddsOfHitting
 from phoenix_command.tables.core.table5_auto_pellet_shrapnel import Table5AutoPelletShrapnel
 from phoenix_command.tables.core.table8_healing_and_recovery import Table8HealingAndRecovery
+from phoenix_command.tables.advanced_rules.knock_down import (
+    explosive_knock_down,
+    infantry_armor_class,
+    knock_down_for_projectile_hit,
+)
 
 
 class CombatSimulatorUtils:
@@ -359,7 +364,8 @@ class CombatSimulatorUtils:
         target_exposure: TargetExposure,
         shot_params: ShotParameters,
         is_front_shot: bool,
-        log: List[str]
+        log: List[str],
+        weapon_knock_down: int = 0,
     ):
         """Process a successful hit and calculate damage."""
         log.append(f"[Process Hit] Target: {target.name}, Ammo: {ammo.name}, Range: {range_hexes}")
@@ -399,7 +405,7 @@ class CombatSimulatorUtils:
             recovery = Table8HealingAndRecovery.get_critical_time_period_and_recovery_chance_8a(
                 target.physical_damage_total, target.health
             )
-            return damage_result, incap_effect, recovery, None
+            return damage_result, incap_effect, recovery, None, None
 
         epen = pen_after_cover
         penetrated = True
@@ -471,7 +477,12 @@ class CombatSimulatorUtils:
             incap_time = Table8HealingAndRecovery.get_incapacitation_time_8b(target.physical_damage_total, modifier)
             log.append(f"  Incapacitation time: {incap_time} phases")
 
-        return damage_result, incap_effect, recovery, incap_time
+        knock_down = knock_down_for_projectile_hit(int(weapon_knock_down or 0), location)
+        if knock_down is not None and not knock_down.is_none():
+            log.append(f"  Knock down ({location.name}): {knock_down.label()} [KD {weapon_knock_down}]")
+        else:
+            knock_down = None
+        return damage_result, incap_effect, recovery, incap_time, knock_down
     
     @staticmethod
     def process_target_hits(
@@ -485,7 +496,8 @@ class CombatSimulatorUtils:
         log: List[str],
         eal: int = 0,
         odds: int = 0,
-        roll: int = 0
+        roll: int = 0,
+        weapon_knock_down: int = 0,
     ) -> List[ShotResult]:
         """Process multiple hits on a single target."""
         log.append(f"[Process Target Hits] {hits} hits on {target.name}")
@@ -494,8 +506,9 @@ class CombatSimulatorUtils:
         for i in range(hits):
             hit_log = []
             hit_log.append(f"--- Hit {i+1}/{hits} ---")
-            dmg, effect, recovery, time = CombatSimulatorUtils.process_hit(
-                target, ammo, range_hexes, exposure, shot_params, is_front_shot, hit_log
+            dmg, effect, recovery, time, knock_down = CombatSimulatorUtils.process_hit(
+                target, ammo, range_hexes, exposure, shot_params, is_front_shot, hit_log,
+                weapon_knock_down=weapon_knock_down,
             )
             log.extend(hit_log)
             target_results.append(ShotResult(
@@ -508,7 +521,8 @@ class CombatSimulatorUtils:
                 incapacitation_effect=effect,
                 recovery=recovery,
                 incapacitation_time_phases=time,
-                log="\n".join(hit_log)
+                log="\n".join(hit_log),
+                knock_down=knock_down,
             ))
         return target_results
     
@@ -584,7 +598,8 @@ class CombatSimulatorUtils:
         shot_params_list: List[ShotParameters],
         is_front_shots: List[bool],
         bphc: Optional[str],
-        log: List[str]
+        log: List[str],
+        weapon_knock_down: int = 0,
     ) -> List[ShotResult]:
         """Process shotgun pattern hits for all targets."""
         log.append(f"[Shotgun Pattern] BPHC: {bphc}, Targets: {len(targets)}")
@@ -602,7 +617,8 @@ class CombatSimulatorUtils:
         results = []
         for idx, hits, target, rng, exposure, params, front, _ in pellet_hits_data:
             hit_results = CombatSimulatorUtils.process_target_hits(
-                target, ammo, rng, exposure, params, front, hits, log
+                target, ammo, rng, exposure, params, front, hits, log,
+                weapon_knock_down=weapon_knock_down,
             )
             results.extend(hit_results)
 
@@ -940,6 +956,13 @@ class CombatSimulatorUtils:
             )
             log.append(f"  Incap time: {incap_time} phases")
 
+        armor_class = infantry_armor_class(target, None, True)
+        knock_down = explosive_knock_down(int(base_concussion), armor_class)
+        if knock_down is not None and not knock_down.is_none():
+            log.append(f"  Knock down (explosive {armor_class}): {knock_down.label()} [BC {base_concussion}]")
+        else:
+            knock_down = None
+
         return ShotResult(
             hit=True,
             eal=0,
@@ -950,5 +973,6 @@ class CombatSimulatorUtils:
             incapacitation_effect=incap_effect,
             recovery=recovery,
             incapacitation_time_phases=incap_time,
-            log="\n".join(log)
+            log="\n".join(log),
+            knock_down=knock_down,
         )

@@ -10,6 +10,7 @@ from PyQt6.QtWidgets import (
     QMessageBox,
     QFileDialog,
     QTabWidget,
+    QDialog,
 )
 
 from phoenix_command.gui.widgets.body_diagram import BodyDiagramWidget
@@ -132,6 +133,16 @@ class MainWindow(QMainWindow):
         self._action_catalog_action.triggered.connect(self._show_action_catalog)
         self._custom_barrier_action = self.map_menu.addAction("&Custom Barrier Material...")
         self._custom_barrier_action.triggered.connect(self._add_custom_barrier)
+
+        options_menu = menubar.addMenu("&Options")
+        from phoenix_command.gui.app_settings import get_show_blast_modifier_dialog
+
+        self._blast_review_action = options_menu.addAction(
+            "Review &blast modifiers before damage"
+        )
+        self._blast_review_action.setCheckable(True)
+        self._blast_review_action.setChecked(get_show_blast_modifier_dialog())
+        self._blast_review_action.toggled.connect(self._on_blast_review_toggled)
 
         help_menu = menubar.addMenu("&Help")
         help_menu.addAction("&Documentation")
@@ -798,7 +809,6 @@ class MainWindow(QMainWindow):
     def _execute_confirmed_preview(self, preview) -> tuple[bool, str]:
         from phoenix_command.simulations.map_fire_dispatch import (
             build_snapshot,
-            dispatch_map_fire,
         )
 
         tokens = self.hex_map_view.get_token_state()
@@ -847,7 +857,7 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage(f"Projectile in flight ({preview.tof_impulses} impulses)")
             return True, "scheduled"
 
-        outcome = dispatch_map_fire(
+        outcome = self._dispatch_map_fire_with_blast_review(
             preview,
             shooter,
             weapon,
@@ -859,6 +869,65 @@ class MainWindow(QMainWindow):
         )
         self._apply_map_fire_outcome(outcome)
         return True, "resolved"
+
+    def _on_blast_review_toggled(self, checked: bool) -> None:
+        from phoenix_command.gui.app_settings import set_show_blast_modifier_dialog
+
+        set_show_blast_modifier_dialog(checked)
+
+    def _dispatch_map_fire_with_blast_review(
+        self,
+        preview,
+        shooter,
+        weapon,
+        ammo,
+        tokens,
+        chars,
+        map_state,
+        token_runtime,
+    ):
+        from phoenix_command.gui.app_settings import get_show_blast_modifier_dialog
+        from phoenix_command.simulations.map_fire_dispatch import (
+            apply_pending_blast_damage,
+            dispatch_map_fire,
+        )
+
+        review = get_show_blast_modifier_dialog()
+        outcome = dispatch_map_fire(
+            preview,
+            shooter,
+            weapon,
+            ammo,
+            tokens,
+            chars,
+            map_state,
+            token_runtime,
+            apply_blast=not review,
+        )
+        package = outcome.pending_blast
+        has_victims = package and any(p.victims for p in package.passes)
+        if review and has_victims and outcome.blast_ammo:
+            from phoenix_command.gui.dialogs.map_blast_review_dialog import (
+                MapBlastReviewDialog,
+            )
+
+            dlg = MapBlastReviewDialog(package, tokens, parent=self)
+            if dlg.exec() == QDialog.DialogCode.Accepted:
+                outcome.shot_results.extend(
+                    apply_pending_blast_damage(
+                        package,
+                        outcome.blast_ammo,
+                        preview,
+                        tokens,
+                        chars,
+                        map_state,
+                        token_runtime,
+                        dlg.mod_overrides(),
+                    )
+                )
+            else:
+                outcome.messages.append("Blast damage cancelled")
+        return outcome
 
     def _apply_map_fire_outcome(self, outcome) -> None:
         for reason in outcome.miss_reasons:
@@ -894,7 +963,6 @@ class MainWindow(QMainWindow):
 
     def _resolve_pending_projectile(self, proj) -> None:
         from phoenix_command.simulations.map_fire_dispatch import (
-            dispatch_map_fire,
             preview_from_snapshot,
         )
         from phoenix_command.gui.utils.hex_geometry import axial_distance
@@ -949,7 +1017,7 @@ class MainWindow(QMainWindow):
             dist_m = axial_distance(shooter_tok.q, shooter_tok.r, preview.aim_q, preview.aim_r) * mph
             preview.range_hexes = max(1, round(rules_hexes(dist_m)))
 
-        outcome = dispatch_map_fire(
+        outcome = self._dispatch_map_fire_with_blast_review(
             preview,
             shooter,
             weapon,

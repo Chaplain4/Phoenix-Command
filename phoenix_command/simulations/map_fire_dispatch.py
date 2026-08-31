@@ -28,6 +28,14 @@ from phoenix_command.session.domains.impulse_combat_state import (
 from phoenix_command.session.domains.map_state import MapState, rules_hexes
 from phoenix_command.session.domains.token_state import TokenPlacement, TokenState
 from phoenix_command.simulations.combat_simulator import CombatSimulator
+from phoenix_command.simulations.map_blast import (
+    BlastPassSpec,
+    BlastVictimSpec,
+    PendingBlastPackage,
+    blast_centers_from_results,
+    concussion_radius_hexes,
+    derive_blast_modifiers,
+)
 from phoenix_command.simulations.map_fire_targets import (
     build_per_target_entry,
     infer_fire_kind,
@@ -36,7 +44,11 @@ from phoenix_command.simulations.map_fire_targets import (
     tokens_in_pattern,
 )
 from phoenix_command.simulations.map_los import check_los
-from phoenix_command.simulations.map_shot_context import build_map_shot_context
+from phoenix_command.simulations.map_knockdown import (
+    apply_shooter_after_fire,
+    apply_shot_knockdowns,
+    second_shot_aim_bonus,
+)
 from phoenix_command.gui.utils.hex_geometry import axial_distance
 
 
@@ -66,6 +78,8 @@ class MapFireOutcome:
     explosive_results: list[ExplosiveShotResult] = field(default_factory=list)
     messages: list[str] = field(default_factory=list)
     miss_reasons: list[str] = field(default_factory=list)
+    pending_blast: PendingBlastPackage | None = None
+    blast_ammo: AmmoType | Grenade | None = None
 
 
 def enrich_preview_targets(
@@ -246,6 +260,8 @@ def _shot_params_from_preview(
     intervening_barriers: list | None = None,
     shooter_stance: str = "standing",
     target_stance: str = "standing",
+    target_tok: TokenPlacement | None = None,
+    token_runtime: dict | None = None,
 ) -> ShotParameters:
     per = per or {}
     stance = [
@@ -266,8 +282,15 @@ def _shot_params_from_preview(
         elif isinstance(entry, (list, tuple)) and len(entry) >= 2:
             customs.append((entry[0], int(entry[1])))
     cover_pf = float(preview.manual_cover_pf) if preview.manual_cover_pf is not None else 0.0
+    aim_time = preview.aim_time_ac
+    if target_tok is not None and token_runtime:
+        s_rt = token_runtime.get(preview.shooter_token_id)
+        if s_rt is not None:
+            aim_time = preview.aim_time_ac + second_shot_aim_bonus(
+                s_rt, target_tok.q, target_tok.r, target_tok.layer_id or ""
+            )
     return ShotParameters(
-        aim_time_ac=preview.aim_time_ac,
+        aim_time_ac=aim_time,
         situation_stance_modifiers=stance,
         visibility_modifiers=vis,
         target_orientation=_enum_or(
@@ -314,6 +337,8 @@ def _params_for_target(
         intervening_barriers=_barriers_for_pair(map_state, shooter_tok, target_tok),
         shooter_stance=getattr(s_rt, "stance", "standing") if s_rt else "standing",
         target_stance=getattr(t_rt, "stance", "standing") if t_rt else "standing",
+        target_tok=target_tok,
+        token_runtime=runtime,
     )
 
 
@@ -445,6 +470,40 @@ def filter_ids_by_los(
     return clear, blocked
 
 
+
+def _finalize_map_runtime(
+    preview: PendingShotPreview,
+    shooter: Character,
+    weapon: Weapon | Grenade,
+    tokens: TokenState,
+    runtime: dict,
+    outcome: MapFireOutcome,
+) -> MapFireOutcome:
+    if not runtime:
+        return outcome
+    if not outcome.shot_results and not outcome.explosive_results:
+        return outcome
+    apply_shot_knockdowns(outcome.shot_results, tokens, runtime)
+    sid = preview.shooter_token_id
+    shooter_rt = runtime.get(sid)
+    if shooter_rt is None:
+        shooter_rt = TokenCombatRuntime()
+        runtime[sid] = shooter_rt
+    explosive = outcome.kind in ("grenade", "agl", "explosive")
+    aim_tok = None if explosive else tokens.placements.get(preview.target_token_id)
+    apply_shooter_after_fire(
+        shooter_rt,
+        fire_kind=outcome.kind,
+        weapon=weapon if isinstance(weapon, Weapon) else None,
+        shooter=shooter,
+        aim_tok=aim_tok,
+        aim_q=preview.aim_q,
+        aim_r=preview.aim_r,
+        aim_layer_id=preview.aim_layer_id or "",
+    )
+    return outcome
+
+
 def dispatch_map_fire(
     preview: PendingShotPreview,
     shooter: Character,
@@ -455,6 +514,7 @@ def dispatch_map_fire(
     map_state: MapState | None = None,
     token_runtime: dict | None = None,
     skip_los_filter: bool = False,
+    apply_blast: bool = True,
 ) -> MapFireOutcome:
     """Route preview to the correct CombatSimulator method."""
     runtime = token_runtime or {}
@@ -463,15 +523,29 @@ def dispatch_map_fire(
     shooter_tok = tokens.placements.get(preview.shooter_token_id)
     outcome = MapFireOutcome(kind=kind)
 
+    def _done(o: MapFireOutcome) -> MapFireOutcome:
+        return _finalize_map_runtime(preview, shooter, weapon, tokens, runtime, o)
+
     if kind in ("grenade", "agl", "explosive"):
-        return _dispatch_explosive(
-            preview, shooter, weapon, ammo, tokens, characters, map_state, outcome
+        return _done(
+            _dispatch_explosive(
+            preview,
+            shooter,
+            weapon,
+            ammo,
+            tokens,
+            characters,
+            map_state,
+            outcome,
+            token_runtime=runtime,
+            apply_blast=apply_blast,
+            )
         )
 
     primary_ids = preview.primary_ids()
     if not primary_ids:
         outcome.miss_reasons.append("no targets")
-        return outcome
+        return _done(outcome)
 
     if not skip_los_filter and shooter_tok:
         clear, blocked = filter_ids_by_los(
@@ -483,7 +557,7 @@ def dispatch_map_fire(
         primary_ids = clear
 
     if not primary_ids:
-        return outcome
+        return _done(outcome)
 
     if kind == "burst":
         tg = _build_target_group(
@@ -491,7 +565,7 @@ def dispatch_map_fire(
         )
         if not tg:
             outcome.miss_reasons.append("no valid burst targets")
-            return outcome
+            return _done(outcome)
         outcome.shot_results = CombatSimulator.burst_fire(
             shooter,
             weapon,
@@ -500,14 +574,14 @@ def dispatch_map_fire(
             arc_of_fire=preview.arc_of_fire,
             continuous_burst_impulses=preview.continuous_burst_impulses,
         )
-        return outcome
+        return _done(outcome)
 
     if kind == "3rb":
         tid = primary_ids[0]
         chars, kept, miss = _chars_for_ids([tid], tokens, characters)
         outcome.miss_reasons.extend(miss)
         if not chars:
-            return outcome
+            return _done(outcome)
         per = preview.per_target.get(tid, {})
         params = _params_for_target(
             preview,
@@ -527,7 +601,7 @@ def dispatch_map_fire(
             params,
             bool(per.get("is_front", preview.is_front)),
         )
-        return outcome
+        return _done(outcome)
 
     if kind == "shotgun":
         tid = primary_ids[0]
@@ -544,7 +618,7 @@ def dispatch_map_fire(
         chars, kept, miss = _chars_for_ids(all_ids, tokens, characters)
         outcome.miss_reasons.extend(miss)
         if not chars:
-            return outcome
+            return _done(outcome)
         ranges, exposures, params_list, fronts = [], [], [], []
         for kid in kept:
             per = preview.per_target.get(kid, {})
@@ -564,13 +638,13 @@ def dispatch_map_fire(
         outcome.shot_results = CombatSimulator.shotgun_shot(
             shooter, chars, weapon, ammo, ranges, exposures, params_list, fronts, 0
         )
-        return outcome
+        return _done(outcome)
 
     if kind == "shotgun_burst":
         primary_chars, kept_primary, miss = _chars_for_ids(primary_ids, tokens, characters)
         outcome.miss_reasons.extend(miss)
         if not primary_chars:
-            return outcome
+            return _done(outcome)
         primary_group = _build_target_group(
             kept_primary, preview, tokens, characters, map_state, shooter_tok, runtime
         )
@@ -605,14 +679,14 @@ def dispatch_map_fire(
             arc_of_fire=preview.arc_of_fire,
             continuous_burst_impulses=preview.continuous_burst_impulses,
         )
-        return outcome
+        return _done(outcome)
 
     # single
     tid = primary_ids[0]
     chars, kept, miss = _chars_for_ids([tid], tokens, characters)
     outcome.miss_reasons.extend(miss)
     if not chars:
-        return outcome
+        return _done(outcome)
     per = preview.per_target.get(tid, {})
     params = _params_for_target(
         preview,
@@ -633,7 +707,7 @@ def dispatch_map_fire(
         bool(per.get("is_front", preview.is_front)),
     )
     outcome.shot_results = [result]
-    return outcome
+    return _done(outcome)
 
 
 def _build_target_group(
@@ -667,6 +741,128 @@ def _build_target_group(
     return TargetGroup(chars, ranges, exposures, params_list, fronts)
 
 
+def _max_blast_m(explosive_ammo) -> float:
+    """Victim gather radius from concussion footprint (rule hexes × 2 m)."""
+    return float(concussion_radius_hexes(explosive_ammo)) * 2.0
+
+
+def _build_blast_package(
+    preview: PendingShotPreview,
+    tokens: TokenState,
+    characters: dict[str, Character],
+    map_state: MapState | None,
+    token_runtime: dict,
+    explosive_ammo,
+    explosive_results: list[ExplosiveShotResult],
+) -> PendingBlastPackage:
+    aim_q, aim_r = preview.aim_q, preview.aim_r
+    shooter_tok = tokens.placements.get(preview.shooter_token_id)
+    sq = shooter_tok.q if shooter_tok else aim_q
+    sr = shooter_tok.r if shooter_tok else aim_r
+    centers = blast_centers_from_results(aim_q, aim_r, sq, sr, explosive_results)
+    max_blast_m = _max_blast_m(explosive_ammo)
+    runtime = token_runtime or {}
+    package = PendingBlastPackage()
+    for expl, (cq, cr) in zip(explosive_results, centers):
+        victims_raw = tokens_in_blast(
+            cq,
+            cr,
+            max_blast_m,
+            tokens,
+            map_state,
+            shooter=shooter_tok,
+            layer_id=preview.aim_layer_id,
+        )
+        specs: list[BlastVictimSpec] = []
+        for tid, dist_m in victims_raw:
+            tok = tokens.placements.get(tid)
+            if not tok or not tok.character_name:
+                continue
+            ch = characters.get(tok.character_name)
+            if not ch:
+                continue
+            mods = derive_blast_modifiers(
+                map_state,
+                cq,
+                cr,
+                tok,
+                ch,
+                runtime.get(tid),
+                explosive_ammo=explosive_ammo,
+            )
+            specs.append(
+                BlastVictimSpec(
+                    token_id=tid,
+                    range_hex=max(0, round(rules_hexes(dist_m))),
+                    dist_m=dist_m,
+                    derived_mods=mods,
+                )
+            )
+        package.passes.append(
+            BlastPassSpec(
+                center_q=cq,
+                center_r=cr,
+                scatter_hexes=expl.scatter_hexes,
+                is_long=expl.is_long,
+                hit=expl.hit,
+                victims=specs,
+            )
+        )
+    return package
+
+
+def apply_pending_blast_damage(
+    package: PendingBlastPackage,
+    explosive_ammo: AmmoType | Grenade,
+    preview: PendingShotPreview,
+    tokens: TokenState,
+    characters: dict[str, Character],
+    map_state: MapState | None,
+    token_runtime: dict | None = None,
+    mod_overrides: dict[str, list[BlastModifier]] | None = None,
+) -> list[ShotResult]:
+    """Resolve one explosion_damage pass per grenade using derived or overridden mods."""
+    shooter_tok = tokens.placements.get(preview.shooter_token_id)
+    runtime = token_runtime or {}
+    overrides = mod_overrides or {}
+    results: list[ShotResult] = []
+    for blast_pass in package.passes:
+        targets, ranges_b, exposures, sp_list, fronts, blast_mods = [], [], [], [], [], []
+        for spec in blast_pass.victims:
+            tok = tokens.placements.get(spec.token_id)
+            if not tok or not tok.character_name:
+                continue
+            ch = characters.get(tok.character_name)
+            if not ch:
+                continue
+            per = preview.per_target.get(spec.token_id, {})
+            targets.append(ch)
+            ranges_b.append(spec.range_hex)
+            exposures.append(_exposure_from(per, preview))
+            sp_list.append(
+                _params_for_target(
+                    preview,
+                    per,
+                    map_state=map_state,
+                    shooter_tok=shooter_tok,
+                    target_tok=tok,
+                    token_runtime=runtime,
+                )
+            )
+            fronts.append(bool(per.get("is_front", True)))
+            blast_mods.append(list(overrides.get(spec.token_id, spec.derived_mods)))
+        if not targets:
+            continue
+        results.extend(
+            CombatSimulator.explosion_damage(
+                explosive_ammo, targets, ranges_b, exposures, sp_list, fronts, blast_mods
+            )
+        )
+    if token_runtime:
+        apply_shot_knockdowns(results, tokens, runtime)
+    return results
+
+
 def _dispatch_explosive(
     preview: PendingShotPreview,
     shooter: Character,
@@ -676,6 +872,8 @@ def _dispatch_explosive(
     characters: dict[str, Character],
     map_state: MapState | None,
     outcome: MapFireOutcome,
+    token_runtime: dict | None = None,
+    apply_blast: bool = True,
 ) -> MapFireOutcome:
     aim_q = preview.aim_q
     aim_r = preview.aim_r
@@ -694,20 +892,7 @@ def _dispatch_explosive(
     params = _shot_params_from_preview(preview)
     kind = preview.fire_kind
 
-    if kind == "grenade" or isinstance(weapon, Grenade):
-        expl = CombatSimulator.thrown_grenade(
-            shooter,
-            range_hex,
-            ExplosiveTarget.HEX,
-            preview.aim_time_ac,
-            params.situation_stance_modifiers,
-            params.visibility_modifiers,
-        )
-        outcome.explosive_results = [expl]
-        outcome.messages.append(
-            f"Grenade {'HIT' if expl.hit else f'scatter {expl.scatter_hexes}'}"
-        )
-    elif kind == "agl" or (
+    if kind == "agl" or (
         isinstance(weapon, Weapon)
         and getattr(weapon, "weapon_type", None) == WeaponType.AUTOMATIC_GRENADE_LAUNCHER
     ):
@@ -722,6 +907,19 @@ def _dispatch_explosive(
         )
         hits = sum(1 for r in outcome.explosive_results if r.hit)
         outcome.messages.append(f"AGL burst: {hits}/{len(outcome.explosive_results)} direct hits")
+    elif kind == "grenade" or isinstance(weapon, Grenade):
+        expl = CombatSimulator.thrown_grenade(
+            shooter,
+            range_hex,
+            ExplosiveTarget.HEX,
+            preview.aim_time_ac,
+            params.situation_stance_modifiers,
+            params.visibility_modifiers,
+        )
+        outcome.explosive_results = [expl]
+        outcome.messages.append(
+            f"Grenade {'HIT' if expl.hit else f'scatter {expl.scatter_hexes}'}"
+        )
     else:
         expl = CombatSimulator.explosive_weapon_shot(
             shooter, weapon, range_hex, ExplosiveTarget.HEX, params
@@ -731,55 +929,40 @@ def _dispatch_explosive(
             f"Explosive {'HIT' if expl.hit else f'scatter {expl.scatter_hexes}'}"
         )
 
-    # Apply explosion damage to tokens in blast if we have explosive_data and at least one placement
     explosive_ammo = ammo if getattr(ammo, "explosive_data", None) else (
         weapon if isinstance(weapon, Grenade) else ammo
     )
     if not getattr(explosive_ammo, "explosive_data", None):
         return outcome
 
-    # Use aim hex (ignore scatter for map simplicity unless miss with scatter — still center on aim for now;
-    # if all elevation failed, still resolve at aim for damage preview consistency)
-    max_blast_m = max(
-        (d.range_hexes * 2.0 for d in explosive_ammo.explosive_data),
-        default=10.0,
+    outcome.blast_ammo = explosive_ammo
+    package = _build_blast_package(
+        preview,
+        tokens,
+        characters,
+        map_state,
+        token_runtime or {},
+        explosive_ammo,
+        outcome.explosive_results,
     )
-    victims = tokens_in_blast(
-        aim_q, aim_r, max_blast_m, tokens, map_state,
-        shooter=shooter_tok,
-        layer_id=preview.aim_layer_id,
-    )
-    if not victims:
-        return outcome
+    outcome.pending_blast = package
+    for blast_pass in package.passes:
+        if not blast_pass.hit and blast_pass.scatter_hexes:
+            outcome.messages.append(
+                f"Blast center ({blast_pass.center_q},{blast_pass.center_r}) "
+                f"scatter {blast_pass.scatter_hexes}"
+            )
 
-    targets, ranges_b, exposures, sp_list, fronts, blast_mods = [], [], [], [], [], []
-    for tid, dist_m in victims:
-        tok = tokens.placements.get(tid)
-        if not tok or not tok.character_name:
-            continue
-        ch = characters.get(tok.character_name)
-        if not ch:
-            continue
-        per = preview.per_target.get(tid, {})
-        targets.append(ch)
-        ranges_b.append(max(0, round(rules_hexes(dist_m))))
-        exposures.append(_exposure_from(per, preview))
-        sp_list.append(
-            _params_for_target(
+    if apply_blast:
+        outcome.shot_results.extend(
+            apply_pending_blast_damage(
+                package,
+                explosive_ammo,
                 preview,
-                per,
-                map_state=map_state,
-                shooter_tok=shooter_tok,
-                target_tok=tok,
-                token_runtime=None,
+                tokens,
+                characters,
+                map_state,
+                token_runtime,
             )
         )
-        fronts.append(bool(per.get("is_front", True)))
-        blast_mods.append([BlastModifier.IN_THE_OPEN])
-
-    if targets:
-        damage = CombatSimulator.explosion_damage(
-            explosive_ammo, targets, ranges_b, exposures, sp_list, fronts, blast_mods
-        )
-        outcome.shot_results.extend(damage)
     return outcome
