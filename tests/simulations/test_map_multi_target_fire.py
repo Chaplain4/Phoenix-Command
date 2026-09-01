@@ -410,3 +410,110 @@ def test_dispatch_agl_two_centers() -> None:
     assert centers == [(3, 0), (4, 0)]
     assert outcome.pending_blast is not None
     assert len(outcome.pending_blast.passes) == 2
+
+
+def test_infer_fire_kind_agl_respects_mode() -> None:
+    from phoenix_command.item_database.weapons import m19
+
+    ammo = m19.ammunition_types[0]
+    assert infer_fire_kind("auto", m19, ammo) == "agl"
+    assert infer_fire_kind("single", m19, ammo) == "explosive"
+
+
+def test_dispatch_agl_single_uses_one_shot_not_burst() -> None:
+    from phoenix_command.item_database.weapons import m19
+    from phoenix_command.models.hit_result_advanced import ExplosiveShotResult
+
+    tokens, shooter = _tokens_line()
+    chars = {n: _char(n) for n in ("Shooter", "Enemy1", "Enemy2")}
+    map_state = MapState()
+    map_state.ensure_default_layer()
+    ammo = m19.ammunition_types[0]
+    preview = PendingShotPreview(
+        preview_id="p",
+        shooter_token_id="s",
+        target_token_id="e1",
+        proposed_by="host",
+        fire_mode="single",
+        aim_q=5,
+        aim_r=0,
+        weapon_name=m19.name,
+        ammo_name=ammo.name,
+    )
+    single = ExplosiveShotResult(hit=True, eal=8, odds=40, roll=10, scatter_hexes=0)
+    with patch(
+        "phoenix_command.simulations.map_fire_dispatch.CombatSimulator.automatic_grenade_launcher_burst",
+    ) as burst_mock:
+        with patch(
+            "phoenix_command.simulations.map_fire_dispatch.CombatSimulator.explosive_weapon_shot",
+            return_value=single,
+        ) as single_mock:
+            with patch(
+                "phoenix_command.simulations.map_fire_dispatch.tokens_in_blast",
+                return_value=[],
+            ):
+                outcome = dispatch_map_fire(
+                    preview,
+                    chars["Shooter"],
+                    m19,
+                    ammo,
+                    tokens,
+                    chars,
+                    map_state,
+                    {},
+                    apply_blast=False,
+                )
+    burst_mock.assert_not_called()
+    single_mock.assert_called_once()
+    assert outcome.kind == "explosive"
+    assert len(outcome.explosive_results) == 1
+
+
+def test_agl_auto_ags17_rof_one_landing() -> None:
+    """AGS-17 ROF 1: burst resolves exactly one grenade (Table 5A *2 capped)."""
+    from phoenix_command.item_database.weapons import ags_17
+    from phoenix_command.models.hit_result_advanced import ExplosiveShotResult
+
+    tokens, shooter = _tokens_line()
+    chars = {n: _char(n) for n in ("Shooter", "Enemy1", "Enemy2")}
+    map_state = MapState()
+    map_state.ensure_default_layer()
+    ammo = ags_17.ammunition_types[0]
+    preview = PendingShotPreview(
+        preview_id="p",
+        shooter_token_id="s",
+        target_token_id="e1",
+        proposed_by="host",
+        fire_mode="auto",
+        range_hexes=40,
+        aim_q=5,
+        aim_r=0,
+        weapon_name=ags_17.name,
+        ammo_name=ammo.name,
+    )
+    results = [
+        ExplosiveShotResult(hit=True, eal=10, odds=50, roll=10, scatter_hexes=0),
+    ]
+    with patch(
+        "phoenix_command.simulations.map_fire_dispatch.CombatSimulator.automatic_grenade_launcher_burst",
+        return_value=results,
+    ):
+        with patch(
+            "phoenix_command.simulations.map_fire_dispatch.tokens_in_blast",
+            return_value=[],
+        ):
+            outcome = dispatch_map_fire(
+                preview,
+                chars["Shooter"],
+                ags_17,
+                ammo,
+                tokens,
+                chars,
+                map_state,
+                {},
+                apply_blast=False,
+            )
+    assert outcome.kind == "agl"
+    assert len(outcome.explosive_results) == 1
+    assert outcome.pending_blast is not None
+    assert len(outcome.pending_blast.passes) == 1

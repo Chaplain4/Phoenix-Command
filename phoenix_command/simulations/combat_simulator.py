@@ -527,62 +527,106 @@ class CombatSimulator:
         log.append(f"[Elevation Check] Odds: {odds}%, Roll: {roll}")
         
         if roll > odds:
-            log.append("  Burst MISSED elevation, calculating scatter...")
+            rof = int(weapon.full_auto_rof or 1)
+            log.append(f"  Burst MISSED elevation — {rof} grenade(s) off-target")
+            return CombatSimulator._agl_off_target_results(
+                rof, eal, odds, roll, final_arc, elevation_failed=True, log=log
+            )
 
-            eal_diff = 0
-            for test_eal in range(eal + 1, 29):
-                test_odds = Table4AdvancedOddsOfHitting.get_odds_of_hitting_4g(test_eal, ShotType.SINGLE)
-                if test_odds > roll:
-                    eal_diff = test_eal - eal
-                    break
-
-            scatter_hexes = Table5AutoPelletShrapnel.get_scatter_distance_5c(eal_diff)
-
-            if scatter_hexes == 1:
-                is_long = random.randint(1, 6) > 3
-            else:
-                is_long = random.randint(0, 9) >= 5
-
-            log.append(f"  EAL diff: {eal_diff}, Scatter: {scatter_hexes} hexes, Long: {is_long}")
-
-            return [ExplosiveShotResult(
-                hit=False, eal=eal, odds=odds, roll=roll,
-                scatter_hexes=scatter_hexes, is_long=is_long,
-                elevation_failed=True
-            )]
-
-        hits = Table5AutoPelletShrapnel.get_fire_table_value5a(
+        table_hits = Table5AutoPelletShrapnel.get_fire_table_value5a(
             final_arc, weapon.full_auto_rof, 0, log
         )
-        
-        log.append(f"  Burst HIT, grenades on target: {hits}")
-        
-        results = []
+
+        rof = int(weapon.full_auto_rof or 1)
+        if table_hits > rof:
+            log.append(f"  Table 5A raw: {table_hits}, capped to ROF {rof}")
+        on_target = min(table_hits, rof)
+        off_target_count = rof - on_target
+
+        log.append(
+            f"  Burst HIT, landings: {rof} "
+            f"(on-target: {on_target}, off-target: {off_target_count})"
+        )
+
+        results: List[ExplosiveShotResult] = []
         is_long = random.randint(0, 9) >= 5
 
-        for i in range(hits):
+        for i in range(on_target):
             hit_roll = random.randint(0, 99)
-            log.append(f"--- Grenade {i+1}/{hits}, Roll: {hit_roll} ---")
-            
+            log.append(f"--- On-target grenade {i + 1}/{on_target}, Roll: {hit_roll} ---")
+
             if hit_roll <= odds:
                 log.append("  Direct hit!")
-                results.append(ExplosiveShotResult(hit=True, eal=eal, odds=odds, roll=hit_roll, scatter_hexes=0))
+                results.append(
+                    ExplosiveShotResult(
+                        hit=True, eal=eal, odds=odds, roll=hit_roll, scatter_hexes=0
+                    )
+                )
             else:
                 eal_diff = 0
                 for test_eal in range(eal + 1, 29):
-                    test_odds = Table4AdvancedOddsOfHitting.get_odds_of_hitting_4g(test_eal, ShotType.SINGLE)
+                    test_odds = Table4AdvancedOddsOfHitting.get_odds_of_hitting_4g(
+                        test_eal, ShotType.SINGLE
+                    )
                     if test_odds > hit_roll:
                         eal_diff = test_eal - eal
                         break
-                
+
                 scatter_hexes = Table5AutoPelletShrapnel.get_scatter_distance_5c(eal_diff)
                 log.append(f"  Scatter: {scatter_hexes} hexes, Long: {is_long}")
 
-                results.append(ExplosiveShotResult(
-                    hit=False, eal=eal, odds=odds, roll=hit_roll,
-                    scatter_hexes=scatter_hexes, is_long=is_long
-                ))
-        
+                results.append(
+                    ExplosiveShotResult(
+                        hit=False,
+                        eal=eal,
+                        odds=odds,
+                        roll=hit_roll,
+                        scatter_hexes=scatter_hexes,
+                        is_long=is_long,
+                    )
+                )
+
+        results.extend(
+            CombatSimulator._agl_off_target_results(
+                off_target_count, eal, odds, roll, final_arc, log=log
+            )
+        )
+
+        return results
+
+    @staticmethod
+    def _agl_off_target_results(
+        count: int,
+        eal: int,
+        odds: int,
+        roll: int,
+        final_arc: float,
+        *,
+        elevation_failed: bool = False,
+        log: Optional[List[str]] = None,
+    ) -> List[ExplosiveShotResult]:
+        """Off-target grenades within arc wedge (always land, never on aim hex)."""
+        results: List[ExplosiveShotResult] = []
+        for i in range(count):
+            scatter_hexes = random.randint(1, 2)
+            if log is not None:
+                log.append(
+                    f"--- Off-target grenade {i + 1}/{count}, "
+                    f"scatter {scatter_hexes} hex(es) in arc ---"
+                )
+            results.append(
+                ExplosiveShotResult(
+                    hit=False,
+                    eal=eal,
+                    odds=odds,
+                    roll=roll,
+                    scatter_hexes=scatter_hexes,
+                    is_long=False,
+                    elevation_failed=elevation_failed,
+                    off_target=True,
+                    arc_of_fire=final_arc,
+                )
+            )
         return results
 
     @staticmethod

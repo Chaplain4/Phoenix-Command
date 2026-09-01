@@ -21,6 +21,20 @@ from phoenix_command.simulations.combat_simulator import CombatSimulator
 from typing import List
 
 
+def _format_agl_grenade_line(index: int, result: ExplosiveShotResult) -> str:
+    """Human-readable line for one AGL grenade result."""
+    n = index + 1
+    if result.off_target:
+        tag = "OFF-TARGET (elevation miss)" if result.elevation_failed else "OFF-TARGET"
+        return f"Grenade {n}: {tag}, arc scatter {result.scatter_hexes} hex(es)"
+    if result.hit:
+        return f"Grenade {n}: Direct HIT (Roll: {result.roll})"
+    return (
+        f"Grenade {n}: Scatter {result.scatter_hexes} hexes "
+        f"({'long' if result.is_long else 'short'}) (Roll: {result.roll})"
+    )
+
+
 class AutoGrenadeLauncherDialog(QDialog):
     """Dialog for automatic grenade launcher burst simulation.
 
@@ -421,39 +435,36 @@ class AutoGrenadeLauncherDialog(QDialog):
                 f"{shooter.name} fires AGL burst {weapon.name} ({ammo.name}) "
                 f"at {explosive_target.name} (range {range_hexes})"
             )
-            # First result may be elevation miss
-            if len(results) == 1 and results[0].elevation_failed:
+            # Elevation miss → ROF off-target landings
+            if results and all(r.elevation_failed for r in results):
                 main_window.combat_log.append_miss(
                     f"Burst MISSED elevation (Roll: {results[0].roll} vs {results[0].odds}%) "
-                    f"– Scatter {results[0].scatter_hexes} hexes "
-                    f"({'long' if results[0].is_long else 'short'})"
+                    f"– {len(results)} grenade(s) off-target"
                 )
             else:
                 direct = sum(1 for r in results if r.hit)
-                scattered = sum(1 for r in results if not r.hit)
+                on_target = sum(1 for r in results if not r.off_target)
+                off_target = sum(1 for r in results if r.off_target)
                 main_window.combat_log.append_hit(
-                    f"{len(results)} grenades on target: {direct} direct hit(s), {scattered} scattered"
+                    f"{len(results)} landings: {direct} direct, "
+                    f"{on_target} on-target, {off_target} off-target"
                 )
             # Send detailed log
             detail_lines = [f"AGL Burst: {weapon.name} ({ammo.name})"]
             first = results[0]
-            if len(results) == 1 and first.elevation_failed:
+            if results and all(r.elevation_failed for r in results):
                 detail_lines.append(
                     f"Burst MISSED elevation check\n"
                     f"EAL={first.eal}, Odds={first.odds}%, Roll={first.roll}\n"
-                    f"Scatter: {first.scatter_hexes} hexes ({'long' if first.is_long else 'short'})"
+                    f"{len(results)} off-target grenade(s)"
                 )
+                for i, r in enumerate(results):
+                    detail_lines.append(_format_agl_grenade_line(i, r))
             else:
                 detail_lines.append(f"EAL={first.eal}, Elevation Odds={first.odds}%")
-                detail_lines.append(f"Grenades on target: {len(results)}")
+                detail_lines.append(f"Landings: {len(results)}")
                 for i, r in enumerate(results):
-                    if r.hit:
-                        detail_lines.append(f"Grenade {i+1}: Direct HIT (Roll: {r.roll})")
-                    else:
-                        detail_lines.append(
-                            f"Grenade {i+1}: Scatter {r.scatter_hexes} hexes "
-                            f"({'long' if r.is_long else 'short'}) (Roll: {r.roll})"
-                        )
+                    detail_lines.append(_format_agl_grenade_line(i, r))
             main_window.combat_log.append_detailed("\n".join(detail_lines))
             if hasattr(main_window, 'combat_zone'):
                 main_window.combat_zone.refresh_cards()
@@ -478,26 +489,29 @@ class AutoGrenadeLauncherDialog(QDialog):
         first = results[0]
         text += f"<b>EAL:</b> {first.eal}, <b>Odds:</b> {first.odds}%<br><br>"
 
-        # Elevation miss
-        if len(results) == 1 and first.elevation_failed:
+        if results and all(r.elevation_failed for r in results):
             text += (
                 f"<b style='color:red;'>Burst MISSED elevation</b><br>"
                 f"Roll: {first.roll} vs {first.odds}%<br>"
-                f"Scatter: <b>{first.scatter_hexes}</b> hexes "
-                f"({'long' if first.is_long else 'short'})<br>"
+                f"<b>{len(results)}</b> off-target grenade(s)<br><br>"
             )
-        else:
-            text += f"<b>Grenades on target:</b> {len(results)}<br><br>"
             for i, r in enumerate(results):
-                text += f"<b>Grenade {i + 1}:</b> "
+                text += _format_agl_grenade_line(i, r) + "<br>"
+        else:
+            on_target = sum(1 for r in results if not r.off_target)
+            off_target = sum(1 for r in results if r.off_target)
+            text += (
+                f"<b>Landings:</b> {len(results)} "
+                f"({on_target} on-target, {off_target} off-target)<br><br>"
+            )
+            for i, r in enumerate(results):
+                line = _format_agl_grenade_line(i, r)
                 if r.hit:
-                    text += "<span style='color:green;'>Direct HIT</span>"
+                    text += f"<span style='color:green;'>{line}</span><br>"
+                elif r.off_target:
+                    text += f"<span style='color:#888;'>{line}</span><br>"
                 else:
-                    text += (
-                        f"<span style='color:orange;'>Scatter {r.scatter_hexes} hexes "
-                        f"({'long' if r.is_long else 'short'})</span>"
-                    )
-                text += f" (Roll: {r.roll})<br>"
+                    text += f"<span style='color:orange;'>{line}</span><br>"
 
         text += (
             "<br><i>Use Combat \u2192 Explosion Damage to calculate "
@@ -512,26 +526,19 @@ class AutoGrenadeLauncherDialog(QDialog):
         lines = []
         first = self.last_results[0]
 
-        # Elevation miss: single result with elevation_failed=True
-        if len(self.last_results) == 1 and first.elevation_failed:
+        if self.last_results and all(r.elevation_failed for r in self.last_results):
             lines.append(
                 f"Burst MISSED elevation check\n"
                 f"EAL={first.eal}, Odds={first.odds}%, Roll={first.roll}\n"
-                f"Scatter: {first.scatter_hexes} hexes ({'long' if first.is_long else 'short'})"
+                f"{len(self.last_results)} off-target grenade(s)\n"
             )
+            for i, r in enumerate(self.last_results):
+                lines.append(_format_agl_grenade_line(i, r))
         else:
             lines.append(f"EAL={first.eal}, Elevation Odds={first.odds}%")
-            lines.append(f"Grenades on target: {len(self.last_results)}\n")
+            lines.append(f"Landings: {len(self.last_results)}\n")
             for i, r in enumerate(self.last_results):
-                if r.hit:
-                    lines.append(
-                        f"Grenade {i + 1}: Direct HIT (Roll: {r.roll})"
-                    )
-                else:
-                    lines.append(
-                        f"Grenade {i + 1}: Scatter {r.scatter_hexes} hexes "
-                        f"({'long' if r.is_long else 'short'}) (Roll: {r.roll})"
-                    )
+                lines.append(_format_agl_grenade_line(i, r))
 
         log_content = "\n".join(lines)
 

@@ -85,6 +85,8 @@ class ExplosiveShotResult:
     scatter_hexes: int = 0
     is_long: bool = True
     elevation_failed: bool = False
+    off_target: bool = False
+    arc_of_fire: float | None = None
 
 
 @dataclass

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import random
 from dataclasses import dataclass, field
 from typing import Any, Iterable
@@ -88,6 +89,43 @@ def scatter_blast_hex(
     return aim_q + di * scatter_hexes, aim_r + dj * scatter_hexes
 
 
+def _bearing_from_hex(q0: int, r0: int, q1: int, r1: int) -> float:
+    dq = q1 - q0
+    dr = r1 - r0
+    return math.atan2(dr * math.sqrt(3) / 2, dq * 1.5 + dr * 0.75)
+
+
+def _angle_diff(a: float, b: float) -> float:
+    d = abs(a - b) % (2 * math.pi)
+    return min(d, 2 * math.pi - d)
+
+
+def scatter_off_target_in_arc(
+    aim_q: int,
+    aim_r: int,
+    shooter_q: int,
+    shooter_r: int,
+    arc_hexes: float,
+    scatter_hexes: int = 1,
+    rng: random.Random | None = None,
+) -> tuple[int, int]:
+    """Place an off-target grenade within the burst arc wedge, at least 1 hex from aim."""
+    rng = rng or random
+    steps = max(1, scatter_hexes)
+    center_bearing = _bearing_from_hex(shooter_q, shooter_r, aim_q, aim_r)
+    half_rad = math.radians(max(15.0, min(90.0, float(arc_hexes) * 8.0)))
+    candidates: list[tuple[int, int]] = []
+    for di, dj in AXIAL_NEIGHBORS:
+        nq, nr = aim_q + di, aim_r + dj
+        step_bearing = _bearing_from_hex(aim_q, aim_r, nq, nr)
+        if _angle_diff(step_bearing, center_bearing) <= half_rad:
+            candidates.append((di, dj))
+    if not candidates:
+        candidates = list(AXIAL_NEIGHBORS)
+    di, dj = rng.choice(candidates)
+    return aim_q + di * steps, aim_r + dj * steps
+
+
 def blast_centers_from_results(
     aim_q: int,
     aim_r: int,
@@ -99,9 +137,22 @@ def blast_centers_from_results(
     """One blast center per grenade: aim hex on hit, scatter hex on miss."""
     centers: list[tuple[int, int]] = []
     for expl in explosive_results:
-        if expl.hit or expl.scatter_hexes <= 0:
+        if expl.hit:
             centers.append((aim_q, aim_r))
-        else:
+        elif expl.off_target:
+            arc = expl.arc_of_fire if expl.arc_of_fire is not None else 1.0
+            centers.append(
+                scatter_off_target_in_arc(
+                    aim_q,
+                    aim_r,
+                    shooter_q,
+                    shooter_r,
+                    arc,
+                    max(1, expl.scatter_hexes),
+                    rng=rng,
+                )
+            )
+        elif expl.scatter_hexes > 0:
             centers.append(
                 scatter_blast_hex(
                     aim_q,
@@ -113,6 +164,8 @@ def blast_centers_from_results(
                     rng=rng,
                 )
             )
+        else:
+            centers.append((aim_q, aim_r))
     return centers
 
 

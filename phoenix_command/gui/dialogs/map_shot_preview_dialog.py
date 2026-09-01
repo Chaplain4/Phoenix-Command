@@ -221,6 +221,8 @@ class MapShotPreviewDialog(QDialog):
 
     def _on_mode_changed(self) -> None:
         self._update_mode_visibility()
+        if self._editable:
+            self.preview_updated.emit(self._collect())
 
     def _on_ammo_changed(self) -> None:
         if not self._editable or not self._ammo_options:

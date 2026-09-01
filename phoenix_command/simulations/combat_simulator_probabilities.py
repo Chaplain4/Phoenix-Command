@@ -484,12 +484,20 @@ class CombatSimulatorProbabilities:
             final_arc, weapon.full_auto_rof, 0
         )
 
+        rof = int(weapon.full_auto_rof or 1)
         if guaranteed > 0:
-            grenades_info = f"{guaranteed} guaranteed"
+            eff_on = min(guaranteed, rof)
+            off = rof - eff_on
+            cap = f" (Table 5A={guaranteed}, capped to ROF)" if guaranteed > rof else ""
+            grenades_info = (
+                f"{rof} landings: {eff_on} on-target{cap}, {off} off-target"
+            )
         elif probability > 0:
-            grenades_info = f"{probability}% chance of 1"
+            grenades_info = (
+                f"{rof} landings: {probability}% chance 1 on-target, else all off-target"
+            )
         else:
-            grenades_info = "0"
+            grenades_info = f"{rof} landings: all off-target"
 
         return eal, elevation_odds, final_arc, grenades_info
 

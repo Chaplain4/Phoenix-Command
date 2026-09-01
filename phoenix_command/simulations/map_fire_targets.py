@@ -222,11 +222,12 @@ def infer_fire_kind(fire_mode: str, weapon, ammo) -> str:
     from phoenix_command.models.enums import WeaponType
     from phoenix_command.models.gear import Grenade
 
+    if weapon and getattr(weapon, "weapon_type", None) == WeaponType.AUTOMATIC_GRENADE_LAUNCHER:
+        return "agl" if fire_mode == "auto" else "explosive"
+
     if isinstance(weapon, Grenade) or (
         ammo is not None and getattr(ammo, "explosive_data", None)
     ):
-        if weapon and getattr(weapon, "weapon_type", None) == WeaponType.AUTOMATIC_GRENADE_LAUNCHER:
-            return "agl"
         if fire_mode == "auto":
             return "agl"
         return "grenade"

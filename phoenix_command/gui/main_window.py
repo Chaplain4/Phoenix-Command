@@ -870,6 +870,15 @@ class MainWindow(QMainWindow):
             tof = int(weapon.ballistic_data.get_time_of_flight(ctx.range_rule_hexes) or 0)
 
         cover = ctx.los.cover if ctx.los else None
+        from phoenix_command.models.enums import WeaponType
+
+        fire_mode = shooter_rt.fire_mode
+        if (
+            isinstance(weapon, Weapon)
+            and weapon.full_auto
+            and getattr(weapon, "weapon_type", None) == WeaponType.AUTOMATIC_GRENADE_LAUNCHER
+        ):
+            fire_mode = "auto"
         preview = PendingShotPreview(
             preview_id=str(uuid.uuid4()),
             shooter_token_id=shooter_token_id,
@@ -882,7 +891,7 @@ class MainWindow(QMainWindow):
             stance_mods=[m.name for m in ctx.shot_params.situation_stance_modifiers],
             visibility_mods=[m.name for m in ctx.shot_params.visibility_modifiers],
             aim_time_ac=ctx.shot_params.aim_time_ac,
-            fire_mode=shooter_rt.fire_mode,
+            fire_mode=fire_mode,
             weapon_name=weapon.name if weapon else "",
             ammo_name=ammo_name,
             visible_exposures=[e.name for e in ctx.visible_exposures],
@@ -1020,6 +1029,7 @@ class MainWindow(QMainWindow):
         ic = self._game_bridge.state.impulse_combat
         shooter_rt = ic.token_runtime.get(preview.shooter_token_id, TokenCombatRuntime())
         fire_kind = infer_fire_kind(preview.fire_mode, weapon, ammo)
+        preview.fire_kind = fire_kind
         plan = plan_fire_ac(preview, shooter_rt, fire_kind, weapon)
         ok, msg = validate_fire_ac(plan, shooter_rt, fire_kind)
         if not ok:
@@ -1027,6 +1037,7 @@ class MainWindow(QMainWindow):
 
         sync_preview_from_plan(preview, plan, shooter_rt)
         apply_fire_ac(plan, shooter_rt)
+        shooter_rt.fire_mode = preview.fire_mode
         clear_aim_state(shooter_rt)
         if fire_kind == "grenade":
             clear_grenade_hand(shooter_rt)
@@ -1416,6 +1427,7 @@ class MainWindow(QMainWindow):
             self._shot_preview_dialog = None
             return
         self._game_bridge.state.impulse_combat.shot_preview = preview
+        preview = self._re_enrich_shot_preview(preview)
         ok, msg = self._execute_confirmed_preview(preview)
         if not ok:
             fail = f"Shot failed: {msg}"

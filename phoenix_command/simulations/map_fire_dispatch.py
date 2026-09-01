@@ -12,7 +12,6 @@ from phoenix_command.models.enums import (
     TargetExposure,
     TargetOrientation,
     VisibilityModifier4C,
-    WeaponType,
 )
 from phoenix_command.models.gear import AmmoType, Grenade, Weapon
 from phoenix_command.models.hit_result_advanced import (
@@ -80,10 +79,13 @@ def explosive_result_to_dict(result: ExplosiveShotResult) -> dict:
         "scatter_hexes": result.scatter_hexes,
         "is_long": result.is_long,
         "elevation_failed": result.elevation_failed,
+        "off_target": result.off_target,
+        "arc_of_fire": result.arc_of_fire,
     }
 
 
 def explosive_result_from_dict(data: dict) -> ExplosiveShotResult:
+    arc = data.get("arc_of_fire")
     return ExplosiveShotResult(
         hit=bool(data.get("hit", False)),
         eal=int(data.get("eal", 0)),
@@ -92,6 +94,8 @@ def explosive_result_from_dict(data: dict) -> ExplosiveShotResult:
         scatter_hexes=int(data.get("scatter_hexes", 0)),
         is_long=bool(data.get("is_long", True)),
         elevation_failed=bool(data.get("elevation_failed", False)),
+        off_target=bool(data.get("off_target", False)),
+        arc_of_fire=float(arc) if arc is not None else None,
     )
 
 
@@ -195,6 +199,33 @@ class MapFireOutcome:
     blast_cancelled: bool = False
 
 
+def _agl_table5a_note(weapon: Weapon, preview: PendingShotPreview) -> str | None:
+    """Expected on-target grenade count from Table 5A (after elevation hit)."""
+    if not weapon.ballistic_data or not weapon.full_auto_rof:
+        return None
+    min_arc = weapon.ballistic_data.get_minimum_arc(preview.range_hexes)
+    arc = float(preview.arc_of_fire if preview.arc_of_fire is not None else (min_arc or 1.0))
+    from phoenix_command.tables.core.table5_auto_pellet_shrapnel import Table5AutoPelletShrapnel
+
+    guaranteed, probability = Table5AutoPelletShrapnel.get_fire_table_probability_5a(
+        arc, weapon.full_auto_rof, 0
+    )
+    rof = int(weapon.full_auto_rof or 1)
+    if guaranteed > 0:
+        eff_on = min(guaranteed, rof)
+        off = rof - eff_on
+        cap = f" (Table 5A={guaranteed}, capped to ROF)" if guaranteed > rof else ""
+        return (
+            f"AGL auto: {rof} landings — {eff_on} on-target{cap}, {off} off-target at arc {arc:.1f}"
+        )
+    if probability > 0:
+        return (
+            f"AGL auto: {rof} landings — {probability}% chance 1 on-target at arc {arc:.1f}, "
+            f"else all {rof} off-target"
+        )
+    return f"AGL auto: {rof} landings — 0 on-target at arc {arc:.1f}; all off-target"
+
+
 def enrich_preview_targets(
     preview: PendingShotPreview,
     shooter: TokenPlacement,
@@ -254,6 +285,10 @@ def enrich_preview_targets(
             preview.per_target[tid] = entry
         if preview.target_token_ids:
             preview.target_token_id = preview.target_token_ids[0]
+        if kind == "agl" and isinstance(weapon, Weapon):
+            note = _agl_table5a_note(weapon, preview)
+            if note and note not in preview.notes:
+                preview.notes = list(preview.notes) + [note]
         return preview
 
     if kind in ("burst", "shotgun_burst"):
@@ -1028,10 +1063,7 @@ def _dispatch_explosive(
     params = _shot_params_from_preview(preview)
     kind = preview.fire_kind
 
-    if kind == "agl" or (
-        isinstance(weapon, Weapon)
-        and getattr(weapon, "weapon_type", None) == WeaponType.AUTOMATIC_GRENADE_LAUNCHER
-    ):
+    if kind == "agl":
         outcome.explosive_results = CombatSimulator.automatic_grenade_launcher_burst(
             shooter,
             weapon,
@@ -1042,7 +1074,12 @@ def _dispatch_explosive(
             continuous_burst_impulses=preview.continuous_burst_impulses,
         )
         hits = sum(1 for r in outcome.explosive_results if r.hit)
-        outcome.messages.append(f"AGL burst: {hits}/{len(outcome.explosive_results)} direct hits")
+        on_target_n = sum(1 for r in outcome.explosive_results if not r.off_target)
+        off_target_n = sum(1 for r in outcome.explosive_results if r.off_target)
+        outcome.messages.append(
+            f"AGL burst: {hits}/{len(outcome.explosive_results)} direct hits "
+            f"({on_target_n} on-target, {off_target_n} off-target landings)"
+        )
     elif kind == "grenade" or isinstance(weapon, Grenade):
         expl = CombatSimulator.thrown_grenade(
             shooter,

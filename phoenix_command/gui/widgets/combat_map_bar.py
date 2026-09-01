@@ -102,6 +102,7 @@ class CombatMapBar(QWidget):
         self._fire_mode_combo = QComboBox()
         for mode in ("single", "3rb", "auto"):
             self._fire_mode_combo.addItem(mode, mode)
+        self._fire_mode_combo.currentIndexChanged.connect(self._on_fire_mode_changed)
         row2.addWidget(self._fire_mode_combo)
 
         self._do_action_btn = QPushButton("Do Action")
@@ -207,6 +208,20 @@ class CombatMapBar(QWidget):
         if tid:
             self.token_selected.emit(tid)
 
+    def _on_fire_mode_changed(self) -> None:
+        """Apply fire mode immediately (no separate Set Fire Mode action)."""
+        if not self._is_host or not self._selected_token_id:
+            return
+        mode = self._fire_mode_combo.currentData()
+        if not mode:
+            return
+        rt = self._impulse_combat.token_runtime.get(self._selected_token_id)
+        if rt and rt.fire_mode == mode:
+            return
+        self.combat_action_requested.emit(
+            self._selected_token_id, "set_fire_mode", {"fire_mode": mode}
+        )
+
     def _emit_action(self) -> None:
         if not self._selected_token_id:
             return
@@ -218,8 +233,6 @@ class CombatMapBar(QWidget):
             args["ac"] = self._aim_spin.value()
             if action_id == "custom_action":
                 args["label"] = "Custom"
-        if action_id == "set_fire_mode":
-            args["fire_mode"] = self._fire_mode_combo.currentData()
         self.combat_action_requested.emit(self._selected_token_id, action_id, args)
 
     def _emit_duck(self) -> None:
