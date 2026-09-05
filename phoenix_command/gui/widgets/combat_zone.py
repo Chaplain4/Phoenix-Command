@@ -109,17 +109,21 @@ class CombatZoneWidget(QWidget):
         layout.addLayout(self.targets_layout)
         
         buttons_layout = QHBoxLayout()
-        simulate_btn = QPushButton("Simulate")
-        simulate_btn.clicked.connect(self._simulate)
-        buttons_layout.addWidget(simulate_btn)
-        clear_btn = QPushButton("Clear All")
-        clear_btn.clicked.connect(self.clear_all)
-        buttons_layout.addWidget(clear_btn)
+        self.simulate_btn = QPushButton("Simulate")
+        self.simulate_btn.clicked.connect(self._simulate)
+        buttons_layout.addWidget(self.simulate_btn)
+        self.clear_btn = QPushButton("Clear All")
+        self.clear_btn.clicked.connect(self.clear_all)
+        buttons_layout.addWidget(self.clear_btn)
         buttons_layout.addStretch()
         layout.addLayout(buttons_layout)
         
         layout.addStretch()
-    
+
+    def set_actions_enabled(self, enabled: bool) -> None:
+        """Gate Simulate/Clear when running as a network guest."""
+        self.simulate_btn.setEnabled(enabled)
+        self.clear_btn.setEnabled(enabled) 
     def _simulate(self):
         """Show menu to select combat type."""
         from PyQt6.QtWidgets import QMessageBox, QMenu

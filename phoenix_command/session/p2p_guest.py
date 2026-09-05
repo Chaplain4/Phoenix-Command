@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import threading
 from typing import Callable
 
-from PyQt6.QtCore import QThread, pyqtSignal
+from PyQt6.QtCore import QThread, Qt, pyqtSignal
 
 from phoenix_command.session.p2p_config import create_peer_connection
 from phoenix_command.session.signaling_manual import decode_signaling_payload, encode_signaling_payload
@@ -17,13 +18,18 @@ logger = logging.getLogger(__name__)
 
 
 class P2PSessionGuest(QThread):
-    """WebRTC guest: consumes invite, produces answer, receives GameState."""
+    """WebRTC guest: consumes invite, produces answer, receives GameState.
+
+    aiortc callbacks run on the worker thread — UI work must go through signals
+    with QueuedConnection (message_received / answer_ready / channel_open / etc.).
+    """
 
     answer_ready = pyqtSignal(str)
     connected = pyqtSignal()
+    channel_open = pyqtSignal()
     disconnected = pyqtSignal()
     connection_failed = pyqtSignal(str)
-    state_received = pyqtSignal(object)
+    message_received = pyqtSignal(object)
     ice_state_changed = pyqtSignal(str)
 
     def __init__(self, parent=None) -> None:
@@ -33,13 +39,22 @@ class P2PSessionGuest(QThread):
         self._channel = None
         self._transport = MessageTransport()
         self._on_message: Callable[[SyncMessage], None] | None = None
+        self._loop_ready = threading.Event()
+        self.message_received.connect(
+            self._dispatch_message, Qt.ConnectionType.QueuedConnection
+        )
 
     def set_message_handler(self, handler: Callable[[SyncMessage], None]) -> None:
         self._on_message = handler
 
+    def _dispatch_message(self, message: SyncMessage) -> None:
+        if self._on_message is not None:
+            self._on_message(message)
+
     def run(self) -> None:
         self._loop = asyncio.new_event_loop()
         asyncio.set_event_loop(self._loop)
+        self._loop_ready.set()
         try:
             self._loop.run_forever()
         except Exception as exc:
@@ -52,8 +67,9 @@ class P2PSessionGuest(QThread):
     def connect_with_invite(self, invite_code: str) -> None:
         if self._loop is None:
             self.start()
-        while self._loop is None:
-            pass
+        if not self._loop_ready.wait(timeout=5.0):
+            self.connection_failed.emit("Guest event loop failed to start")
+            return
         asyncio.run_coroutine_threadsafe(
             self._connect(invite_code), self._loop
         )
@@ -83,6 +99,7 @@ class P2PSessionGuest(QThread):
 
             @channel.on("open")
             def on_open() -> None:
+                self.channel_open.emit()
                 self._request_state()
 
             @channel.on("message")
@@ -94,10 +111,7 @@ class P2PSessionGuest(QThread):
                 parsed = self._transport.unpack(data)
                 if parsed is None:
                     return
-                if parsed.type == MessageType.FULL_STATE:
-                    self.state_received.emit(parsed)
-                if self._on_message:
-                    self._on_message(parsed)
+                self.message_received.emit(parsed)
 
         await pc.setRemoteDescription(
             RTCSessionDescription(sdp=offer_sdp, type="offer")

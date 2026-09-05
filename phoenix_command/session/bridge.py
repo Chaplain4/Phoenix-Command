@@ -85,6 +85,10 @@ class GameStateBridge:
                 window.hex_map_view.new_map()
             if self.state.tokens is not None:
                 window.hex_map_view.set_token_state(self.state.tokens)
+            else:
+                from phoenix_command.session.domains.token_state import TokenState
+
+                window.hex_map_view.set_token_state(TokenState())
             window.hex_map_view.set_impulse_combat_state(self.state.impulse_combat)
             window.hex_map_view.set_session_context(
                 role=getattr(window, "_session_role", None),

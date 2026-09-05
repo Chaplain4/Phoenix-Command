@@ -89,9 +89,15 @@ def gear_from_dict(data: dict) -> Gear:
     try:
         gear = clone_gear_template(data["gear_ref"])
     except KeyError:
-        if data.get("gear_type") == "Armor":
+        gear_type = data.get("gear_type", "")
+        if gear_type == "Armor":
             return _armor_from_inline(data)
-        raise
+        # Unknown non-Armor: keep a stub so sync does not abort the whole state.
+        return Gear(
+            name=data.get("gear_ref", "Unknown"),
+            weight=float(data.get("weight", 0.0)),
+            description=data.get("description", "") or f"Unknown gear ({gear_type})",
+        )
     if isinstance(gear, Armor) and "armor_delta" in data:
         gear.protection = _armor_protection_from_dict(data["armor_delta"])
     return gear

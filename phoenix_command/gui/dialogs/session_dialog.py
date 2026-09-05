@@ -1,6 +1,8 @@
 """Session host/join dialogs with Discord signaling."""
 
-from PyQt6.QtCore import pyqtSignal
+from __future__ import annotations
+
+from PyQt6.QtCore import pyqtSignal, Qt
 from PyQt6.QtWidgets import (
     QDialog,
     QVBoxLayout,
@@ -12,21 +14,26 @@ from PyQt6.QtWidgets import (
     QWidget,
     QLineEdit,
     QMessageBox,
+    QListWidget,
+    QListWidgetItem,
 )
 from PyQt6.QtGui import QFont
 
 
 class HostSessionDialog(QDialog):
-    """Host session: show invite code and accept guest answer from Discord."""
+    """Host session: create invite codes and accept guest answers."""
 
-    answer_submitted = pyqtSignal(str)
+    answer_submitted = pyqtSignal(str, str)  # slot_id, answer_code
+    new_invite_requested = pyqtSignal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Host Session")
-        self.setMinimumSize(520, 420)
+        self.setMinimumSize(560, 480)
         self.invite_code = ""
         self.answer_code = ""
+        self._slots: dict[str, dict] = {}
+        self._active_slot_id: str | None = None
         self._setup_ui()
 
     def _setup_ui(self) -> None:
@@ -38,9 +45,9 @@ class HostSessionDialog(QDialog):
 
         steps = QLabel(
             "<b>Discord signaling</b><br>"
-            "1. Copy the invite code below and send it in Discord.<br>"
+            "1. Select or create an invite slot, copy the invite code, send it in Discord.<br>"
             "2. Guest pastes it and sends you an <b>answer</b> code.<br>"
-            "3. Paste the answer code below and click <b>Connect Guest</b>."
+            "3. Paste the answer below and click <b>Connect Guest</b>."
         )
         steps.setWordWrap(True)
         discord_layout.addWidget(steps)
@@ -50,7 +57,17 @@ class HostSessionDialog(QDialog):
         self.name_edit.setPlaceholderText("Host")
         discord_layout.addWidget(self.name_edit)
 
-        discord_layout.addWidget(QLabel("<b>Step 1 — Invite code (send to guest):</b>"))
+        discord_layout.addWidget(QLabel("<b>Guest slots:</b>"))
+        self.slot_list = QListWidget()
+        self.slot_list.setMaximumHeight(100)
+        self.slot_list.currentItemChanged.connect(self._on_slot_selected)
+        discord_layout.addWidget(self.slot_list)
+
+        new_invite_btn = QPushButton("New Invite")
+        new_invite_btn.clicked.connect(self.new_invite_requested.emit)
+        discord_layout.addWidget(new_invite_btn)
+
+        discord_layout.addWidget(QLabel("<b>Invite code (send to guest):</b>"))
         self.invite_edit = QTextEdit()
         self.invite_edit.setReadOnly(True)
         self.invite_edit.setMaximumHeight(80)
@@ -63,7 +80,7 @@ class HostSessionDialog(QDialog):
         copy_invite_btn.clicked.connect(self._copy_invite)
         discord_layout.addWidget(copy_invite_btn)
 
-        discord_layout.addWidget(QLabel("<b>Step 3 — Answer code (from guest):</b>"))
+        discord_layout.addWidget(QLabel("<b>Answer code (from guest):</b>"))
         self.answer_edit = QTextEdit()
         self.answer_edit.setMaximumHeight(80)
         self.answer_edit.setFont(mono)
@@ -91,10 +108,55 @@ class HostSessionDialog(QDialog):
 
         layout.addWidget(tabs)
 
-    def set_invite_code(self, code: str) -> None:
+    def set_invite_code(self, code: str, slot_id: str | None = None) -> None:
+        """Register or update an invite for a peer slot."""
+        if slot_id is None:
+            slot_id = f"slot-{len(self._slots)}"
+        self._slots[slot_id] = {
+            "invite": code,
+            "status": "invite ready",
+            "player_id": None,
+        }
+        self._active_slot_id = slot_id
+        self._refresh_slot_list()
         self.invite_code = code
         self.invite_edit.setPlainText(code)
-        self.status_label.setText("Invite ready — send to guest via Discord.")
+        self.status_label.setText(f"Invite ready ({slot_id}) — send to guest via Discord.")
+
+    def set_slot_status(self, slot_id: str, status: str, player_id: str | None = None) -> None:
+        info = self._slots.get(slot_id)
+        if not info:
+            return
+        info["status"] = status
+        if player_id is not None:
+            info["player_id"] = player_id
+        self._refresh_slot_list()
+        if slot_id == self._active_slot_id:
+            self.status_label.setText(f"{slot_id}: {status}")
+
+    def _refresh_slot_list(self) -> None:
+        current = self._active_slot_id
+        self.slot_list.clear()
+        for slot_id, info in self._slots.items():
+            label = f"{slot_id}: {info['status']}"
+            if info.get("player_id"):
+                label += f" ({info['player_id']})"
+            item = QListWidgetItem(label)
+            item.setData(int(Qt.ItemDataRole.UserRole), slot_id)
+            self.slot_list.addItem(item)
+            if slot_id == current:
+                self.slot_list.setCurrentItem(item)
+
+    def _on_slot_selected(self, current: QListWidgetItem | None, _previous) -> None:
+        if current is None:
+            return
+        slot_id = current.data(int(Qt.ItemDataRole.UserRole))
+        if not slot_id or slot_id not in self._slots:
+            return
+        self._active_slot_id = slot_id
+        self.invite_code = self._slots[slot_id]["invite"]
+        self.invite_edit.setPlainText(self.invite_code)
+        self.status_label.setText(f"{slot_id}: {self._slots[slot_id]['status']}")
 
     def _copy_invite(self) -> None:
         from PyQt6.QtWidgets import QApplication
@@ -106,7 +168,10 @@ class HostSessionDialog(QDialog):
         if not self.answer_code:
             QMessageBox.warning(self, "Missing Answer", "Paste the guest answer code from Discord.")
             return
-        self.answer_submitted.emit(self.answer_code)
+        if not self._active_slot_id:
+            QMessageBox.warning(self, "No Slot", "Select or create an invite slot first.")
+            return
+        self.answer_submitted.emit(self._active_slot_id, self.answer_code)
         self.set_status("Connecting guest...")
 
     def set_status(self, text: str) -> None:
@@ -115,6 +180,9 @@ class HostSessionDialog(QDialog):
     @property
     def display_name(self) -> str:
         return self.name_edit.text().strip() or "Host"
+
+
+class JoinSessionDialog(QDialog):
     """Join session: paste invite, produce answer for Discord."""
 
     def __init__(self, parent=None):

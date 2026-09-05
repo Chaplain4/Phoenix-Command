@@ -26,7 +26,9 @@ class MessageType(str, Enum):
     CHUNK = "chunk"
 
 
-CHUNK_SIZE = 60_000
+# Inner payload size before chunk wrapper. Must stay well under SCTP 64 KiB
+# after json.dumps wrapping + unicode escaping (\\uXXXX doubling).
+CHUNK_SIZE = 32_000
 
 
 @dataclass
@@ -108,10 +110,17 @@ def make_player_intent(
     )
 
 
-def make_intent_nack(intent_id: str, reason: str) -> SyncMessage:
+def make_intent_nack(
+    intent_id: str,
+    reason: str,
+    player_id: str | None = None,
+) -> SyncMessage:
+    payload: dict[str, Any] = {"intent_id": intent_id, "reason": reason}
+    if player_id is not None:
+        payload["player_id"] = player_id
     return SyncMessage(
         type=MessageType.INTENT_NACK,
-        payload={"intent_id": intent_id, "reason": reason},
+        payload=payload,
     )
 
 
@@ -138,8 +147,16 @@ def make_domain_delta(
 
 def apply_message_to_state(state: GameState, message: SyncMessage) -> GameState:
     """Apply incoming sync message; returns updated GameState."""
-    if message.revision and message.revision <= state.revision:
-        return state
+    # Reject equal-or-older revisions (including revision 0 overwriting a live state).
+    # Use explicit int compare — do not treat 0 as "unset" via truthiness.
+    if message.revision <= state.revision and message.type in (
+        MessageType.FULL_STATE,
+        MessageType.DOMAIN_DELTA,
+        MessageType.DOMAIN_FULL,
+    ):
+        # Allow the very first apply when both sides are still at 0.
+        if not (message.revision == 0 and state.revision == 0):
+            return state
 
     if message.type == MessageType.FULL_STATE and message.payload:
         return GameState.from_dict(message.payload)
@@ -167,9 +184,10 @@ def apply_message_to_state(state: GameState, message: SyncMessage) -> GameState:
 
 
 def chunk_payload(data: bytes) -> list[SyncMessage]:
-    """Split large payload into chunk messages."""
+    """Split large payload into base64-encoded chunk messages."""
     if len(data) <= CHUNK_SIZE:
         return []
+    import base64
     import uuid
 
     chunk_id = hash(uuid.uuid4().hex) & 0xFFFFFFFF
@@ -184,20 +202,25 @@ def chunk_payload(data: bytes) -> list[SyncMessage]:
                 chunk_id=chunk_id,
                 chunk_index=i,
                 chunk_total=total,
-                payload={"data": data[start:end].decode("latin-1")},
+                payload={
+                    "encoding": "base64",
+                    "data": base64.b64encode(data[start:end]).decode("ascii"),
+                },
             )
         )
     return messages
 
 
 class ChunkAssembler:
-    """Reassemble chunked sync payloads."""
+    """Reassemble chunked sync payloads (base64 or legacy latin-1)."""
 
     def __init__(self) -> None:
         self._buffers: dict[int, dict[int, bytes]] = {}
         self._totals: dict[int, int] = {}
 
     def feed(self, message: SyncMessage) -> bytes | None:
+        import base64
+
         if message.type != MessageType.CHUNK:
             return None
         if message.chunk_id is None or message.chunk_index is None or message.chunk_total is None:
@@ -205,8 +228,13 @@ class ChunkAssembler:
         cid = message.chunk_id
         self._buffers.setdefault(cid, {})
         self._totals[cid] = message.chunk_total
-        chunk_data = message.payload.get("data", "") if message.payload else ""
-        self._buffers[cid][message.chunk_index] = chunk_data.encode("latin-1")
+        payload = message.payload or {}
+        chunk_data = payload.get("data", "")
+        if payload.get("encoding") == "base64":
+            self._buffers[cid][message.chunk_index] = base64.b64decode(chunk_data)
+        else:
+            # Legacy latin-1 chunks from older peers.
+            self._buffers[cid][message.chunk_index] = chunk_data.encode("latin-1")
         if len(self._buffers[cid]) < self._totals[cid]:
             return None
         parts = [self._buffers[cid][i] for i in range(self._totals[cid])]

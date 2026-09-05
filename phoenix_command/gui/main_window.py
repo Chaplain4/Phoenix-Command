@@ -1,5 +1,7 @@
 """Main window for Phoenix Command GUI."""
 
+import uuid
+
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QMainWindow,
@@ -216,6 +218,8 @@ class MainWindow(QMainWindow):
         self._equip_action.setEnabled(not guest)
         self._save_char_action.setEnabled(not guest)
         self._load_char_action.setEnabled(not guest)
+        self._save_session_action.setEnabled(not guest)
+        self._load_session_action.setEnabled(not guest)
         self.combat_menu.setEnabled(not guest)
         self._new_map_action.setEnabled(not guest)
         self._save_map_action.setEnabled(not guest)
@@ -232,6 +236,8 @@ class MainWindow(QMainWindow):
         self._host_session_action.setEnabled(not guest)
         self._join_session_action.setEnabled(not guest)
         self._new_session_action.setEnabled(not guest)
+        if hasattr(self, "combat_zone"):
+            self.combat_zone.set_actions_enabled(not guest)
 
     def _notify_game_state_changed(self, domain: str = "combat", immediate: bool = False) -> None:
         if self._session_role == "host" and self._publisher:
@@ -243,19 +249,28 @@ class MainWindow(QMainWindow):
         if self._relay_client:
             self._relay_client.send_message(message)
 
-    def _on_sync_message_received(self, message: SyncMessage) -> None:
-        if self._session_role == "host":
-            if message.type == MessageType.REQUEST_STATE and self._publisher:
-                full = self._publisher.publish_now()
-                self._broadcast_sync_message(full)
-            elif message.type == MessageType.PLAYER_HELLO and message.payload:
-                self._handle_player_hello(message.payload)
-            elif message.type == MessageType.PLAYER_INTENT and message.payload:
-                self._handle_player_intent(message.payload)
-            return
+    def _send_nack(self, player_id: str, intent_id: str, reason: str) -> None:
+        nack = make_intent_nack(intent_id, reason, player_id=player_id)
+        if self._p2p_host:
+            self._p2p_host.send_to_player(player_id, nack)
+        else:
+            self._broadcast_sync_message(nack)
 
+    def _on_host_sync_message(self, slot_id: str, message: SyncMessage) -> None:
+        if message.type == MessageType.REQUEST_STATE and self._publisher:
+            full = self._publisher.publish_now()
+            self._broadcast_sync_message(full)
+        elif message.type == MessageType.PLAYER_HELLO and message.payload:
+            self._handle_player_hello(slot_id, message.payload)
+        elif message.type == MessageType.PLAYER_INTENT and message.payload:
+            self._handle_player_intent(message.payload)
+
+    def _on_sync_message_received(self, message: SyncMessage) -> None:
         if self._session_role == "guest":
             if message.type == MessageType.INTENT_NACK and message.payload:
+                target = message.payload.get("player_id")
+                if target and target != self._player_id:
+                    return
                 reason = message.payload.get("reason", "Action rejected")
                 self.statusBar().showMessage(f"Guest: {reason}")
                 return
@@ -324,34 +339,43 @@ class MainWindow(QMainWindow):
         self._publisher = GameStatePublisher(self._broadcast_sync_message)
         self._publisher.attach(self, self._game_bridge)
 
-        self._p2p_host.invite_ready.connect(self._on_invite_ready)
-        self._p2p_host.guest_connected.connect(self._on_guest_connected)
-        self._p2p_host.connection_failed.connect(self._on_connection_failed)
-        self._p2p_host.ice_state_changed.connect(self._on_ice_state)
-        self._p2p_host.set_message_handler(self._on_sync_message_received)
+        from PyQt6.QtCore import Qt as _Qt
+        _q = _Qt.ConnectionType.QueuedConnection
+        self._p2p_host.invite_ready.connect(self._on_invite_ready, _q)
+        self._p2p_host.guest_connected.connect(self._on_guest_connected, _q)
+        self._p2p_host.connection_failed.connect(self._on_connection_failed, _q)
+        self._p2p_host.ice_state_changed.connect(self._on_ice_state, _q)
+        self._p2p_host.set_message_handler(self._on_host_sync_message)
         self._host_dialog.answer_submitted.connect(self._on_host_answer_submitted)
+        self._host_dialog.new_invite_requested.connect(self._on_new_invite_requested)
 
         self._session_role = "host"
         self._disconnect_action.setEnabled(True)
         self._p2p_host.start()
         self._host_dialog.show()
 
-    def _on_invite_ready(self, code: str) -> None:
+    def _on_invite_ready(self, slot_id: str, code: str) -> None:
         if self._host_dialog:
-            self._host_dialog.set_invite_code(code)
-        self.statusBar().showMessage("Host: invite ready — send via Discord")
+            self._host_dialog.set_invite_code(code, slot_id=slot_id)
+        self.statusBar().showMessage(f"Host: invite ready ({slot_id}) — send via Discord")
 
-    def _on_guest_connected(self, guest_id: str) -> None:
+    def _on_new_invite_requested(self) -> None:
+        if self._p2p_host:
+            self._p2p_host.create_invite()
+
+    def _on_guest_connected(self, slot_id: str) -> None:
         if self._host_dialog:
-            self._host_dialog.set_status(f"Guest connected ({guest_id})")
+            self._host_dialog.set_slot_status(slot_id, "connected")
         if self._publisher:
             full = self._publisher.publish_now()
             self._broadcast_sync_message(full)
-        self.statusBar().showMessage(f"Host: guest {guest_id} connected")
+        self.statusBar().showMessage(f"Host: guest slot {slot_id} connected")
 
-    def _handle_player_hello(self, payload: dict) -> None:
-        player_id = payload.get("player_id", f"guest-{len(self._game_bridge.state.meta.players)}")
+    def _handle_player_hello(self, slot_id: str, payload: dict) -> None:
+        player_id = payload.get("player_id") or f"guest-{uuid.uuid4().hex[:8]}"
         display_name = payload.get("display_name", player_id)
+        if self._p2p_host:
+            self._p2p_host.bind_player(slot_id, player_id)
         meta = self._game_bridge.state.meta
         if meta.get_player(player_id) is None:
             meta.players.append(PlayerInfo(player_id, display_name, is_host=False))
@@ -361,6 +385,8 @@ class MainWindow(QMainWindow):
                     p.display_name = display_name
         meta.connected_guests = [p.display_name for p in meta.players if not p.is_host]
         self._game_bridge.state.bump_revision()
+        if self._host_dialog:
+            self._host_dialog.set_slot_status(slot_id, f"hello: {display_name}", player_id)
         self._notify_game_state_changed(domain="meta", immediate=True)
 
     def _handle_player_intent(self, payload: dict) -> None:
@@ -372,39 +398,51 @@ class MainWindow(QMainWindow):
         if action == "open_shot_preview":
             ok, msg = self._host_open_shot_preview(token_id, player_id)
             if not ok:
-                self._broadcast_sync_message(make_intent_nack(intent_id, msg))
+                self._send_nack(player_id, intent_id, msg)
             else:
                 self._notify_game_state_changed(domain="impulse_combat", immediate=True)
             return
         if action == "update_shot_preview":
             ok, msg = self._host_update_shot_preview(args.get("preview") or args, player_id)
             if not ok:
-                self._broadcast_sync_message(make_intent_nack(intent_id, msg))
+                self._send_nack(player_id, intent_id, msg)
             else:
                 self._notify_game_state_changed(domain="impulse_combat", immediate=True)
             return
         if action == "confirm_shot":
             ok, msg = self._host_confirm_shot(player_id)
             if not ok:
-                self._broadcast_sync_message(make_intent_nack(intent_id, msg))
+                self._send_nack(player_id, intent_id, msg)
             else:
                 self._notify_game_state_changed(immediate=True)
             return
         if action == "cancel_shot":
+            if not self._can_edit_preview(player_id):
+                self._send_nack(player_id, intent_id, "Cannot cancel this shot preview")
+                return
             self._game_bridge.state.impulse_combat.shot_preview = None
             self._notify_game_state_changed(domain="impulse_combat", immediate=True)
             return
+        if action == "abandon_pending":
+            result = self._apply_combat_action(token_id, action, args, player_id, is_host=False)
+            if not result.success:
+                self._send_nack(player_id, intent_id, result.message)
+            else:
+                self.statusBar().showMessage(result.message)
+                self._notify_game_state_changed(domain="impulse_combat", immediate=True)
+            return
         result = self._apply_combat_action(token_id, action, args, player_id, is_host=False)
         if not result.success:
-            nack = make_intent_nack(intent_id, result.message)
-            self._broadcast_sync_message(nack)
+            self._send_nack(player_id, intent_id, result.message)
         else:
             self.statusBar().showMessage(result.message)
             self._notify_game_state_changed(domain="impulse_combat", immediate=True)
 
-    def _on_host_answer_submitted(self, answer: str) -> None:
+    def _on_host_answer_submitted(self, slot_id: str, answer: str) -> None:
         if self._p2p_host:
-            self._p2p_host.submit_answer(answer)
+            self._p2p_host.submit_answer(slot_id, answer)
+            if self._host_dialog:
+                self._host_dialog.set_slot_status(slot_id, "answer submitted")
 
     def _join_session(self) -> None:
         if self._session_role:
@@ -418,17 +456,19 @@ class MainWindow(QMainWindow):
         if not dialog.exec():
             return
 
-        self._player_id = "guest-0"
-        guest_name = dialog.display_name
+        self._player_id = f"guest-{uuid.uuid4().hex[:8]}"
+        self._guest_display_name = dialog.display_name
 
         self._join_dialog = dialog
         self._p2p_guest = P2PSessionGuest(parent=self)
-        self._p2p_guest.answer_ready.connect(self._on_answer_ready)
-        self._p2p_guest.connected.connect(self._on_guest_connected_to_host)
-        self._p2p_guest.disconnected.connect(self._on_guest_disconnected)
-        self._p2p_guest.connection_failed.connect(self._on_connection_failed)
-        self._p2p_guest.state_received.connect(self._on_guest_state_received)
-        self._p2p_guest.ice_state_changed.connect(self._on_ice_state)
+        from PyQt6.QtCore import Qt as _Qt
+        _q = _Qt.ConnectionType.QueuedConnection
+        self._p2p_guest.answer_ready.connect(self._on_answer_ready, _q)
+        self._p2p_guest.connected.connect(self._on_guest_connected_to_host, _q)
+        self._p2p_guest.channel_open.connect(self._on_guest_channel_open, _q)
+        self._p2p_guest.disconnected.connect(self._on_guest_disconnected, _q)
+        self._p2p_guest.connection_failed.connect(self._on_connection_failed, _q)
+        self._p2p_guest.ice_state_changed.connect(self._on_ice_state, _q)
         self._p2p_guest.set_message_handler(self._on_sync_message_received)
 
         self._session_role = "guest"
@@ -444,15 +484,18 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage("Guest: send answer code to host via Discord")
 
     def _on_guest_connected_to_host(self) -> None:
+        self.statusBar().showMessage("Guest: ICE connected — waiting for data channel")
+
+    def _on_guest_channel_open(self) -> None:
         self.statusBar().showMessage("Guest: connected to host")
-        if self._join_dialog and self._p2p_guest:
-            self._p2p_guest.send_player_hello(self._player_id, self._join_dialog.display_name)
+        if self._p2p_guest:
+            name = getattr(self, "_guest_display_name", None)
+            if name is None and self._join_dialog:
+                name = self._join_dialog.display_name
+            self._p2p_guest.send_player_hello(self._player_id, name or "Player")
 
     def _on_guest_disconnected(self) -> None:
         self.statusBar().showMessage("Guest: disconnected")
-
-    def _on_guest_state_received(self, message: SyncMessage) -> None:
-        self._on_sync_message_received(message)
 
     def _on_connection_failed(self, error: str) -> None:
         QMessageBox.critical(self, "Connection Failed", error)
@@ -522,7 +565,10 @@ class MainWindow(QMainWindow):
         )
 
     def _token_available_actions(self, token_id: str):
-        return self._combat_engine().available_actions(token_id)
+        actions = self._combat_engine().available_actions(token_id)
+        if self._session_role == "guest":
+            actions = [a for a in actions if a[0] != "set_medical_aid"]
+        return actions
 
     def _apply_combat_action(
         self,
@@ -771,7 +817,17 @@ class MainWindow(QMainWindow):
             )
             if reply != QMessageBox.StandardButton.Yes:
                 return
-            if self._session_role != "guest":
+            if self._session_role == "guest":
+                abandon_intent = make_player_intent(
+                    self._player_id,
+                    str(uuid.uuid4()),
+                    shooter_token_id,
+                    "abandon_pending",
+                    {},
+                )
+                if self._p2p_guest:
+                    self._p2p_guest.send_message(abandon_intent)
+            else:
                 result = self._apply_combat_action(
                     shooter_token_id, "abandon_pending", {}, self._player_id, is_host=True
                 )
@@ -782,7 +838,6 @@ class MainWindow(QMainWindow):
                 self.hex_map_view._refresh_combat_ui()
 
         if self._session_role == "guest":
-            import uuid
             intent = make_player_intent(
                 self._player_id,
                 str(uuid.uuid4()),
@@ -1422,8 +1477,7 @@ class MainWindow(QMainWindow):
 
     def _on_preview_confirmed(self, preview) -> None:
         if self._session_role == "guest":
-            import uuid
-            # Apply local edits first via intent
+            # Keep dialog open until host sync clears or updates the preview.
             intent_u = make_player_intent(
                 self._player_id,
                 str(uuid.uuid4()),
@@ -1441,7 +1495,7 @@ class MainWindow(QMainWindow):
             if self._p2p_guest:
                 self._p2p_guest.send_message(intent_u)
                 self._p2p_guest.send_message(intent_c)
-            self._shot_preview_dialog = None
+            self.statusBar().showMessage("Guest: shot submitted — waiting for host")
             return
         self._game_bridge.state.impulse_combat.shot_preview = preview
         preview = self._re_enrich_shot_preview(preview)
