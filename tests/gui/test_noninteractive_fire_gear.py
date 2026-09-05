@@ -38,6 +38,39 @@ def test_prompt_fire_gear_noninteractive_first_weapon_without_held(qapp, rifle_p
     win.close()
 
 
+def test_prompt_fire_gear_noninteractive_fire_with_grenade(qapp, rifle_pair):
+    from phoenix_command.models.gear import Grenade
+
+    win = MainWindow()
+    char = rifle_pair[0]
+    char.add_gear(m67)
+    rt = TokenCombatRuntime()
+    weapon, grenade = win._prompt_fire_gear(
+        char, rt, interactive=False, fire_with="grenade", gear_name=m67.name
+    )
+    assert grenade is not None
+    assert isinstance(weapon, Grenade)
+    assert weapon.name == m67.name
+    win.close()
+
+
+def test_prompt_fire_gear_noninteractive_fire_with_weapon_name(qapp, rifle_pair):
+    win = MainWindow()
+    char = rifle_pair[0]
+    char.add_gear(m67)
+    weapons = [i for i in char.equipment if isinstance(i, Weapon)]
+    assert weapons
+    name = weapons[0].name
+    rt = TokenCombatRuntime()
+    weapon, grenade = win._prompt_fire_gear(
+        char, rt, interactive=False, fire_with="weapon", gear_name=name
+    )
+    assert grenade is None
+    assert weapon is not None
+    assert weapon.name == name
+    win.close()
+
+
 def test_reject_confirm_keep_open_leaves_dialog(qapp):
     preview = PendingShotPreview(
         preview_id="p1",

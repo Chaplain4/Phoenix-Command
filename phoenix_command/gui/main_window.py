@@ -495,7 +495,7 @@ class MainWindow(QMainWindow):
         action = payload.get("action", "")
         args = payload.get("args") or {}
         if action == "open_shot_preview":
-            ok, msg = self._host_open_shot_preview(token_id, player_id)
+            ok, msg = self._host_open_shot_preview(token_id, player_id, args=args)
             if not ok:
                 self._send_nack(player_id, intent_id, msg)
             else:
@@ -834,11 +834,18 @@ class MainWindow(QMainWindow):
         choice, ok = QInputDialog.getItem(self, "Select Weapon", "Weapon:", names, 0, False)
         return choice if ok else None
 
-    def _prompt_fire_gear(self, char, shooter_rt, interactive: bool = True):
+    def _prompt_fire_gear(
+        self,
+        char,
+        shooter_rt,
+        interactive: bool = True,
+        fire_with: str | None = None,
+        gear_name: str | None = None,
+    ):
         """Choose weapon or grenade when Declare Shot and both are available."""
         from phoenix_command.models.gear import Grenade, Weapon
 
-        if shooter_rt.held_grenade_name:
+        if shooter_rt.held_grenade_name and not fire_with:
             for item in char.equipment:
                 if isinstance(item, Grenade) and item.name == shooter_rt.held_grenade_name:
                     return item, item
@@ -846,7 +853,18 @@ class MainWindow(QMainWindow):
         grenades = [i for i in char.equipment if isinstance(i, Grenade)]
         if grenades and weapons:
             if not interactive:
-                # Guest intent path: prefer held weapon, else first weapon.
+                # Guest intent: honor fire_with/gear_name from guest-local Fire-with.
+                kind = (fire_with or "weapon").lower()
+                if kind == "grenade":
+                    if gear_name:
+                        for item in grenades:
+                            if item.name == gear_name:
+                                return item, item
+                    return grenades[0], grenades[0]
+                if gear_name:
+                    for item in weapons:
+                        if item.name == gear_name:
+                            return item, None
                 if shooter_rt.held_weapon_name:
                     for item in weapons:
                         if item.name == shooter_rt.held_weapon_name:
@@ -880,6 +898,48 @@ class MainWindow(QMainWindow):
         if grenades:
             return grenades[0], grenades[0]
         return None, None
+
+    def _collect_fire_with_intent_args(self, shooter_token_id: str) -> dict | None:
+        """Guest-local Fire-with choice for open_shot_preview intent.
+
+        Returns {} when no prompt needed, args dict when chosen, None if cancelled.
+        """
+        from PyQt6.QtWidgets import QInputDialog
+        from phoenix_command.models.gear import Grenade, Weapon
+        from phoenix_command.session.domains.impulse_combat_state import TokenCombatRuntime
+
+        tokens = self.hex_map_view.get_token_state()
+        tok = tokens.placements.get(shooter_token_id)
+        if not tok or not tok.character_name:
+            return {}
+        char = self._characters_by_name().get(tok.character_name)
+        if not char:
+            return {}
+        ic = self.hex_map_view.get_impulse_combat_state()
+        rt = ic.token_runtime.get(shooter_token_id, TokenCombatRuntime())
+        if rt.held_grenade_name:
+            return {"fire_with": "grenade", "gear_name": rt.held_grenade_name}
+        weapons = [i for i in char.equipment if isinstance(i, Weapon)]
+        grenades = [i for i in char.equipment if isinstance(i, Grenade)]
+        if not (weapons and grenades):
+            return {}
+        options = [f"Weapon: {w.name}" for w in weapons] + [
+            f"Grenade: {g.name}" for g in grenades
+        ]
+        choice, ok = QInputDialog.getItem(
+            self, "Declare Shot", "Fire with:", options, 0, False
+        )
+        if not ok:
+            return None
+        if choice.startswith("Grenade:"):
+            return {
+                "fire_with": "grenade",
+                "gear_name": choice.split(": ", 1)[1],
+            }
+        return {
+            "fire_with": "weapon",
+            "gear_name": choice.split(": ", 1)[1],
+        }
 
     def _ammo_options_for_weapon(self, weapon) -> list[str]:
         from phoenix_command.models.gear import AmmoType
@@ -981,12 +1041,15 @@ class MainWindow(QMainWindow):
                 self.hex_map_view._refresh_combat_ui()
 
         if self._session_role == "guest":
+            fire_args = self._collect_fire_with_intent_args(shooter_token_id)
+            if fire_args is None:
+                return
             intent = make_player_intent(
                 self._player_id,
                 str(uuid.uuid4()),
                 shooter_token_id,
                 "open_shot_preview",
-                {},
+                fire_args,
             )
             if self._p2p_guest:
                 self._p2p_guest.send_message(intent)
@@ -999,7 +1062,12 @@ class MainWindow(QMainWindow):
         self._maybe_show_shot_preview()
 
     def _build_preview_from_tokens(
-        self, shooter_token_id: str, proposed_by: str, interactive: bool = True
+        self,
+        shooter_token_id: str,
+        proposed_by: str,
+        interactive: bool = True,
+        fire_with: str | None = None,
+        gear_name: str | None = None,
     ):
         import uuid
         from phoenix_command.models.gear import AmmoType, Weapon
@@ -1035,7 +1103,11 @@ class MainWindow(QMainWindow):
             from phoenix_command.simulations.map_fire_targets import default_ammo_for_weapon
 
             weapon, grenade_ammo = self._prompt_fire_gear(
-                char, shooter_rt, interactive=interactive
+                char,
+                shooter_rt,
+                interactive=interactive,
+                fire_with=fire_with,
+                gear_name=gear_name,
             )
             if weapon is None:
                 return None, "No weapon or grenade available"
@@ -1128,7 +1200,9 @@ class MainWindow(QMainWindow):
         )
         return preview, ""
 
-    def _host_open_shot_preview(self, shooter_token_id: str, player_id: str):
+    def _host_open_shot_preview(
+        self, shooter_token_id: str, player_id: str, args: dict | None = None
+    ):
         tokens = self.hex_map_view.get_token_state()
         tok = tokens.placements.get(shooter_token_id)
         if not tok:
@@ -1136,9 +1210,14 @@ class MainWindow(QMainWindow):
         engine = self._combat_engine()
         if not engine.can_control_token(player_id, tok, is_host=(player_id == "host")):
             return False, "No control of shooter"
+        args = args or {}
         # Guest intents must not pop QInputDialog on the host machine.
         preview, err = self._build_preview_from_tokens(
-            shooter_token_id, player_id, interactive=(player_id == "host")
+            shooter_token_id,
+            player_id,
+            interactive=(player_id == "host"),
+            fire_with=args.get("fire_with"),
+            gear_name=args.get("gear_name"),
         )
         if not preview:
             return False, err
