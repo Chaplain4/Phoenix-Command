@@ -129,14 +129,11 @@ class Table4AdvancedOddsOfHitting:
         }
 
         keys = sorted(table.keys())
-        index = bisect.bisect_left(keys, effective_accuracy_level)
+        index = bisect.bisect_right(keys, effective_accuracy_level)
 
         if index == 0:
             return table[keys[0]][shot_type]
-        elif index == len(keys):
-            return table[keys[-1]][shot_type]
         else:
-            # Floor to the nearest lower key
             return table[keys[index - 1]][shot_type]
 
     @classmethod
@@ -166,7 +163,7 @@ class Table4AdvancedOddsOfHitting:
             TargetExposure.STANDING_EXPOSED: {
                 AccuracyModifiers.TARGET_SIZE: 7,
                 AccuracyModifiers.AUTO_ELEV: 14,
-                AccuracyModifiers.AUTO_WIDTH: 3, #fixed rules bullshit
+                AccuracyModifiers.AUTO_WIDTH: 1,
             },
             TargetExposure.KNEELING_EXPOSED: {
                 AccuracyModifiers.TARGET_SIZE: 6,
@@ -176,32 +173,32 @@ class Table4AdvancedOddsOfHitting:
             TargetExposure.PRONE_EXPOSED: {
                 AccuracyModifiers.TARGET_SIZE: 2,
                 AccuracyModifiers.AUTO_ELEV: 2,
-                AccuracyModifiers.AUTO_WIDTH: 3,
+                AccuracyModifiers.AUTO_WIDTH: 2,
             },
             TargetExposure.RUNNING: {
                 AccuracyModifiers.TARGET_SIZE: 8,
                 AccuracyModifiers.AUTO_ELEV: 14,
-                AccuracyModifiers.AUTO_WIDTH: 3,
+                AccuracyModifiers.AUTO_WIDTH: 1,
             },
             TargetExposure.LOW_CROUCH: {
                 AccuracyModifiers.TARGET_SIZE: 7,
                 AccuracyModifiers.AUTO_ELEV: 11,
-                AccuracyModifiers.AUTO_WIDTH: 3,
+                AccuracyModifiers.AUTO_WIDTH: 2,
             },
             TargetExposure.HANDS_AND_KNEES_CROUCH: {
                 AccuracyModifiers.TARGET_SIZE: 6,
                 AccuracyModifiers.AUTO_ELEV: 8,
-                AccuracyModifiers.AUTO_WIDTH: 3,
+                AccuracyModifiers.AUTO_WIDTH: 1,
             },
             TargetExposure.LOW_PRONE: {
                 AccuracyModifiers.TARGET_SIZE: 1,
                 AccuracyModifiers.AUTO_ELEV: 0,
-                AccuracyModifiers.AUTO_WIDTH: 3,
+                AccuracyModifiers.AUTO_WIDTH: 5,
             },
             TargetExposure.HEAD: {
                 AccuracyModifiers.TARGET_SIZE: -3,
                 AccuracyModifiers.AUTO_ELEV: 0,
-                AccuracyModifiers.AUTO_WIDTH: -1,
+                AccuracyModifiers.AUTO_WIDTH: -3,
             },
             TargetExposure.BODY: {
                 AccuracyModifiers.TARGET_SIZE: 5,
@@ -234,7 +231,7 @@ class Table4AdvancedOddsOfHitting:
         """
         Returns the movement ALM modifier and maximum aim impulses based on speed and target HPI from Table 4D.
         For non-exact speed or HPI, floors to the nearest lower value in the table.
-        Maximum aim impulses: 2 for -10, 3 for -9, 4 for -8, 5 for -7, 6 for -6, infinity for -5 and above.
+        Book §3.1: shaded entries (ALM >= -5) have no aim limit; unshaded (ALM < -5) max 2 impulses.
         """
         # Table: speed -> hpi -> modifier
         table: Dict[float, Dict[float, int]] = {
@@ -274,16 +271,6 @@ class Table4AdvancedOddsOfHitting:
                     1000: -9, 1200: -8, 1500: -7},
         }
 
-        # Max aim impulses mapping
-        max_aim_map = {
-            -10: 2,
-            -9: 3,
-            -8: 4,
-            -7: 5,
-            -6: 6,
-            -5: float('inf'),
-        }
-
         # Get sorted keys for speed and hpi
         speed_keys = sorted(table.keys())
         hpi_keys = sorted(table[speed_keys[0]].keys()) if table else []
@@ -298,13 +285,8 @@ class Table4AdvancedOddsOfHitting:
 
         modifier = table[floored_speed][floored_hpi]
 
-        # Get max aim: extend pattern for modifiers > -5 or < -10
-        if modifier <= -10:
-            max_aim = 2
-        elif modifier >= -5:
-            max_aim = float('inf')
-        else:
-            max_aim = max_aim_map.get(modifier, 2)  # Default to 2 for unknown
+        # Book §3.1: shaded (-5) = no limit; unshaded (< -5) = max 2 impulses aim
+        max_aim: float = float('inf') if modifier >= -5 else 2
 
         return modifier, max_aim
 

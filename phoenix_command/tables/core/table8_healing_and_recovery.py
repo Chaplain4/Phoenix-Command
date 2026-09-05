@@ -9,20 +9,25 @@ class Table8HealingAndRecovery:
 
     @classmethod
     def get_incapacitation_time_8b(cls, physical_damage_total: int, modifier: int = 0) -> int:
-        """Return incapacitation time in phases with optional modifier to roll."""
+        """Return incapacitation time in phases with optional modifier to roll.
+
+        1 phase = 2 seconds.  Conversions: 1 min = 30 phases, 1 h = 1800 phases,
+        1 day = 43200 phases.
+        """
 
         INC_TABLE = {
+            0: [1, 1, 2, 4, 6, 11],
             50: [4, 15, 29, 47, 73, 120],
             100: [25, 90, 150, 270, 420, 750],
             200: [90, 330, 630, 690, 1590, 2880],
-            300: [600, 1980, 3780, 7200, 10800, 18000],
-            450: [750, 2550, 10800, 14400, 25200, 43200],
-            600: [1500, 10800, 18000, 32400, 50400, 90000],
-            750: [7200, 21600, 39600, 68400, 104400, 190800],
-            1000: [18000, 61200, 115200, 190800, 295200, 259200],
+            300: [300, 990, 1890, 3600, 5400, 9000],
+            450: [750, 2550, 5400, 7200, 12600, 21600],
+            600: [1500, 5400, 9000, 16200, 25200, 45000],
+            750: [3600, 10800, 19800, 34200, 52200, 95400],
+            1000: [9000, 30600, 57600, 95400, 147600, 259200],
         }
 
-        row_key = max(k for k in INC_TABLE.keys() if k <= max(50, physical_damage_total))
+        row_key = max(k for k in INC_TABLE.keys() if k <= physical_damage_total)
 
         r = max(0, random.randint(0, 9) + modifier)
         if r == 0:
@@ -89,7 +94,13 @@ class Table8HealingAndRecovery:
 
         lookup = physical_damage * 10.0 / target_health
 
-        closest_row = min(TABLE, key=lambda r: abs(r[0] - lookup))
+        # Book rule: use next lower entry (floor lookup)
+        closest_row = TABLE[0]
+        for row in TABLE:
+            if row[0] <= lookup:
+                closest_row = row
+            else:
+                break
 
         (
             dmg, healing_days,

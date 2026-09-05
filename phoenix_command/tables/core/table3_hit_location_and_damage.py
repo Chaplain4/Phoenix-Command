@@ -335,10 +335,12 @@ class Table3HitLocationAndDamage:
         sorted_keys = sorted(table_data.keys())
         max_pf = sorted_keys[-1]
         min_pf = sorted_keys[0]
+        if armor_pf <= 0:
+            return 0
         if armor_pf >= max_pf:
             return table_data[max_pf][roll]
         if armor_pf <= min_pf:
-            return armor_pf
+            return table_data[min_pf][roll]
         if armor_pf in table_data:
             return table_data[armor_pf][roll]
         x0 = max([k for k in sorted_keys if k < armor_pf])

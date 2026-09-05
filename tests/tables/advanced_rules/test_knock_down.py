@@ -58,12 +58,31 @@ def test_explosive_bc52_normal_minus_1() -> None:
     assert effect.ac_penalty == 1
 
 
-def test_explosive_bc52_infantry_none() -> None:
-    assert explosive_knock_down(52, "infantry").is_none()
+def test_explosive_bc52_infantry_minus_1() -> None:
+    """Both classes use the same Normal Infantry column."""
+    effect = explosive_knock_down(52, "infantry")
+    assert effect.kind == KIND_AC_1
+    assert effect.ac_penalty == 1
 
 
-def test_explosive_bc66_infantry_minus_1() -> None:
-    assert explosive_knock_down(66, "infantry").kind == KIND_AC_1
+def test_explosive_bc66_minus_2() -> None:
+    assert explosive_knock_down(66, "normal").kind == KIND_AC_2
+    assert explosive_knock_down(66, "infantry").kind == KIND_AC_2
+
+
+def test_explosive_bc82_minus_4() -> None:
+    from phoenix_command.tables.advanced_rules.knock_down import KIND_AC_4
+    assert explosive_knock_down(82, "normal").kind == KIND_AC_4
+    assert explosive_knock_down(82, "normal").ac_penalty == 4
+
+
+def test_explosive_bc90_knock_down() -> None:
+    assert explosive_knock_down(90, "normal").kind == KIND_OFF_FEET
+    assert explosive_knock_down(90, "normal").off_feet
+
+
+def test_explosive_bc49_none() -> None:
+    assert explosive_knock_down(49, "normal").is_none()
 
 
 def test_recoil_kd7_skill4_is_1_ac() -> None:

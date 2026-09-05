@@ -171,10 +171,14 @@ class Table2OddsOfHitting:
         Raises ValueError for invalid enum values.
         """
         # Validate enums
+        from phoenix_command.tables.core.table4_advanced_odds_of_hitting import Table4AdvancedOddsOfHitting
+        from phoenix_command.models.enums import AccuracyModifiers
         try:
             stance_mod = shooter_stance.value
-            exposure_mod = target_exposure.value
-        except AttributeError:
+            exposure_mod = Table4AdvancedOddsOfHitting.get_standard_target_size_modifier_4e(
+                target_exposure, AccuracyModifiers.TARGET_SIZE
+            )
+        except (AttributeError, ValueError):
             raise ValueError("Invalid ShooterStance or TargetExposure enum value.")
 
         total = stance_mod

@@ -45,19 +45,16 @@ _PROJECTILE_ROWS: dict[LocationBand, list[tuple[int, str, int, bool]]] = {
     ],
 }
 
+_NORMAL_INFANTRY_EXPLOSIVE = [
+    (90, KIND_OFF_FEET, 0, True),
+    (82, KIND_AC_4, 4, False),
+    (66, KIND_AC_2, 2, False),
+    (50, KIND_AC_1, 1, False),
+]
+
 _EXPLOSIVE_ROWS: dict[ArmorClass, list[tuple[int, str, int, bool]]] = {
-    "normal": [
-        (770, KIND_OFF_FEET, 0, True),
-        (520, KIND_AC_4, 4, False),
-        (270, KIND_AC_2, 2, False),
-        (50, KIND_AC_1, 1, False),
-    ],
-    "infantry": [
-        (1020, KIND_OFF_FEET, 0, True),
-        (700, KIND_AC_4, 4, False),
-        (350, KIND_AC_2, 2, False),
-        (66, KIND_AC_1, 1, False),
-    ],
+    "normal": _NORMAL_INFANTRY_EXPLOSIVE,
+    "infantry": _NORMAL_INFANTRY_EXPLOSIVE,
 }
 
 _HEAD_PREFIXES = (

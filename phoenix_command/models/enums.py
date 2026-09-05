@@ -25,21 +25,21 @@ class ShooterStance(Enum):
 class TargetExposure(Enum):
     """
     Enum for Target Exposure types (Table 4E rows).
-    Values represent base ALM (Aim Level Modifier) adjustments for Target Size.
+    Values are unique identifiers; ALM lookup is in Table 4E.
     """
-    LOOKING_OVER_COVER = -4         # Look Over/Around
-    FIRING_OVER_COVER = 0           # Fire Over/Around
-    STANDING_EXPOSED = 7            # Standing Exposed (updated to match table)
-    KNEELING_EXPOSED = 6            # Kneeling Exposed
-    PRONE_EXPOSED = 2               # Prone / Crawl
-    RUNNING = 8                     # Running
-    LOW_CROUCH = 7                  # Low Crouch
-    HANDS_AND_KNEES_CROUCH = 6      # Hands and Knees
-    LOW_PRONE = 1                   # Low Prone
-    HEAD = -3                       # Head
-    BODY = 5                        # Body
-    LEGS = 4                        # Legs
-    ARMS = 3                        # Arms
+    LOOKING_OVER_COVER = 1
+    FIRING_OVER_COVER = 2
+    STANDING_EXPOSED = 3
+    KNEELING_EXPOSED = 4
+    PRONE_EXPOSED = 5
+    RUNNING = 6
+    LOW_CROUCH = 7
+    HANDS_AND_KNEES_CROUCH = 8
+    LOW_PRONE = 9
+    HEAD = 10
+    BODY = 11
+    LEGS = 12
+    ARMS = 13
 
 class ExplosiveTarget(Enum):
     HEX = 12

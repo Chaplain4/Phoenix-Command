@@ -83,8 +83,8 @@ class Character:
     
     @property
     def knockout_value(self) -> int:
-        """Knockout value = 0.5 × Will × Skill Level."""
-        return int(0.5 * self.will * self.gun_combat_skill_level)
+        """Knockout value = 0.5 x Will x Skill Level (rounded, minimum 5)."""
+        return max(5, round(0.5 * self.will * self.gun_combat_skill_level))
     
     @property
     def defensive_alm(self) -> int:

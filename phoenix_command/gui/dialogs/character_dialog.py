@@ -146,7 +146,8 @@ class CharacterDialog(QDialog):
             return
 
         pd = self.pd_spin.value()
-        knockout_value = int(0.5 * self.wil_spin.value() * self.skl_spin.value())
+        # Match Character.knockout_value: round(0.5 * Will * Skill), minimum 5
+        knockout_value = max(5, round(0.5 * self.wil_spin.value() * self.skl_spin.value()))
 
         if pd == 0:
             status = "Healthy"

@@ -113,3 +113,20 @@ def test_roll_characteristic():
     for _ in range(100):
         roll = CharacterGenerator.roll_characteristic()
         assert 3 <= roll <= 18
+
+
+def test_knockout_value_rounding():
+    """KV = round(0.5 * will * skill), not truncated."""
+    from phoenix_command.models.character import Character
+    c = Character(name="T", strength=10, intelligence=10, will=11,
+                  health=10, agility=10, gun_combat_skill_level=3)
+    # 0.5 * 11 * 3 = 16.5, round -> 16 (Python banker's rounding)
+    assert c.knockout_value == 16
+
+
+def test_knockout_value_minimum_5():
+    """Untrained (skill 0) gets KV = 5 per pregenerated troop table."""
+    from phoenix_command.models.character import Character
+    c = Character(name="U", strength=10, intelligence=10, will=10,
+                  health=10, agility=10, gun_combat_skill_level=0)
+    assert c.knockout_value == 5

@@ -446,9 +446,11 @@ class CombatSimulatorUtils:
             target.apply_damage(blunt_damage, damage_result)
         else:
             epen = max(0.0, epen)
-            if total_protection > epen:
+            # DC=1 when effective armor protection (Table 6D) exceeds EPEN
+            effective_protection = pen_after_cover - epen
+            if effective_protection > epen:
                 dc = 1
-                log.append("  Protection > EPEN, DC reduced to 1")
+                log.append(f"  Effective protection ({effective_protection:.1f}) > EPEN ({epen:.1f}), DC reduced to 1")
             damage_result = AdvancedDamageCalculator.calculate_damage(
                 location=location, dc=dc, epen=epen, is_front=is_front_shot
             )
@@ -858,7 +860,8 @@ class CombatSimulatorUtils:
                 hit_log.append(f"  Blunt damage: {blunt_damage}")
             else:
                 epen = max(0.0, epen)
-                effective_dc = 1 if total_protection > epen else dc
+                effective_protection = pen - epen
+                effective_dc = 1 if effective_protection > epen else dc
                 damage_result = AdvancedDamageCalculator.calculate_damage(
                     location=location, dc=effective_dc, epen=epen, is_front=is_front_shot
                 )
