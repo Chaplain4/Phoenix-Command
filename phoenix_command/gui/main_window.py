@@ -258,8 +258,8 @@ class MainWindow(QMainWindow):
 
     def _on_host_sync_message(self, slot_id: str, message: SyncMessage) -> None:
         if message.type == MessageType.REQUEST_STATE and self._publisher:
-            full = self._publisher.publish_now()
-            self._broadcast_sync_message(full)
+            # publish_now already broadcasts via _broadcast_sync_message
+            self._publisher.publish_now()
         elif message.type == MessageType.PLAYER_HELLO and message.payload:
             self._handle_player_hello(slot_id, message.payload)
         elif message.type == MessageType.PLAYER_INTENT and message.payload:
@@ -272,14 +272,42 @@ class MainWindow(QMainWindow):
                 if target and target != self._player_id:
                     return
                 reason = message.payload.get("reason", "Action rejected")
+                if self._shot_preview_dialog is not None:
+                    self._shot_preview_dialog.reject_confirm_keep_open(reason)
                 self.statusBar().showMessage(f"Guest: {reason}")
                 return
             new_state = apply_message_to_state(self._game_bridge.state, message)
             self._game_bridge.apply_remote_state(new_state, self)
             self._maybe_show_shot_preview()
-            self.statusBar().showMessage(
-                f"Guest: synced revision {new_state.revision}"
+            self._show_guest_sync_status(new_state.revision)
+
+    def _pending_move_hint_text(self) -> str:
+        """Guest hint when selected token has an unfinished move."""
+        ic = self._game_bridge.state.impulse_combat
+        sel = ic.selected_token_id
+        if not sel:
+            return ""
+        rt = ic.token_runtime.get(sel)
+        if rt and rt.pending_id() == "move":
+            return (
+                "Continue Move (Do Action → Move / pick hex) — "
+                "Next Impulse does not finish pending movement"
             )
+        return ""
+
+    def _show_guest_sync_status(self, revision: int) -> None:
+        """Status line after sync; keep Continue Move hint on the same line."""
+        hint = self._pending_move_hint_text()
+        if hint:
+            self.statusBar().showMessage(f"Guest: synced r{revision} — {hint}")
+        else:
+            self.statusBar().showMessage(f"Guest: synced revision {revision}")
+
+    def _maybe_hint_pending_move(self) -> None:
+        """Remind guest that Next Impulse does not finish a pending move."""
+        hint = self._pending_move_hint_text()
+        if hint:
+            self.statusBar().showMessage(f"Guest: {hint}")
 
     def _new_session(self) -> None:
         if self._session_role:
@@ -343,6 +371,7 @@ class MainWindow(QMainWindow):
         _q = _Qt.ConnectionType.QueuedConnection
         self._p2p_host.invite_ready.connect(self._on_invite_ready, _q)
         self._p2p_host.guest_connected.connect(self._on_guest_connected, _q)
+        self._p2p_host.guest_disconnected.connect(self._on_host_guest_disconnected, _q)
         self._p2p_host.connection_failed.connect(self._on_connection_failed, _q)
         self._p2p_host.ice_state_changed.connect(self._on_ice_state, _q)
         self._p2p_host.set_message_handler(self._on_host_sync_message)
@@ -364,12 +393,39 @@ class MainWindow(QMainWindow):
             self._p2p_host.create_invite()
 
     def _on_guest_connected(self, slot_id: str) -> None:
+        # Do not overwrite an existing hello:* slot status (channel-open / HELLO race).
         if self._host_dialog:
-            self._host_dialog.set_slot_status(slot_id, "connected")
+            info = self._host_dialog._slots.get(slot_id) or {}
+            prev = str(info.get("status") or "")
+            if not prev.startswith("hello"):
+                self._host_dialog.set_slot_status(slot_id, "connected")
         if self._publisher:
-            full = self._publisher.publish_now()
-            self._broadcast_sync_message(full)
+            # publish_now already broadcasts
+            self._publisher.publish_now()
+        self.hex_map_view.set_session_context(
+            self._session_role, self._player_id, self._game_bridge.state.meta.players
+        )
         self.statusBar().showMessage(f"Host: guest slot {slot_id} connected")
+        self._maybe_qa_auto_hello(slot_id)
+
+    @staticmethod
+    def _qa_auto_hello_enabled() -> bool:
+        """Opt-in only — must not default on in production."""
+        import os
+        return os.environ.get("PC_QA_AUTO_HELLO") == "1"
+
+    def _maybe_qa_auto_hello(self, slot_id: str) -> bool:
+        if not self._qa_auto_hello_enabled():
+            return False
+        from PyQt6.QtCore import QTimer
+        QTimer.singleShot(
+            500,
+            lambda: self._handle_player_hello(
+                slot_id,
+                {"player_id": "guest-0", "display_name": "GuestTester"},
+            ),
+        )
+        return True
 
     def _handle_player_hello(self, slot_id: str, payload: dict) -> None:
         player_id = payload.get("player_id") or f"guest-{uuid.uuid4().hex[:8]}"
@@ -387,7 +443,23 @@ class MainWindow(QMainWindow):
         self._game_bridge.state.bump_revision()
         if self._host_dialog:
             self._host_dialog.set_slot_status(slot_id, f"hello: {display_name}", player_id)
+        self.hex_map_view.set_session_context(
+            self._session_role, self._player_id, self._game_bridge.state.meta.players
+        )
+        # Auto-assign first free token only under explicit QA flag.
+        if self._qa_auto_hello_enabled() and self._game_bridge.state.tokens is not None:
+            tokens = self._game_bridge.state.tokens.placements
+            if not any(tok.controlled_by == player_id for tok in tokens.values()):
+                for tok in tokens.values():
+                    if not tok.controlled_by:
+                        tok.controlled_by = player_id
+                        self.statusBar().showMessage(
+                            f"Host: auto-assigned {tok.character_name or tok.token_id} → {display_name}"
+                        )
+                        break
+        self.statusBar().showMessage(f"Host: hello from {display_name} ({player_id})")
         self._notify_game_state_changed(domain="meta", immediate=True)
+        self._notify_game_state_changed(domain="tokens", immediate=True)
 
     def _handle_player_intent(self, payload: dict) -> None:
         player_id = payload.get("player_id", "")
@@ -429,6 +501,7 @@ class MainWindow(QMainWindow):
                 self._send_nack(player_id, intent_id, result.message)
             else:
                 self.statusBar().showMessage(result.message)
+                self.combat_log.append_system(result.message)
                 self._notify_game_state_changed(domain="impulse_combat", immediate=True)
             return
         result = self._apply_combat_action(token_id, action, args, player_id, is_host=False)
@@ -436,6 +509,7 @@ class MainWindow(QMainWindow):
             self._send_nack(player_id, intent_id, result.message)
         else:
             self.statusBar().showMessage(result.message)
+            self.combat_log.append_system(result.message)
             self._notify_game_state_changed(domain="impulse_combat", immediate=True)
 
     def _on_host_answer_submitted(self, slot_id: str, answer: str) -> None:
@@ -461,6 +535,8 @@ class MainWindow(QMainWindow):
 
         self._join_dialog = dialog
         self._p2p_guest = P2PSessionGuest(parent=self)
+        # Pre-register before connect so answerer already-open bootstrap can send HELLO.
+        self._p2p_guest.set_hello_credentials(self._player_id, self._guest_display_name)
         from PyQt6.QtCore import Qt as _Qt
         _q = _Qt.ConnectionType.QueuedConnection
         self._p2p_guest.answer_ready.connect(self._on_answer_ready, _q)
@@ -468,6 +544,7 @@ class MainWindow(QMainWindow):
         self._p2p_guest.channel_open.connect(self._on_guest_channel_open, _q)
         self._p2p_guest.disconnected.connect(self._on_guest_disconnected, _q)
         self._p2p_guest.connection_failed.connect(self._on_connection_failed, _q)
+        self._p2p_guest.send_failed.connect(self._on_guest_send_failed, _q)
         self._p2p_guest.ice_state_changed.connect(self._on_ice_state, _q)
         self._p2p_guest.set_message_handler(self._on_sync_message_received)
 
@@ -492,10 +569,41 @@ class MainWindow(QMainWindow):
             name = getattr(self, "_guest_display_name", None)
             if name is None and self._join_dialog:
                 name = self._join_dialog.display_name
-            self._p2p_guest.send_player_hello(self._player_id, name or "Player")
+            name = name or "Player"
+            # Retry HELLO only — primary send is already-open bootstrap.
+            self._p2p_guest.send_player_hello(self._player_id, name)
+            from PyQt6.QtCore import QTimer
+            QTimer.singleShot(
+                400,
+                lambda n=name: self._p2p_guest
+                and self._p2p_guest.send_player_hello(self._player_id, n),
+            )
+
+    def _on_guest_send_failed(self, error: str) -> None:
+        self.statusBar().showMessage(f"Guest: uplink send failed — retry ({error})")
 
     def _on_guest_disconnected(self) -> None:
-        self.statusBar().showMessage("Guest: disconnected")
+        """ICE/channel drop on guest side — leave guest mode entirely."""
+        self._disconnect_session()
+
+    def _on_host_guest_disconnected(self, slot_id: str) -> None:
+        """Guest channel closed — update slot UI and roster."""
+        player_id = None
+        if self._p2p_host:
+            player_id = self._p2p_host.player_id_for_slot(slot_id)
+        if self._host_dialog:
+            self._host_dialog.set_slot_status(slot_id, "disconnected")
+        meta = self._game_bridge.state.meta
+        if player_id:
+            meta.players = [p for p in meta.players if p.player_id != player_id]
+        meta.connected_guests = [p.display_name for p in meta.players if not p.is_host]
+        self._game_bridge.state.bump_revision()
+        if self._publisher:
+            self._publisher.publish_now()
+        self.hex_map_view.set_session_context(
+            self._session_role, self._player_id, meta.players
+        )
+        self.statusBar().showMessage(f"Host: guest slot {slot_id} disconnected")
 
     def _on_connection_failed(self, error: str) -> None:
         QMessageBox.critical(self, "Connection Failed", error)
@@ -699,9 +807,8 @@ class MainWindow(QMainWindow):
         choice, ok = QInputDialog.getItem(self, "Select Weapon", "Weapon:", names, 0, False)
         return choice if ok else None
 
-    def _prompt_fire_gear(self, char, shooter_rt):
+    def _prompt_fire_gear(self, char, shooter_rt, interactive: bool = True):
         """Choose weapon or grenade when Declare Shot and both are available."""
-        from PyQt6.QtWidgets import QInputDialog
         from phoenix_command.models.gear import Grenade, Weapon
 
         if shooter_rt.held_grenade_name:
@@ -711,6 +818,15 @@ class MainWindow(QMainWindow):
         weapons = [i for i in char.equipment if isinstance(i, Weapon)]
         grenades = [i for i in char.equipment if isinstance(i, Grenade)]
         if grenades and weapons:
+            if not interactive:
+                # Guest intent path: prefer held weapon, else first weapon.
+                if shooter_rt.held_weapon_name:
+                    for item in weapons:
+                        if item.name == shooter_rt.held_weapon_name:
+                            return item, None
+                return weapons[0], None
+            from PyQt6.QtWidgets import QInputDialog
+
             options = [f"Weapon: {w.name}" for w in weapons] + [
                 f"Grenade: {g.name}" for g in grenades
             ]
@@ -855,7 +971,9 @@ class MainWindow(QMainWindow):
         self._notify_game_state_changed(domain="impulse_combat", immediate=True)
         self._maybe_show_shot_preview()
 
-    def _build_preview_from_tokens(self, shooter_token_id: str, proposed_by: str):
+    def _build_preview_from_tokens(
+        self, shooter_token_id: str, proposed_by: str, interactive: bool = True
+    ):
         import uuid
         from phoenix_command.models.gear import AmmoType, Weapon
         from phoenix_command.session.domains.impulse_combat_state import (
@@ -889,7 +1007,9 @@ class MainWindow(QMainWindow):
             from phoenix_command.models.gear import Grenade
             from phoenix_command.simulations.map_fire_targets import default_ammo_for_weapon
 
-            weapon, grenade_ammo = self._prompt_fire_gear(char, shooter_rt)
+            weapon, grenade_ammo = self._prompt_fire_gear(
+                char, shooter_rt, interactive=interactive
+            )
             if weapon is None:
                 return None, "No weapon or grenade available"
             if grenade_ammo is not None:
@@ -989,7 +1109,10 @@ class MainWindow(QMainWindow):
         engine = self._combat_engine()
         if not engine.can_control_token(player_id, tok, is_host=(player_id == "host")):
             return False, "No control of shooter"
-        preview, err = self._build_preview_from_tokens(shooter_token_id, player_id)
+        # Guest intents must not pop QInputDialog on the host machine.
+        preview, err = self._build_preview_from_tokens(
+            shooter_token_id, player_id, interactive=(player_id == "host")
+        )
         if not preview:
             return False, err
         self._game_bridge.state.impulse_combat = self.hex_map_view.get_impulse_combat_state()
@@ -1031,7 +1154,8 @@ class MainWindow(QMainWindow):
         preview = self._game_bridge.state.impulse_combat.shot_preview
         if not preview or preview.status != "open":
             return False, "No open preview"
-        return self._execute_confirmed_preview(preview)
+        # Guest confirm must not open MapBlastReviewDialog on the host machine.
+        return self._execute_confirmed_preview(preview, interactive=False)
 
     def _resolve_weapon_ammo(self, shooter, preview):
         from phoenix_command.models.gear import AmmoType, Grenade, Weapon
@@ -1063,7 +1187,9 @@ class MainWindow(QMainWindow):
             return weapon, None, "No ammo"
         return weapon, ammo, ""
 
-    def _execute_confirmed_preview(self, preview) -> tuple[bool, str]:
+    def _execute_confirmed_preview(
+        self, preview, *, interactive: bool = True
+    ) -> tuple[bool, str]:
         from phoenix_command.simulations.map_fire_dispatch import build_snapshot, explosive_result_to_dict
         from phoenix_command.simulations.map_fire_targets import infer_fire_kind
         from phoenix_command.simulations.map_fire_ac import (
@@ -1152,6 +1278,7 @@ class MainWindow(QMainWindow):
             chars,
             self.hex_map_view.get_map_state(),
             ic.token_runtime,
+            interactive=interactive,
         )
         if outcome.fuse_impulses > 0 and outcome.explosive_results and not outcome.blast_cancelled:
             engine = self._combat_engine()
@@ -1185,6 +1312,8 @@ class MainWindow(QMainWindow):
         chars,
         map_state,
         token_runtime,
+        *,
+        interactive: bool = True,
     ):
         from phoenix_command.gui.app_settings import get_show_blast_modifier_dialog
         from phoenix_command.simulations.map_fire_dispatch import (
@@ -1193,7 +1322,7 @@ class MainWindow(QMainWindow):
             serialize_blast_mod_overrides,
         )
 
-        review = get_show_blast_modifier_dialog()
+        review = interactive and get_show_blast_modifier_dialog()
         abs_impulse = self._combat_engine().absolute_impulse_index()
         outcome = dispatch_map_fire(
             preview,

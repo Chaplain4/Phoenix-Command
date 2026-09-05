@@ -89,3 +89,59 @@ def test_slot_chunk_assemblers_isolated() -> None:
 
     # A still incomplete (independent assembler)
     assert slot_a.transport.unpack(packets[0]) is None
+
+
+class _WireFakeChannel:
+    def __init__(self) -> None:
+        self.readyState = "connecting"
+        self.sent: list[str] = []
+        self._handlers: dict[str, object] = {}
+
+    def on(self, event: str):
+        def decorator(fn):
+            self._handlers[event] = fn
+            return fn
+
+        return decorator
+
+    def send(self, data: str) -> None:
+        self.sent.append(data)
+
+    def deliver(self, message: SyncMessage) -> None:
+        handler = self._handlers.get("message")
+        assert handler is not None
+        handler(encode_message(message).decode("utf-8"))
+
+
+def test_host_wire_channel_emits_inbound_messages() -> None:
+    host = P2PSessionHost()
+    received: list[tuple[str, SyncMessage]] = []
+    host.set_message_handler(lambda sid, msg: received.append((sid, msg)))
+    # Bypass QueuedConnection — call dispatch directly for unit test.
+    host.message_received.disconnect()
+    host.message_received.connect(host._dispatch_message)
+
+    slot = PeerSlot(slot_id="slot-rx")
+    host._slots["slot-rx"] = slot
+    ch = _WireFakeChannel()
+    host._wire_channel(slot, ch)
+
+    hello = make_player_hello("guest-rx", "Rx")
+    ch.deliver(hello)
+    assert len(received) == 1
+    assert received[0][0] == "slot-rx"
+    assert received[0][1].type == MessageType.PLAYER_HELLO
+
+    req = SyncMessage(type=MessageType.REQUEST_STATE, since_revision=0)
+    ch.deliver(req)
+    assert received[1][1].type == MessageType.REQUEST_STATE
+
+    intent = SyncMessage(
+        type=MessageType.PLAYER_INTENT,
+        payload={"player_id": "guest-rx", "action": "move", "token_id": "t1"},
+    )
+    ch.deliver(intent)
+    assert received[2][1].type == MessageType.PLAYER_INTENT
+
+    host.bind_player("slot-rx", "guest-rx")
+    assert slot.player_id == "guest-rx"

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import uuid
 from dataclasses import dataclass, field
 from typing import Callable
@@ -136,9 +137,15 @@ class P2PSessionHost(QThread):
                 data = message.encode("utf-8")
             else:
                 data = message
-            parsed = slot.transport.unpack(data)
+            try:
+                parsed = slot.transport.unpack(data)
+            except Exception:
+                logger.exception("Host failed to unpack guest message on %s", slot.slot_id)
+                return
             if parsed is None:
                 return
+            if os.environ.get("PC_DEBUG_P2P") == "1":
+                logger.debug("Host RX %s %s", slot.slot_id, parsed.type)
             if parsed.type in (
                 MessageType.REQUEST_STATE,
                 MessageType.PLAYER_HELLO,
@@ -174,6 +181,10 @@ class P2PSessionHost(QThread):
         slot = self._slots.get(slot_id)
         if slot is not None:
             slot.player_id = player_id
+
+    def player_id_for_slot(self, slot_id: str) -> str | None:
+        slot = self._slots.get(slot_id)
+        return slot.player_id if slot is not None else None
 
     def broadcast_message(self, message: SyncMessage) -> None:
         if self._loop is None:

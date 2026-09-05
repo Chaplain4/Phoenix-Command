@@ -184,6 +184,9 @@ class CombatMapBar(QWidget):
     def set_available_actions(
         self, actions: list[tuple[str, str, float | str]]
     ) -> None:
+        # Fire mode is set via the combo; avoid a no-args Do Action for guests.
+        if not self._is_host:
+            actions = [a for a in actions if a[0] != "set_fire_mode"]
         self._available_actions = actions
         self._action_combo.clear()
         for action_id, label, cost in actions:
@@ -209,8 +212,8 @@ class CombatMapBar(QWidget):
             self.token_selected.emit(tid)
 
     def _on_fire_mode_changed(self) -> None:
-        """Apply fire mode immediately (no separate Set Fire Mode action)."""
-        if not self._is_host or not self._selected_token_id:
+        """Apply fire mode immediately (host or guest intent)."""
+        if not self._selected_token_id:
             return
         mode = self._fire_mode_combo.currentData()
         if not mode:
@@ -233,6 +236,10 @@ class CombatMapBar(QWidget):
             args["ac"] = self._aim_spin.value()
             if action_id == "custom_action":
                 args["label"] = "Custom"
+        if action_id == "set_fire_mode":
+            mode = self._fire_mode_combo.currentData()
+            if mode:
+                args["fire_mode"] = mode
         self.combat_action_requested.emit(self._selected_token_id, action_id, args)
 
     def _emit_duck(self) -> None:

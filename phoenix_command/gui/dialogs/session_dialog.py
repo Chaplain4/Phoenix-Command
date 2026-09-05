@@ -122,6 +122,14 @@ class HostSessionDialog(QDialog):
         self.invite_code = code
         self.invite_edit.setPlainText(code)
         self.status_label.setText(f"Invite ready ({slot_id}) — send to guest via Discord.")
+        # LOCAL QA only (two-bot on one machine): share invite via file. Not for laptop push.
+        import os
+        path = os.environ.get("PC_HOST_INVITE_PATH", "/workspace/pc-host-invite.txt")
+        try:
+            open(path, "w", encoding="utf-8").write(code)
+            open("/tmp/pc-host-invite.txt", "w", encoding="utf-8").write(code)
+        except OSError:
+            pass
 
     def set_slot_status(self, slot_id: str, status: str, player_id: str | None = None) -> None:
         info = self._slots.get(slot_id)
