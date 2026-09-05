@@ -93,7 +93,7 @@ def test_fuse_schedule_timing() -> None:
     assert expl.resolve_impulse == 0
     due = []
     for _ in range(8):
-        _, due = engine.advance_impulse()
+        _, due, _ = engine.advance_impulse()
     assert len(due) == 1
     assert len(engine.impulse_combat.pending_grenade_explosions) == 0
 

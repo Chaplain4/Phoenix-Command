@@ -11,6 +11,7 @@ from phoenix_command.models.enums import (
     TargetOrientation,
     VisibilityModifier4C,
 )
+from phoenix_command.models.gear import Weapon
 from phoenix_command.models.hit_result_advanced import ShotParameters
 from phoenix_command.session.domains.impulse_combat_state import TokenCombatRuntime
 from phoenix_command.session.domains.map_state import MapLayer, MapState, rules_hexes
@@ -18,6 +19,7 @@ from phoenix_command.session.domains.token_state import TokenPlacement
 from phoenix_command.simulations.hex_tactical import line_hexes, relative_orientation
 from phoenix_command.simulations.map_los import LosResult, check_los
 from phoenix_command.simulations.map_knockdown import second_shot_aim_bonus
+from phoenix_command.simulations.map_wounds import one_hand_alm_for_shot
 
 
 @dataclass
@@ -103,6 +105,7 @@ def build_map_shot_context(
     map_state: MapState | None,
     *,
     pen: float | None = None,
+    weapon: Weapon | None = None,
 ) -> MapShotContext:
     """Derive range and shot modifiers from token positions on the map."""
     meters = (
@@ -157,6 +160,9 @@ def build_map_shot_context(
     stance_mods = [stance_mod]
     if not shooter_rt.aim_ac_accumulated:
         stance_mods.append(SituationStanceModifier4B.FIRING_FROM_THE_HIP)
+    one_hand = one_hand_alm_for_shot(shooter_rt, weapon)
+    if one_hand is not None and one_hand not in stance_mods:
+        stance_mods.append(one_hand)
     if shooter_rt.aim_impulses > 0 and shooter_rt.aim_target_token_id:
         aim_ac = max(aim_ac, int(shooter_rt.aim_ac_accumulated) or aim_ac)
 
@@ -181,6 +187,8 @@ def build_map_shot_context(
         notes.append("Shooter moved this impulse")
     if not shooter_rt.aim_ac_accumulated:
         notes.append("Hip fire (no aim AC spent)")
+    if one_hand is not None:
+        notes.append(f"One-hand fire ({one_hand.name})")
     if shooter_rt.aim_impulses:
         notes.append(f"Aimed {shooter_rt.aim_impulses} impulse(s) at target")
     if shooter_rt.ducking:

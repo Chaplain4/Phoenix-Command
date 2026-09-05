@@ -42,6 +42,22 @@ class TokenCombatRuntime:
     pending_args: dict = field(default_factory=dict)
     looking_over_cover: bool = False
     ducking: bool = False
+    # §2.7 / §5.13 / §2.9–2.10 wound & incapacitation (map)
+    incap_effect: str | None = None
+    incap_remaining_phases: int = 0
+    wound_ca_penalty: float = 0.0
+    healing_days: float = 0.0
+    medical_aid: str = "No Aid"
+    wound_onset_abs_impulse: int | None = None
+    ctp_deadline_abs_impulse: int | None = None
+    recovery_rr: int | None = None
+    ctp_resolved: bool = False
+    is_dead: bool = False
+    disabled_arm_left: bool = False
+    disabled_arm_right: bool = False
+    disabled_leg: bool = False
+    disabled_head_spine: bool = False
+    dazed_wait_impulses: int = 0
 
     def has_pending(self) -> bool:
         if self.pending_action_id:
@@ -110,6 +126,29 @@ class TokenCombatRuntime:
                 f"grenade: {self.held_grenade_name}"
                 + (" armed" if self.grenade_armed else " in hand")
             )
+        if self.is_dead:
+            parts.append("DEAD")
+        elif self.incap_effect:
+            parts.append(f"{self.incap_effect} ({self.incap_remaining_phases}ph)")
+        if self.wound_ca_penalty > 0:
+            parts.append(f"wound -{self.wound_ca_penalty:.0f}CA")
+        if (
+            not self.is_dead
+            and not self.ctp_resolved
+            and self.ctp_deadline_abs_impulse is not None
+        ):
+            parts.append(f"CTP@{self.ctp_deadline_abs_impulse}")
+        disables: list[str] = []
+        if self.disabled_head_spine:
+            disables.append("spine/head")
+        if self.disabled_arm_left:
+            disables.append("L-arm")
+        if self.disabled_arm_right:
+            disables.append("R-arm")
+        if self.disabled_leg:
+            disables.append("leg")
+        if disables:
+            parts.append("disabled:" + ",".join(disables))
         return " | ".join(parts)
 
     def to_dict(self) -> dict:
@@ -147,6 +186,21 @@ class TokenCombatRuntime:
             "pending_args": dict(self.pending_args),
             "looking_over_cover": self.looking_over_cover,
             "ducking": self.ducking,
+            "incap_effect": self.incap_effect,
+            "incap_remaining_phases": self.incap_remaining_phases,
+            "wound_ca_penalty": self.wound_ca_penalty,
+            "healing_days": self.healing_days,
+            "medical_aid": self.medical_aid,
+            "wound_onset_abs_impulse": self.wound_onset_abs_impulse,
+            "ctp_deadline_abs_impulse": self.ctp_deadline_abs_impulse,
+            "recovery_rr": self.recovery_rr,
+            "ctp_resolved": self.ctp_resolved,
+            "is_dead": self.is_dead,
+            "disabled_arm_left": self.disabled_arm_left,
+            "disabled_arm_right": self.disabled_arm_right,
+            "disabled_leg": self.disabled_leg,
+            "disabled_head_spine": self.disabled_head_spine,
+            "dazed_wait_impulses": self.dazed_wait_impulses,
         }
 
     @classmethod
@@ -158,6 +212,7 @@ class TokenCombatRuntime:
         pending_args = data.get("pending_args") or {}
         if not isinstance(pending_args, dict):
             pending_args = {}
+        rr_raw = data.get("recovery_rr", None)
         return cls(
             ac_remaining=float(data.get("ac_remaining", 0.0)),
             stance=data.get("stance", "standing"),
@@ -192,6 +247,21 @@ class TokenCombatRuntime:
             pending_args=dict(pending_args),
             looking_over_cover=bool(data.get("looking_over_cover", False)),
             ducking=bool(data.get("ducking", False)),
+            incap_effect=data.get("incap_effect"),
+            incap_remaining_phases=int(data.get("incap_remaining_phases", 0)),
+            wound_ca_penalty=float(data.get("wound_ca_penalty", 0.0)),
+            healing_days=float(data.get("healing_days", 0.0)),
+            medical_aid=data.get("medical_aid", "No Aid") or "No Aid",
+            wound_onset_abs_impulse=_opt_int("wound_onset_abs_impulse"),
+            ctp_deadline_abs_impulse=_opt_int("ctp_deadline_abs_impulse"),
+            recovery_rr=int(rr_raw) if rr_raw is not None else None,
+            ctp_resolved=bool(data.get("ctp_resolved", False)),
+            is_dead=bool(data.get("is_dead", False)),
+            disabled_arm_left=bool(data.get("disabled_arm_left", False)),
+            disabled_arm_right=bool(data.get("disabled_arm_right", False)),
+            disabled_leg=bool(data.get("disabled_leg", False)),
+            disabled_head_spine=bool(data.get("disabled_head_spine", False)),
+            dazed_wait_impulses=int(data.get("dazed_wait_impulses", 0)),
         )
 
 

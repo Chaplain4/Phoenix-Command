@@ -50,6 +50,7 @@ from phoenix_command.simulations.map_knockdown import (
     apply_shot_knockdowns,
     second_shot_aim_bonus,
 )
+from phoenix_command.simulations.map_wounds import apply_shot_wounds
 from phoenix_command.gui.utils.hex_geometry import axial_distance
 
 
@@ -108,6 +109,7 @@ def resolve_pending_grenade_explosion(
     characters: dict[str, Character],
     map_state: MapState | None,
     token_runtime: dict | None = None,
+    abs_impulse: int = 0,
 ) -> MapFireOutcome:
     """Apply blast damage for a fuse-delayed grenade."""
     preview = PendingShotPreview.from_dict(pending.preview_snapshot)
@@ -141,6 +143,7 @@ def resolve_pending_grenade_explosion(
             map_state,
             token_runtime,
             mod_overrides or None,
+            abs_impulse=abs_impulse,
         )
     )
     outcome.messages.append(
@@ -277,7 +280,8 @@ def enrich_preview_targets(
         for tid, dist_m in victims:
             tok = tokens.placements[tid]
             ctx = build_map_shot_context(
-                shooter, _rt(runtime, shooter.token_id), tok, _rt(runtime, tid), map_state
+                shooter, _rt(runtime, shooter.token_id), tok, _rt(runtime, tid), map_state,
+                weapon=weapon if isinstance(weapon, Weapon) else None,
             )
             entry = _per_from_ctx(ctx)
             entry["distance_m"] = dist_m
@@ -344,6 +348,7 @@ def enrich_preview_targets(
                         stok,
                         _rt(runtime, sid),
                         map_state,
+                        weapon=weapon if isinstance(weapon, Weapon) else None,
                     )
                     preview.per_target[sid] = _per_from_ctx(ctx)
         return preview
@@ -377,6 +382,7 @@ def enrich_preview_targets(
                     stok,
                     _rt(runtime, sid),
                     map_state,
+                    weapon=weapon if isinstance(weapon, Weapon) else None,
                 )
                 preview.per_target[sid] = _per_from_ctx(ctx)
         else:
@@ -649,12 +655,18 @@ def _finalize_map_runtime(
     tokens: TokenState,
     runtime: dict,
     outcome: MapFireOutcome,
+    characters: dict[str, Character] | None = None,
+    abs_impulse: int = 0,
 ) -> MapFireOutcome:
     if not runtime:
         return outcome
     if not outcome.shot_results and not outcome.explosive_results:
         return outcome
     apply_shot_knockdowns(outcome.shot_results, tokens, runtime)
+    if characters and outcome.shot_results:
+        apply_shot_wounds(
+            outcome.shot_results, tokens, runtime, characters, abs_impulse
+        )
     sid = preview.shooter_token_id
     shooter_rt = runtime.get(sid)
     if shooter_rt is None:
@@ -686,6 +698,7 @@ def dispatch_map_fire(
     token_runtime: dict | None = None,
     skip_los_filter: bool = False,
     apply_blast: bool = True,
+    abs_impulse: int = 0,
 ) -> MapFireOutcome:
     """Route preview to the correct CombatSimulator method."""
     runtime = token_runtime or {}
@@ -695,7 +708,9 @@ def dispatch_map_fire(
     outcome = MapFireOutcome(kind=kind)
 
     def _done(o: MapFireOutcome) -> MapFireOutcome:
-        return _finalize_map_runtime(preview, shooter, weapon, tokens, runtime, o)
+        return _finalize_map_runtime(
+            preview, shooter, weapon, tokens, runtime, o, characters, abs_impulse
+        )
 
     if kind in ("grenade", "agl", "explosive"):
         return _done(
@@ -710,6 +725,7 @@ def dispatch_map_fire(
             outcome,
             token_runtime=runtime,
             apply_blast=apply_blast,
+            abs_impulse=abs_impulse,
             )
         )
 
@@ -991,6 +1007,7 @@ def apply_pending_blast_damage(
     map_state: MapState | None,
     token_runtime: dict | None = None,
     mod_overrides: dict[str, list[BlastModifier]] | None = None,
+    abs_impulse: int = 0,
 ) -> list[ShotResult]:
     """Resolve one explosion_damage pass per grenade using derived or overridden mods."""
     shooter_tok = tokens.placements.get(preview.shooter_token_id)
@@ -1031,6 +1048,7 @@ def apply_pending_blast_damage(
         )
     if token_runtime:
         apply_shot_knockdowns(results, tokens, runtime)
+        apply_shot_wounds(results, tokens, runtime, characters, abs_impulse)
     return results
 
 
@@ -1045,6 +1063,7 @@ def _dispatch_explosive(
     outcome: MapFireOutcome,
     token_runtime: dict | None = None,
     apply_blast: bool = True,
+    abs_impulse: int = 0,
 ) -> MapFireOutcome:
     aim_q = preview.aim_q
     aim_r = preview.aim_r
@@ -1149,6 +1168,7 @@ def _dispatch_explosive(
                 characters,
                 map_state,
                 token_runtime,
+                abs_impulse=abs_impulse,
             )
         )
     return outcome

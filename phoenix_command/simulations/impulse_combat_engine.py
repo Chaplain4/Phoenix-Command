@@ -19,7 +19,15 @@ from phoenix_command.simulations.hex_tactical import (
 )
 from phoenix_command.simulations.map_fire_ac import clear_aim_state
 from phoenix_command.simulations.map_knockdown import HANDS_FREE_AC
+from phoenix_command.simulations.map_wounds import (
+    can_perform_action,
+    effective_impulse_ac,
+    move_closes_on_enemy,
+    set_medical_aid,
+    tick_wounds_on_impulse_advance,
+)
 from phoenix_command.tables.catalogs.action_catalog import BUILTIN_ACTIONS
+from phoenix_command.models.enums import MedicalAid
 from phoenix_command.tables.catalogs.movement_catalog import (
     TERRAIN_PRESETS,
     compute_movement_cost,
@@ -59,6 +67,7 @@ PENDING_EXEMPT = frozenset(
         "recover_hands",
         "skip_impulse",
         "set_fire_mode",
+        "set_medical_aid",
     }
 )
 
@@ -135,7 +144,8 @@ class ImpulseCombatEngine:
                 # Finalize aim impulse count from previous impulse before reset
                 if rt.aimed_this_impulse and rt.aim_target_token_id:
                     rt.aim_impulses += 1
-                rt.ac_remaining = float(impulses[impulse_idx])
+                base = float(impulses[impulse_idx])
+                rt.ac_remaining = effective_impulse_ac(base, rt)
                 rt.aim_ac_this_impulse = 0.0
                 rt.aimed_this_impulse = False
                 rt.moved_this_impulse = False
@@ -146,14 +156,16 @@ class ImpulseCombatEngine:
                 if rt.knockdown_phase == "falling":
                     rt.knockdown_phase = "grounded"
 
-    def advance_impulse(self) -> tuple[list, list]:
-        """Move to next impulse (host only). Returns (due projectiles, due grenades)."""
+    def advance_impulse(self) -> tuple[list, list, list[str]]:
+        """Move to next impulse (host only). Returns (due projectiles, due grenades, wound logs)."""
         self.impulse_combat.impulse += 1
         if self.impulse_combat.impulse >= 4:
             self.impulse_combat.impulse = 0
             self.impulse_combat.phase += 1
+        wound_logs = tick_wounds_on_impulse_advance(self)
         self.refill_impulse_ac()
-        return self.pop_due_projectiles(), self.pop_due_grenade_explosions()
+        due_proj, due_grenades = self.pop_due_projectiles(), self.pop_due_grenade_explosions()
+        return due_proj, due_grenades, wound_logs
 
     def absolute_impulse_index(self) -> int:
         return (self.impulse_combat.phase - 1) * 4 + self.impulse_combat.impulse
@@ -271,6 +283,15 @@ class ImpulseCombatEngine:
             return ActionResult(False, "No control of this token")
 
         rt = self.get_runtime(token_id)
+        if action == "set_medical_aid":
+            if not is_host:
+                return ActionResult(False, "Only host can set medical aid")
+            return self._apply_set_medical_aid(placement, args.get("medical_aid", "No Aid"))
+
+        wound_block = can_perform_action(rt, action, args)
+        if wound_block:
+            return wound_block
+
         if action == "abandon_pending":
             return self._apply_abandon_pending(placement)
         if action == "duck":
@@ -512,6 +533,9 @@ class ImpulseCombatEngine:
 
     def _apply_stance_change(self, placement: TokenPlacement, action_id: str) -> ActionResult:
         cost = float(BUILTIN_ACTIONS[action_id].cost)
+        rt0 = self.get_runtime(placement.token_id)
+        if rt0.disabled_leg and STANCE_ACTION_MAP[action_id] != "prone":
+            return ActionResult(False, "Disabled leg — crawl only (prone)")
 
         def _complete(rt: TokenCombatRuntime) -> None:
             rt.stance = STANCE_ACTION_MAP[action_id]
@@ -726,6 +750,26 @@ class ImpulseCombatEngine:
         braced: bool = False,
     ) -> ActionResult:
         rt = self.get_runtime(placement.token_id)
+        if rt.disabled_leg:
+            rt.stance = "prone"
+            rt.braced = False
+            if braced:
+                return ActionResult(False, "Disabled leg — crawl only (cannot brace)")
+        if rt.incap_effect in ("Dazed", "Disoriented"):
+            if move_closes_on_enemy(
+                placement.q,
+                placement.r,
+                target_q,
+                target_r,
+                placement.side_id,
+                placement.token_id,
+                self.tokens,
+                self.impulse_combat.token_runtime,
+            ):
+                return ActionResult(
+                    False,
+                    f"{rt.incap_effect} — cannot move closer to an enemy",
+                )
         dir_idx = neighbor_direction_index(placement.q, placement.r, target_q, target_r)
         if dir_idx is None:
             return ActionResult(False, "Target is not an adjacent hex")
@@ -741,6 +785,8 @@ class ImpulseCombatEngine:
 
         base_id = classify_movement_base(placement.facing, dir_idx)
         terrain_cost, modifier_ids = self._terrain_modifiers(layer, target_q, target_r, rt.stance)
+        if rt.disabled_leg and "injury_below_waist" not in modifier_ids:
+            modifier_ids.append("injury_below_waist")
         rule_cost = compute_movement_cost(base_id, modifier_ids, terrain_cost)
         if rule_cost < 0:
             return ActionResult(False, "Impassable terrain")
@@ -921,6 +967,21 @@ class ImpulseCombatEngine:
         rt.hands_free = True
         return ActionResult(True, "Rolled to use hands (3 AC)", HANDS_FREE_AC)
 
+    def _apply_set_medical_aid(self, placement: TokenPlacement, aid_name: str) -> ActionResult:
+        rt = self.get_runtime(placement.token_id)
+        char = self.characters.get(placement.character_name or "")
+        if not char:
+            return ActionResult(False, "Token has no character")
+        if rt.is_dead:
+            return ActionResult(False, "Character is dead")
+        aid = MedicalAid.NO_AID
+        for candidate in MedicalAid:
+            if candidate.value == aid_name or candidate.name == aid_name:
+                aid = candidate
+                break
+        set_medical_aid(rt, char, aid, self.absolute_impulse_index())
+        return ActionResult(True, f"Medical aid set to {rt.medical_aid}")
+
     def available_actions(self, token_id: str) -> list[tuple[str, str, float | str]]:
         """Return (action_id, label, cost) for token action menu."""
         placement = self.tokens.placements.get(token_id)
@@ -928,11 +989,22 @@ class ImpulseCombatEngine:
             return []
         rt = self.get_runtime(token_id)
         char = self.characters.get(placement.character_name or "")
+        if rt.is_dead or rt.disabled_head_spine:
+            return [("skip_impulse", "Skip Impulse", 0)]
         if rt.knockdown_phase == "falling":
             return [
                 ("duck", "Duck", 0),
                 ("skip_impulse", "Skip Impulse", 0),
             ]
+        if rt.incap_effect in ("Knocked Out", "Stunned"):
+            actions = [("skip_impulse", "Skip Impulse", 0)]
+            if char and (
+                char.physical_damage_total > 0
+                or rt.ctp_deadline_abs_impulse is not None
+                or rt.healing_days > 0
+            ):
+                actions.append(("set_medical_aid", "Set Medical Aid", 0))
+            return actions
         actions: list[tuple[str, str, float | str]] = []
         if rt.has_pending():
             pid = rt.pending_id() or "action"
@@ -945,47 +1017,69 @@ class ImpulseCombatEngine:
             actions.append(("duck", "Duck", 0))
             actions.append(("skip_impulse", "Skip Impulse", 0))
             return actions
+        if rt.incap_effect == "Dazed" and rt.dazed_wait_impulses > 0:
+            return [("skip_impulse", "Skip Impulse", 0)]
         actions.extend(
             [
                 ("duck", "Duck", 0),
                 ("move", "Move", "var"),
-                ("movement_while_braced", "Movement While Braced", "var"),
-                ("brace_weapon", "Brace Weapon", 1),
-                ("aim", "Aim", "var"),
-                ("custom_action", "Custom Action", "var"),
                 ("skip_impulse", "Skip Impulse", 0),
-                ("set_fire_mode", "Set Fire Mode", 0),
-                ("select_weapon", "Select Weapon", 0),
-                ("look_over_cover", "Look Over or Around Cover", 1),
-                (
-                    "assume_firing_stance_cover",
-                    "Assume Firing Stance (Cover)",
-                    2,
-                ),
-                (
-                    "assume_hip_firing_stance_cover",
-                    "Assume Hip Firing Stance (Cover)",
-                    1,
-                ),
             ]
         )
-        if rt.firing_stance_held or rt.looking_over_cover:
+        if not rt.disabled_leg:
+            actions.append(("movement_while_braced", "Movement While Braced", "var"))
+        if rt.incap_effect not in ("Dazed", "Disoriented"):
+            actions.extend(
+                [
+                    ("brace_weapon", "Brace Weapon", 1),
+                    ("aim", "Aim", "var"),
+                    ("custom_action", "Custom Action", "var"),
+                    ("set_fire_mode", "Set Fire Mode", 0),
+                    ("select_weapon", "Select Weapon", 0),
+                    ("look_over_cover", "Look Over or Around Cover", 1),
+                    (
+                        "assume_firing_stance_cover",
+                        "Assume Firing Stance (Cover)",
+                        2,
+                    ),
+                    (
+                        "assume_hip_firing_stance_cover",
+                        "Assume Hip Firing Stance (Cover)",
+                        1,
+                    ),
+                ]
+            )
+        else:
+            actions.append(("custom_action", "Custom Action", "var"))
+        if (rt.firing_stance_held or rt.looking_over_cover) and rt.incap_effect not in (
+            "Dazed",
+            "Disoriented",
+        ):
             actions.append(
                 ("duck_from_firing", "Duck from Firing Stance / Looking", 1)
             )
         for action_id, new_stance in STANCE_ACTION_MAP.items():
-            if rt.stance != new_stance:
-                cost = BUILTIN_ACTIONS[action_id].cost
-                actions.append((action_id, BUILTIN_ACTIONS[action_id].name, float(cost)))
+            if rt.stance == new_stance:
+                continue
+            if rt.disabled_leg and new_stance != "prone":
+                continue
+            cost = BUILTIN_ACTIONS[action_id].cost
+            actions.append((action_id, BUILTIN_ACTIONS[action_id].name, float(cost)))
+        if char and (
+            char.physical_damage_total > 0
+            or rt.ctp_deadline_abs_impulse is not None
+            or rt.healing_days > 0
+        ):
+            actions.append(("set_medical_aid", "Set Medical Aid", 0))
         weapon = self._held_weapon(char, rt)
-        if weapon:
+        if weapon and rt.incap_effect not in ("Dazed", "Disoriented"):
             actions.append(("reload", f"Reload ({weapon.name})", float(weapon.reload_time)))
             if weapon.actions_to_cycle is not None:
                 actions.append(
                     ("cycle", f"Cycle ({weapon.name})", float(weapon.actions_to_cycle))
                 )
         grenades = [i for i in (char.equipment if char else []) if isinstance(i, Grenade)]
-        if grenades:
+        if grenades and rt.incap_effect not in ("Dazed", "Disoriented"):
             if not rt.held_grenade_name:
                 actions.append(("pick_up_grenade", "Pick up Grenade", 2.0))
             else:

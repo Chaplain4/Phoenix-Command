@@ -77,16 +77,37 @@ def test_token_runtime_json_round_trip() -> None:
     assert rt.grenade_armed is False
 
 
-def test_token_runtime_grenade_fields_round_trip() -> None:
+def test_token_runtime_wound_fields_round_trip() -> None:
     rt = TokenCombatRuntime(
-        held_grenade_name="HG 78 Frag Grenade",
-        grenade_armed=True,
-        impulse_burst_used=True,
+        incap_effect="Dazed",
+        incap_remaining_phases=5,
+        wound_ca_penalty=2.0,
+        healing_days=41.0,
+        medical_aid="First Aid",
+        wound_onset_abs_impulse=3,
+        ctp_deadline_abs_impulse=40,
+        recovery_rr=66,
+        ctp_resolved=False,
+        is_dead=False,
+        disabled_arm_left=True,
+        disabled_leg=True,
+        dazed_wait_impulses=1,
     )
     restored = TokenCombatRuntime.from_dict(rt.to_dict())
-    assert restored.held_grenade_name == "HG 78 Frag Grenade"
-    assert restored.grenade_armed is True
-    assert restored.impulse_burst_used is True
+    assert restored.incap_effect == "Dazed"
+    assert restored.incap_remaining_phases == 5
+    assert restored.wound_ca_penalty == 2.0
+    assert restored.healing_days == 41.0
+    assert restored.medical_aid == "First Aid"
+    assert restored.wound_onset_abs_impulse == 3
+    assert restored.ctp_deadline_abs_impulse == 40
+    assert restored.recovery_rr == 66
+    assert restored.disabled_arm_left is True
+    assert restored.disabled_leg is True
+    assert restored.dazed_wait_impulses == 1
+    label = restored.status_label()
+    assert "Dazed" in label
+    assert "CTP@" in label
 
 
 def test_pending_grenade_explosion_round_trip() -> None:

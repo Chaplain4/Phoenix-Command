@@ -7,4 +7,4 @@ from phoenix_command.models.enums import MedicalAid
 class Recovery:
     healing_time_in_days: float
     aid_data: Dict[MedicalAid, Tuple[Optional[float], Optional[int]]]
-    # Tuple = (critical_time_period_hours, recovery_chance_percent)
+    # Tuple = (critical_time_period_phases, recovery_chance_percent); 1 phase = 2 seconds

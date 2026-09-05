@@ -739,9 +739,11 @@ class MainWindow(QMainWindow):
         if not self._is_combat_authority():
             return
         engine = self._combat_engine()
-        due_proj, due_grenades = engine.advance_impulse()
+        due_proj, due_grenades, wound_logs = engine.advance_impulse()
         ic = self._game_bridge.state.impulse_combat
         self.hex_map_view.set_impulse_combat_state(ic, rebuild=False)
+        for line in wound_logs:
+            self.combat_log.append_system(line)
         for proj in due_proj:
             self._resolve_pending_projectile(proj)
         for expl in due_grenades:
@@ -818,6 +820,11 @@ class MainWindow(QMainWindow):
         target = tokens.placements[target_id]
         shooter_rt = ic.token_runtime.get(shooter_token_id, TokenCombatRuntime())
         target_rt = ic.token_runtime.get(target_id, TokenCombatRuntime())
+        from phoenix_command.simulations.map_wounds import can_fire_weapon
+
+        ok_fire, fire_msg = can_fire_weapon(shooter_rt)
+        if not ok_fire:
+            return None, fire_msg
         char = self._characters_by_name().get(shooter.character_name)
         weapon = None
         ammo_name = ""
@@ -863,6 +870,7 @@ class MainWindow(QMainWindow):
             target_rt,
             map_state,
             pen=pen,
+            weapon=weapon if isinstance(weapon, Weapon) else None,
         )
         if ctx.los and ctx.los.blocked:
             return None, "No LOS to target"
@@ -1028,6 +1036,11 @@ class MainWindow(QMainWindow):
 
         ic = self._game_bridge.state.impulse_combat
         shooter_rt = ic.token_runtime.get(preview.shooter_token_id, TokenCombatRuntime())
+        from phoenix_command.simulations.map_wounds import can_fire_weapon
+
+        ok_fire, fire_msg = can_fire_weapon(shooter_rt)
+        if not ok_fire:
+            return False, fire_msg
         fire_kind = infer_fire_kind(preview.fire_mode, weapon, ammo)
         preview.fire_kind = fire_kind
         plan = plan_fire_ac(preview, shooter_rt, fire_kind, weapon)
@@ -1126,6 +1139,7 @@ class MainWindow(QMainWindow):
         )
 
         review = get_show_blast_modifier_dialog()
+        abs_impulse = self._combat_engine().absolute_impulse_index()
         outcome = dispatch_map_fire(
             preview,
             shooter,
@@ -1136,6 +1150,7 @@ class MainWindow(QMainWindow):
             map_state,
             token_runtime,
             apply_blast=not review,
+            abs_impulse=abs_impulse,
         )
         package = outcome.pending_blast
         has_victims = package and any(p.victims for p in package.passes)
@@ -1165,6 +1180,7 @@ class MainWindow(QMainWindow):
                             map_state,
                             token_runtime,
                             mods,
+                            abs_impulse=abs_impulse,
                         )
                     )
             else:
@@ -1309,6 +1325,7 @@ class MainWindow(QMainWindow):
             chars,
             self.hex_map_view.get_map_state(),
             ic.token_runtime,
+            abs_impulse=self._combat_engine().absolute_impulse_index(),
         )
         self._apply_map_fire_outcome(outcome)
 
