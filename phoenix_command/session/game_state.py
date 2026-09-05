@@ -60,3 +60,47 @@ class GameState:
         """Increment revision and return new value."""
         self.revision += 1
         return self.revision
+
+
+def clamp_loaded_revision(live_revision: int, loaded: GameState) -> GameState:
+    """Keep loaded session revision from rewinding a live host clock.
+
+    Guests reject full_state when message.revision <= their current revision.
+    Loading a file with an older revision would otherwise publish a stale
+    snapshot that connected guests ignore (empty map while host shows tokens).
+    """
+    loaded.revision = max(int(loaded.revision or 0), int(live_revision or 0))
+    return loaded
+
+
+def apply_live_host_roster(
+    loaded: GameState,
+    *,
+    players: list,
+    connected_guests: list[str] | None = None,
+    host_name: str | None = None,
+) -> GameState:
+    """Restore P2P roster after Load Session so Controlled-by keeps guests."""
+    loaded.meta.players = list(players)
+    loaded.meta.connected_guests = list(connected_guests or [])
+    if host_name:
+        loaded.meta.host_name = host_name
+    return loaded
+
+
+def guest_sync_status_message(
+    revision: int,
+    *,
+    has_characters: bool,
+    has_tokens: bool,
+    pending_move_hint: str = "",
+) -> str:
+    """Guest statusBar text after applying a sync message."""
+    if pending_move_hint:
+        return f"Guest: synced r{revision} — {pending_move_hint}"
+    if not has_characters and not has_tokens:
+        return (
+            f"Guest: synced r{revision} — empty session "
+            "(waiting for host Load Session / map)"
+        )
+    return f"Guest: synced revision {revision}"

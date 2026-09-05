@@ -296,12 +296,20 @@ class MainWindow(QMainWindow):
         return ""
 
     def _show_guest_sync_status(self, revision: int) -> None:
-        """Status line after sync; keep Continue Move hint on the same line."""
-        hint = self._pending_move_hint_text()
-        if hint:
-            self.statusBar().showMessage(f"Guest: synced r{revision} — {hint}")
-        else:
-            self.statusBar().showMessage(f"Guest: synced revision {revision}")
+        """Status line after sync; honest empty-session and Continue Move hints."""
+        from phoenix_command.session.game_state import guest_sync_status_message
+
+        state = self._game_bridge.state
+        has_tokens = bool(state.tokens and state.tokens.placements)
+        has_characters = bool(state.combat and state.combat.characters)
+        self.statusBar().showMessage(
+            guest_sync_status_message(
+                revision,
+                has_characters=has_characters,
+                has_tokens=has_tokens,
+                pending_move_hint=self._pending_move_hint_text(),
+            )
+        )
 
     def _maybe_hint_pending_move(self) -> None:
         """Remind guest that Next Impulse does not finish a pending move."""
@@ -342,8 +350,27 @@ class MainWindow(QMainWindow):
         if not path:
             return
         try:
-            state = load_game_state(path)
+            from phoenix_command.session.game_state import (
+                apply_live_host_roster,
+                clamp_loaded_revision,
+            )
+            preserve_roster = self._session_role == "host"
+            saved_players = list(self._game_bridge.state.meta.players) if preserve_roster else None
+            saved_guests = list(self._game_bridge.state.meta.connected_guests) if preserve_roster else None
+            saved_host_name = self._game_bridge.state.meta.host_name if preserve_roster else None
+            prev_rev = self._game_bridge.state.revision
+            state = clamp_loaded_revision(prev_rev, load_game_state(path))
             self._game_bridge.apply_remote_state(state, self)
+            if preserve_roster and saved_players is not None:
+                apply_live_host_roster(
+                    self._game_bridge.state,
+                    players=saved_players,
+                    connected_guests=saved_guests,
+                    host_name=saved_host_name,
+                )
+                self.hex_map_view.set_session_context(
+                    self._session_role, self._player_id, self._game_bridge.state.meta.players
+                )
             self.statusBar().showMessage(f"Session loaded: {path}")
             self._notify_game_state_changed(immediate=True)
         except Exception as exc:
