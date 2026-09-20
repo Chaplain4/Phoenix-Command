@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from phoenix_command.models.character import Character
 from phoenix_command.models.enums import SituationStanceModifier4B
 from phoenix_command.models.gear import Grenade, Weapon
 from phoenix_command.session.domains.impulse_combat_state import (
@@ -29,13 +28,18 @@ class FireAcPlan:
     grenade_arm_time: int = 0
 
 
+def proper_firing_stance(rt: TokenCombatRuntime) -> bool:
+    """True when weapon is in a proper (non-hip) firing stance — clears −6 hip ALM."""
+    return bool(rt.firing_stance_held)
+
+
 def plan_fire_ac(
     preview: PendingShotPreview,
     shooter_rt: TokenCombatRuntime,
     fire_kind: str,
     weapon: Weapon | Grenade | None,
 ) -> FireAcPlan:
-    """Derive hip vs aimed and burst/grenade flags from runtime + preview."""
+    """Derive hip from stance and aim time from accumulated Aim AC (independent)."""
     is_grenade = fire_kind == "grenade" or isinstance(weapon, Grenade)
     is_burst = fire_kind in BURST_FIRE_KINDS
     grenade_arm_time = 0
@@ -43,28 +47,25 @@ def plan_fire_ac(
         grenade_arm_time = int(weapon.arm_time or 0)
 
     accumulated = int(shooter_rt.aim_ac_accumulated or 0)
-    if is_grenade or accumulated <= 0:
-        is_hip = not is_grenade and accumulated <= 0
-        effective = max(1, int(preview.aim_time_ac or 1)) if is_grenade else 1
-        if is_grenade and accumulated > 0:
-            effective = max(1, min(int(preview.aim_time_ac or accumulated), accumulated))
-        return FireAcPlan(
-            fire_cost=FIRE_COST_AC,
-            is_hip=is_hip,
-            effective_aim_time=effective,
-            is_burst=is_burst,
-            is_grenade=is_grenade,
-            grenade_arm_time=grenade_arm_time,
-        )
+    is_hip = not is_grenade and not proper_firing_stance(shooter_rt)
 
-    effective = max(1, min(int(preview.aim_time_ac or accumulated), accumulated))
+    if is_grenade:
+        if accumulated > 0:
+            effective = max(1, min(int(preview.aim_time_ac or accumulated), accumulated))
+        else:
+            effective = max(1, int(preview.aim_time_ac or 1))
+    elif accumulated > 0:
+        effective = max(1, min(int(preview.aim_time_ac or accumulated), accumulated))
+    else:
+        effective = 1
+
     return FireAcPlan(
         fire_cost=FIRE_COST_AC,
-        is_hip=False,
+        is_hip=is_hip,
         effective_aim_time=effective,
         is_burst=is_burst,
-        is_grenade=False,
-        grenade_arm_time=0,
+        is_grenade=is_grenade,
+        grenade_arm_time=grenade_arm_time,
     )
 
 
@@ -73,16 +74,20 @@ def sync_preview_from_plan(
     plan: FireAcPlan,
     shooter_rt: TokenCombatRuntime,
 ) -> None:
-    """Apply hip fire mods and aim time cap to preview before resolve."""
+    """Apply hip fire mods and aim time to preview before resolve."""
     preview.aim_time_ac = plan.effective_aim_time
+    hip_name = SituationStanceModifier4B.FIRING_FROM_THE_HIP.name
     if plan.is_hip:
-        hip = SituationStanceModifier4B.FIRING_FROM_THE_HIP.name
-        if hip not in preview.stance_mods:
-            preview.stance_mods = list(preview.stance_mods) + [hip]
-        if "Hip fire" not in " ".join(preview.notes):
-            preview.notes = list(preview.notes) + ["Hip fire (no aim AC spent)"]
-    elif shooter_rt.aim_ac_accumulated > 0:
-        preview.aim_time_ac = plan.effective_aim_time
+        if hip_name not in preview.stance_mods:
+            preview.stance_mods = list(preview.stance_mods) + [hip_name]
+        note = "Hip fire (not in firing stance)"
+        if note not in " ".join(preview.notes):
+            preview.notes = list(preview.notes) + [note]
+    else:
+        preview.stance_mods = [m for m in preview.stance_mods if m != hip_name]
+    aim_note = f"Aim time {plan.effective_aim_time}"
+    if aim_note not in " ".join(preview.notes):
+        preview.notes = list(preview.notes) + [aim_note]
 
 
 def validate_fire_ac(
@@ -101,7 +106,8 @@ def validate_fire_ac(
         return False, "Already fired a burst this impulse"
     if plan.is_grenade and plan.grenade_arm_time > 0 and not rt.grenade_armed:
         return False, "Arm grenade first"
-    if not plan.is_hip and not plan.is_grenade:
+    # Aim time > 1 requires matching accumulated Aim AC (stance independent).
+    if not plan.is_grenade and plan.effective_aim_time > 1:
         if rt.aim_ac_accumulated < plan.effective_aim_time:
             return False, (
                 f"Need {plan.effective_aim_time} AC aim, "

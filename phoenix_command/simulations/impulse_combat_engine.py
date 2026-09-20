@@ -16,9 +16,12 @@ from phoenix_command.session.domains.token_state import TokenPlacement, TokenSta
 from phoenix_command.simulations.hex_tactical import (
     classify_movement_base,
     neighbor_direction_index,
+    apply_free_facing,
+    direction_index_to_facing,
 )
-from phoenix_command.simulations.map_fire_ac import clear_aim_state
+from phoenix_command.simulations.map_fire_ac import clear_aim_state, proper_firing_stance
 from phoenix_command.simulations.map_knockdown import HANDS_FREE_AC
+from phoenix_command.simulations import map_route
 from phoenix_command.simulations.map_wounds import (
     can_perform_action,
     effective_impulse_ac,
@@ -58,6 +61,13 @@ COVER_FIRING_STANCE_ACTIONS = frozenset(
     }
 )
 
+FACING_ACTIONS = frozenset(
+    {
+        "facing_change_60_120",
+        "facing_change_60_firing",
+    }
+)
+
 # Actions allowed while another pending action exists (without continue match).
 PENDING_EXEMPT = frozenset(
     {
@@ -68,6 +78,12 @@ PENDING_EXEMPT = frozenset(
         "skip_impulse",
         "set_fire_mode",
         "set_medical_aid",
+        "set_declared_target",
+        "clear_declared_target",
+        "clear_route",
+        "plan_route_chain",
+        "plan_route_pathfind",
+        "edit_route",
     }
 )
 
@@ -76,6 +92,7 @@ AIM_INTERRUPT_ACTIONS = frozenset(
     {
         "move",
         "movement_while_braced",
+        "continue_route",
         "reload",
         "cycle",
         "select_weapon",
@@ -86,6 +103,10 @@ AIM_INTERRUPT_ACTIONS = frozenset(
         "duck",
         "duck_from_firing",
         "custom_action",
+        "facing_change_60_120",
+        "facing_change_60_firing",
+        "open_door",
+        "kick_open_door",
         *STANCE_ACTION_MAP.keys(),
         *COVER_FIRING_STANCE_ACTIONS,
     }
@@ -321,11 +342,49 @@ class ImpulseCombatEngine:
                 int(args.get("target_r", placement.r)),
                 braced=action == "movement_while_braced",
             )
+        if action == "continue_route":
+            return self._apply_continue_route(placement)
+        if action in FACING_ACTIONS:
+            return self._apply_facing_change(
+                placement, action, int(args.get("delta_steps", args.get("delta", 0)))
+            )
+        if action == "set_declared_target":
+            return self._apply_set_declared_target(
+                placement, args.get("target_token_id")
+            )
+        if action == "clear_declared_target":
+            return self._apply_clear_declared_target(placement)
+        if action == "plan_route_chain":
+            return self._apply_plan_route_chain(
+                placement,
+                int(args.get("target_q", placement.q)),
+                int(args.get("target_r", placement.r)),
+                braced=bool(args.get("braced", False)),
+            )
+        if action == "plan_route_pathfind":
+            return self._apply_plan_route_pathfind(
+                placement,
+                int(args.get("target_q", placement.q)),
+                int(args.get("target_r", placement.r)),
+                braced=bool(args.get("braced", False)),
+            )
+        if action == "clear_route":
+            return self._apply_clear_route(placement)
+        if action == "edit_route":
+            return self._apply_edit_route(
+                placement,
+                int(args.get("target_q", placement.q)),
+                int(args.get("target_r", placement.r)),
+            )
+        if action in ("open_door", "kick_open_door"):
+            return self._apply_open_door(placement, action)
         if action == "brace_weapon":
             return self._apply_brace(placement)
         if action == "aim":
             ac = float(args.get("ac", 1))
             target_id = args.get("target_token_id")
+            if not target_id:
+                target_id = self.get_runtime(placement.token_id).declared_target_token_id
             return self._apply_aim(placement, ac, target_id)
         if action == "reload":
             return self._apply_reload(placement)
@@ -361,6 +420,12 @@ class ImpulseCombatEngine:
         if not rt.has_pending():
             return None
         pending = rt.pending_id()
+        if action == "continue_route" and pending in (
+            "move",
+            "facing_change_60_120",
+            "facing_change_60_firing",
+        ):
+            return None
         if action == pending or (
             pending == "move" and action in ("move", "movement_while_braced")
         ):
@@ -512,8 +577,12 @@ class ImpulseCombatEngine:
             rt.braced = True
         elif action_id == "look_over_cover":
             rt.looking_over_cover = True
-        elif action_id in COVER_FIRING_STANCE_ACTIONS:
+        elif action_id == "assume_firing_stance_cover":
             rt.firing_stance_held = True
+            rt.looking_over_cover = True
+        elif action_id == "assume_hip_firing_stance_cover":
+            # Hip over cover: ready over cover but keep −6 hip ALM
+            rt.firing_stance_held = False
             rt.looking_over_cover = True
         elif action_id == "duck_from_firing":
             rt.firing_stance_held = False
@@ -826,13 +895,21 @@ class ImpulseCombatEngine:
             rt.pending_progress_ac = rt.move_progress * hex_cost
             rt.pending_total_cost_ac = hex_cost
         rt.moved_this_impulse = True
-        rt.firing_stance_held = False
-        rt.looking_over_cover = False
+        if braced:
+            # Movement while braced keeps weapon ready / firing stance.
+            rt.braced = True
+        else:
+            rt.firing_stance_held = False
+            rt.looking_over_cover = False
+            rt.braced = False
         rt.hexes_moved_this_impulse += spend / hex_cost if hex_cost else 0
 
         if rt.move_progress >= 1.0 - 1e-9:
             placement.q = target_q
             placement.r = target_r
+            # Book §2.3: up to 60° (2 facing steps) free per entered hex.
+            desired = direction_index_to_facing(dir_idx)
+            placement.facing = apply_free_facing(placement.facing, desired, free_steps=2)
             rt.move_progress = 0.0
             rt.move_target_q = None
             rt.move_target_r = None
@@ -871,7 +948,11 @@ class ImpulseCombatEngine:
     def _get_layer(self, layer_id: str) -> MapLayer | None:
         if not self.map_state:
             return None
-        return self.map_state.get_layer(layer_id)
+        if layer_id:
+            found = self.map_state.get_layer(layer_id)
+            if found:
+                return found
+        return self.map_state.get_active_layer()
 
     @staticmethod
     def _first_weapon(char: Character) -> Weapon | None:
@@ -982,6 +1063,292 @@ class ImpulseCombatEngine:
         set_medical_aid(rt, char, aid, self.absolute_impulse_index())
         return ActionResult(True, f"Medical aid set to {rt.medical_aid}")
 
+    def _apply_facing_change(
+        self, placement: TokenPlacement, action_id: str, delta_steps: int
+    ) -> ActionResult:
+        rt = self.get_runtime(placement.token_id)
+        delta = int(delta_steps)
+        if delta == 0:
+            return ActionResult(False, "Facing delta must be nonzero")
+        if abs(delta) > 4:
+            return ActionResult(False, "Facing change capped at ±4 steps (120°) per action")
+        if action_id == "facing_change_60_firing":
+            if not proper_firing_stance(rt):
+                return ActionResult(False, "Need proper firing stance for this facing change")
+            cost = float(BUILTIN_ACTIONS["facing_change_60_firing"].cost)
+            keep_stance = True
+        else:
+            cost = float(BUILTIN_ACTIONS["facing_change_60_120"].cost)
+            keep_stance = False
+            if abs(delta) < 2:
+                # Allow 1-step remainder from routes; still 1 AC.
+                pass
+
+        def _complete(runtime: TokenCombatRuntime) -> None:
+            placement.facing = (placement.facing + delta) % 12
+            if not keep_stance:
+                runtime.firing_stance_held = False
+
+        return self._partial_spend(
+            placement,
+            action_id,
+            cost,
+            {"delta_steps": delta},
+            on_complete=_complete,
+            label=BUILTIN_ACTIONS[action_id].name,
+            interrupt_aim=True,
+        )
+
+    def _apply_set_declared_target(
+        self, placement: TokenPlacement, target_token_id: str | None
+    ) -> ActionResult:
+        if not target_token_id:
+            return ActionResult(False, "No target token")
+        target = self.tokens.placements.get(target_token_id)
+        if not target:
+            return ActionResult(False, "Target token not found")
+        if target.side_id == placement.side_id:
+            return ActionResult(False, "Target must be an enemy")
+        rt = self.get_runtime(placement.token_id)
+        rt.declared_target_token_id = target_token_id
+        label = target.character_name or target.label or target_token_id
+        return ActionResult(True, f"Target: {label}")
+
+    def _apply_clear_declared_target(self, placement: TokenPlacement) -> ActionResult:
+        rt = self.get_runtime(placement.token_id)
+        rt.declared_target_token_id = None
+        return ActionResult(True, "Target cleared")
+
+    def _route_origin(self, placement: TokenPlacement, rt: TokenCombatRuntime) -> tuple[int, int, int]:
+        steps = rt.route_steps[: rt.route_cursor] if rt.route_steps else []
+        if not steps:
+            return placement.q, placement.r, placement.facing % 12
+        return map_route.simulate_route_end(
+            placement.q, placement.r, placement.facing % 12, steps
+        )
+
+    def _apply_plan_route_chain(
+        self,
+        placement: TokenPlacement,
+        target_q: int,
+        target_r: int,
+        braced: bool = False,
+    ) -> ActionResult:
+        rt = self.get_runtime(placement.token_id)
+        layer = self._get_layer(placement.layer_id)
+        # Append from end of planned route (or current position).
+        if rt.route_steps:
+            q, r, facing = map_route.simulate_route_end(
+                placement.q, placement.r, placement.facing % 12, rt.route_steps
+            )
+        else:
+            q, r, facing = placement.q, placement.r, placement.facing % 12
+            rt.route_cursor = 0
+        new_route, _facing, err = map_route.append_adjacent_hex(
+            rt.route_steps,
+            from_q=q,
+            from_r=r,
+            from_facing=facing,
+            to_q=target_q,
+            to_r=target_r,
+            stance=rt.stance,
+            braced=braced,
+            layer=layer,
+            terrain_fn=self._terrain_modifiers,
+        )
+        if err:
+            return ActionResult(False, err)
+        rt.route_steps = new_route
+        rt.route_braced = braced
+        est = map_route.estimate_route(
+            rt, self.characters.get(placement.character_name or ""),
+            current_impulse=self.impulse_combat.impulse,
+        )
+        return ActionResult(True, f"Route +1 hex — {est.label()}")
+
+    def _apply_plan_route_pathfind(
+        self,
+        placement: TokenPlacement,
+        target_q: int,
+        target_r: int,
+        braced: bool = False,
+    ) -> ActionResult:
+        rt = self.get_runtime(placement.token_id)
+        layer = self._get_layer(placement.layer_id)
+        # Replace from cursor: keep completed prefix, replan suffix from current pos.
+        prefix = list(rt.route_steps[: rt.route_cursor])
+        q, r, facing = map_route.simulate_route_end(
+            placement.q, placement.r, placement.facing % 12, prefix
+        )
+        # If mid-route edit with empty cursor, pathfind from live position.
+        if not prefix:
+            q, r, facing = placement.q, placement.r, placement.facing % 12
+        steps, err = map_route.pathfind_to(
+            start_q=q,
+            start_r=r,
+            start_facing=facing,
+            dest_q=target_q,
+            dest_r=target_r,
+            stance=rt.stance,
+            braced=braced,
+            layer=layer,
+            terrain_fn=self._terrain_modifiers,
+        )
+        if err:
+            return ActionResult(False, err)
+        rt.route_steps = prefix + steps
+        rt.route_braced = braced
+        if not prefix:
+            rt.route_cursor = 0
+        est = map_route.estimate_route(
+            rt, self.characters.get(placement.character_name or ""),
+            current_impulse=self.impulse_combat.impulse,
+        )
+        return ActionResult(True, f"Route set — {est.label()}")
+
+    def _apply_clear_route(self, placement: TokenPlacement) -> ActionResult:
+        rt = self.get_runtime(placement.token_id)
+        map_route.clear_route(rt)
+        return ActionResult(True, "Route cleared")
+
+    def _apply_edit_route(
+        self, placement: TokenPlacement, target_q: int, target_r: int
+    ) -> ActionResult:
+        """Truncate route after the last step that lands on (target_q, target_r)."""
+        rt = self.get_runtime(placement.token_id)
+        if not rt.route_steps:
+            return ActionResult(False, "No route to edit")
+        q, r = placement.q, placement.r
+        keep_idx = -1
+        for i, step in enumerate(rt.route_steps):
+            if step.get("kind") == "hex":
+                q = int(step["q"])
+                r = int(step["r"])
+                if q == target_q and r == target_r:
+                    keep_idx = i
+        if keep_idx < 0:
+            return ActionResult(False, "Clicked hex is not on the route")
+        map_route.truncate_from_cursor(rt, keep_idx)
+        if rt.route_cursor > len(rt.route_steps):
+            rt.route_cursor = len(rt.route_steps)
+        return ActionResult(True, f"Route truncated to ({target_q},{target_r})")
+
+    def _apply_continue_route(self, placement: TokenPlacement) -> ActionResult:
+        rt = self.get_runtime(placement.token_id)
+        if not rt.route_steps or rt.route_cursor >= len(rt.route_steps):
+            return ActionResult(False, "No remaining route steps")
+        total_spent = 0.0
+        messages: list[str] = []
+        braced = bool(rt.route_braced)
+
+        while rt.route_cursor < len(rt.route_steps) and rt.ac_remaining > 1e-9:
+            step = rt.route_steps[rt.route_cursor]
+            kind = step.get("kind")
+            if kind == "face":
+                delta = int(step.get("delta", 0))
+                action_id = (
+                    "facing_change_60_firing"
+                    if proper_firing_stance(rt) and braced
+                    else "facing_change_60_120"
+                )
+                # Prefer cheap facing on route unless already in firing stance facing action.
+                action_id = "facing_change_60_120"
+                result = self._apply_facing_change(placement, action_id, delta)
+                if not result.success:
+                    if total_spent > 0:
+                        break
+                    return result
+                total_spent += result.ac_spent
+                messages.append(result.message)
+                if rt.has_pending() and rt.pending_id() in FACING_ACTIONS:
+                    break
+                rt.route_cursor += 1
+                continue
+
+            if kind == "hex":
+                tq, tr = int(step["q"]), int(step["r"])
+                result = self._apply_move(placement, tq, tr, braced=braced)
+                if not result.success:
+                    if total_spent > 0:
+                        break
+                    return result
+                total_spent += result.ac_spent
+                messages.append(result.message)
+                if rt.move_progress > 1e-9 or (
+                    rt.has_pending() and rt.pending_id() == "move"
+                ):
+                    # Mid-hex: leave cursor on this hex step
+                    break
+                # Completed hex — apply planned facing if free didn't finish (paid already done).
+                if "desired_facing" in step:
+                    # After free facing in _apply_move, snap remainder only if still short
+                    # (paid face steps should have handled excess before this hex).
+                    desired = int(step["desired_facing"]) % 12
+                    placement.facing = apply_free_facing(
+                        placement.facing, desired, free_steps=2
+                    )
+                rt.route_cursor += 1
+                continue
+
+            rt.route_cursor += 1
+
+        if rt.route_cursor >= len(rt.route_steps):
+            map_route.clear_route(rt)
+            messages.append("Route complete")
+        msg = "; ".join(messages) if messages else "Continue Route"
+        return ActionResult(True, msg, total_spent)
+
+    def _find_adjacent_door(
+        self, placement: TokenPlacement
+    ):
+        """Return (wall_key, Opening) for a closed/locked door on an adjacent edge."""
+        layer = self._get_layer(placement.layer_id)
+        if not layer:
+            return None
+        from phoenix_command.simulations.hex_tactical import axial_neighbors
+
+        for nq, nr, edge in axial_neighbors(placement.q, placement.r):
+            wall = layer.walls.get(f"{placement.q},{placement.r}:{edge}")
+            key = f"{placement.q},{placement.r}:{edge}"
+            if not wall:
+                opp = (edge + 3) % 6
+                key = f"{nq},{nr}:{opp}"
+                wall = layer.walls.get(key)
+            if not wall:
+                continue
+            for opening in wall.openings:
+                if opening.kind == "door" and opening.state in ("closed", "locked"):
+                    return key, opening
+        return None
+
+    def _apply_open_door(
+        self, placement: TokenPlacement, action_id: str
+    ) -> ActionResult:
+        found = self._find_adjacent_door(placement)
+        if not found:
+            return ActionResult(False, "No closed door on an adjacent edge")
+        _key, opening = found
+        if action_id == "kick_open_door" and opening.state == "locked":
+            # Kick can open locked; open_door cannot.
+            pass
+        elif action_id == "open_door" and opening.state == "locked":
+            return ActionResult(False, "Door is locked — kick it open")
+
+        cost = float(BUILTIN_ACTIONS[action_id].cost)
+
+        def _complete(_rt: TokenCombatRuntime) -> None:
+            opening.state = "open"
+
+        return self._partial_spend(
+            placement,
+            action_id,
+            cost,
+            {},
+            on_complete=_complete,
+            label=BUILTIN_ACTIONS[action_id].name,
+            interrupt_aim=True,
+        )
+
     def available_actions(self, token_id: str) -> list[tuple[str, str, float | str]]:
         """Return (action_id, label, cost) for token action menu."""
         placement = self.tokens.placements.get(token_id)
@@ -1028,6 +1395,13 @@ class ImpulseCombatEngine:
         )
         if not rt.disabled_leg:
             actions.append(("movement_while_braced", "Movement While Braced", "var"))
+        # Route planning / continue
+        actions.append(("plan_route_chain", "Plan Route (chain)", 0))
+        actions.append(("plan_route_pathfind", "Plan Route (to hex)", 0))
+        if rt.route_steps and rt.route_cursor < len(rt.route_steps):
+            actions.append(("continue_route", "Continue Route", "var"))
+            actions.append(("edit_route", "Edit Route", 0))
+            actions.append(("clear_route", "Clear Route", 0))
         if rt.incap_effect not in ("Dazed", "Disoriented"):
             actions.extend(
                 [
@@ -1047,8 +1421,26 @@ class ImpulseCombatEngine:
                         "Assume Hip Firing Stance (Cover)",
                         1,
                     ),
+                    (
+                        "facing_change_60_120",
+                        "60-120° Facing Change",
+                        1,
+                    ),
                 ]
             )
+            if proper_firing_stance(rt):
+                actions.append(
+                    (
+                        "facing_change_60_firing",
+                        "60° Facing (Firing Stance)",
+                        2,
+                    )
+                )
+            if self._find_adjacent_door(placement):
+                actions.append(("open_door", "Open Door", 3))
+                actions.append(("kick_open_door", "Kick Open Door", 2))
+            if rt.declared_target_token_id:
+                actions.append(("clear_declared_target", "Clear Target", 0))
         else:
             actions.append(("custom_action", "Custom Action", "var"))
         if (rt.firing_stance_held or rt.looking_over_cover) and rt.incap_effect not in (

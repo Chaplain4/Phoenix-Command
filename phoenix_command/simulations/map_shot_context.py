@@ -20,6 +20,7 @@ from phoenix_command.simulations.hex_tactical import line_hexes, relative_orient
 from phoenix_command.simulations.map_los import LosResult, check_los
 from phoenix_command.simulations.map_knockdown import second_shot_aim_bonus
 from phoenix_command.simulations.map_wounds import one_hand_alm_for_shot
+from phoenix_command.simulations.map_fire_ac import proper_firing_stance
 
 
 @dataclass
@@ -158,7 +159,8 @@ def build_map_shot_context(
 
     aim_ac = max(1, int(shooter_rt.aim_ac_accumulated)) if shooter_rt.aim_ac_accumulated else 1
     stance_mods = [stance_mod]
-    if not shooter_rt.aim_ac_accumulated:
+
+    if not proper_firing_stance(shooter_rt):
         stance_mods.append(SituationStanceModifier4B.FIRING_FROM_THE_HIP)
     one_hand = one_hand_alm_for_shot(shooter_rt, weapon)
     if one_hand is not None and one_hand not in stance_mods:
@@ -185,8 +187,9 @@ def build_map_shot_context(
     notes.extend(los.notes)
     if shooter_rt.moved_this_impulse:
         notes.append("Shooter moved this impulse")
-    if not shooter_rt.aim_ac_accumulated:
-        notes.append("Hip fire (no aim AC spent)")
+    if not proper_firing_stance(shooter_rt):
+        notes.append("Hip fire (not in firing stance)")
+    notes.append(f"Aim time {aim_ac}")
     if one_hand is not None:
         notes.append(f"One-hand fire ({one_hand.name})")
     if shooter_rt.aim_impulses:

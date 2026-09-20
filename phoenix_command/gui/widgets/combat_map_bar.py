@@ -236,6 +236,10 @@ class CombatMapBar(QWidget):
             args["ac"] = self._aim_spin.value()
             if action_id == "custom_action":
                 args["label"] = "Custom"
+        if action_id in ("facing_change_60_120", "facing_change_60_firing"):
+            # AC spin = facing steps (1–4); positive = clockwise
+            steps = max(1, min(4, self._aim_spin.value()))
+            args["delta_steps"] = steps
         if action_id == "set_fire_mode":
             mode = self._fire_mode_combo.currentData()
             if mode:

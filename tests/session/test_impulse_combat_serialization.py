@@ -77,6 +77,27 @@ def test_token_runtime_json_round_trip() -> None:
     assert rt.grenade_armed is False
 
 
+def test_token_runtime_route_and_target_round_trip() -> None:
+    import json
+
+    rt0 = TokenCombatRuntime(
+        declared_target_token_id="enemy1",
+        route_steps=[
+            {"kind": "face", "delta": 2},
+            {"kind": "hex", "q": 1, "r": 0, "cost": 0.5, "free_delta": 0},
+        ],
+        route_cursor=1,
+        route_braced=True,
+    )
+    raw = json.loads(json.dumps(rt0.to_dict()))
+    rt = TokenCombatRuntime.from_dict(raw)
+    assert rt.declared_target_token_id == "enemy1"
+    assert rt.route_cursor == 1
+    assert rt.route_braced is True
+    assert len(rt.route_steps) == 2
+    assert rt.route_steps[0]["kind"] == "face"
+
+
 def test_token_runtime_wound_fields_round_trip() -> None:
     rt = TokenCombatRuntime(
         incap_effect="Dazed",

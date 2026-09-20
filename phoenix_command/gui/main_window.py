@@ -979,6 +979,16 @@ class MainWindow(QMainWindow):
         shooter = tokens.placements.get(shooter_id)
         if not shooter:
             return None
+        ic = self.hex_map_view.get_impulse_combat_state()
+        rt = ic.token_runtime.get(shooter_id)
+        if rt and rt.declared_target_token_id:
+            declared = tokens.placements.get(rt.declared_target_token_id)
+            if (
+                declared
+                and declared.character_name
+                and declared.side_id != shooter.side_id
+            ):
+                return rt.declared_target_token_id
         for tid, tok in tokens.placements.items():
             if tid != shooter_id and tok.character_name and tok.side_id != shooter.side_id:
                 return tid
@@ -1638,10 +1648,12 @@ class MainWindow(QMainWindow):
         ic = self._game_bridge.state.impulse_combat
         shooter_rt = ic.token_runtime.get(preview.shooter_token_id)
         aim_accumulated = int(shooter_rt.aim_ac_accumulated) if shooter_rt else 0
-        is_hip = aim_accumulated <= 0 and preview.fire_kind not in (
-            "grenade",
-            "agl",
-            "explosive",
+        from phoenix_command.simulations.map_fire_ac import proper_firing_stance
+
+        is_hip = (
+            shooter_rt is not None
+            and not proper_firing_stance(shooter_rt)
+            and preview.fire_kind not in ("grenade", "agl", "explosive")
         )
         ammo_options: list[str] = []
         shooter_tok = tokens.placements.get(preview.shooter_token_id)

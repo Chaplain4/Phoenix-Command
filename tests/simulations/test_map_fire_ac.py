@@ -1,7 +1,7 @@
-"""Tests for map fire AC gate and aim state."""
+"""Tests for map fire AC: stance vs aim decoupling."""
 
 from phoenix_command.models.character import Character
-from phoenix_command.models.enums import Caliber, Country, WeaponType
+from phoenix_command.models.enums import Caliber, Country, SituationStanceModifier4B, WeaponType
 from phoenix_command.models.gear import Weapon
 from phoenix_command.session.domains.impulse_combat_state import (
     PendingShotPreview,
@@ -29,17 +29,17 @@ def _fighter() -> Character:
     )
 
 
-def _preview() -> PendingShotPreview:
+def _preview(aim_time: int = 1) -> PendingShotPreview:
     return PendingShotPreview(
         preview_id="p1",
         shooter_token_id="t1",
         target_token_id="t2",
         proposed_by="host",
-        aim_time_ac=1,
+        aim_time_ac=aim_time,
     )
 
 
-def test_hip_fire_plan_and_validate() -> None:
+def test_no_stance_zero_aim_hip_aim1() -> None:
     rt = TokenCombatRuntime(ac_remaining=2.0, weapon_cycled=True)
     plan = plan_fire_ac(_preview(), rt, "single", None)
     assert plan.is_hip is True
@@ -50,23 +50,59 @@ def test_hip_fire_plan_and_validate() -> None:
     assert rt.ac_remaining == 1.0
 
 
+def test_no_stance_with_aim_still_hip() -> None:
+    rt = TokenCombatRuntime(ac_remaining=3.0, aim_ac_accumulated=3.0, weapon_cycled=True)
+    plan = plan_fire_ac(_preview(3), rt, "single", None)
+    assert plan.is_hip is True
+    assert plan.effective_aim_time == 3
+    ok, _ = validate_fire_ac(plan, rt, "single")
+    assert ok
+
+
+def test_firing_stance_zero_aim_no_hip() -> None:
+    rt = TokenCombatRuntime(
+        ac_remaining=2.0, weapon_cycled=True, firing_stance_held=True
+    )
+    plan = plan_fire_ac(_preview(), rt, "single", None)
+    assert plan.is_hip is False
+    assert plan.effective_aim_time == 1
+    ok, _ = validate_fire_ac(plan, rt, "single")
+    assert ok
+
+
+def test_firing_stance_with_aim() -> None:
+    rt = TokenCombatRuntime(
+        ac_remaining=3.0,
+        aim_ac_accumulated=3.0,
+        weapon_cycled=True,
+        firing_stance_held=True,
+    )
+    plan = plan_fire_ac(_preview(3), rt, "single", None)
+    assert plan.is_hip is False
+    assert plan.effective_aim_time == 3
+
+
+def test_aimed_caps_to_accumulated() -> None:
+    rt = TokenCombatRuntime(
+        ac_remaining=3.0,
+        aim_ac_accumulated=2.0,
+        weapon_cycled=True,
+        firing_stance_held=True,
+    )
+    preview = _preview(3)
+    plan = plan_fire_ac(preview, rt, "single", None)
+    assert plan.is_hip is False
+    assert plan.effective_aim_time == 2
+    ok, _ = validate_fire_ac(plan, rt, "single")
+    assert ok
+
+
 def test_confirm_rejects_without_ac() -> None:
     rt = TokenCombatRuntime(ac_remaining=0.0, weapon_cycled=True)
     plan = plan_fire_ac(_preview(), rt, "single", None)
     ok, msg = validate_fire_ac(plan, rt, "single")
     assert not ok
     assert "AC" in msg
-
-
-def test_aimed_caps_to_accumulated() -> None:
-    rt = TokenCombatRuntime(ac_remaining=3.0, aim_ac_accumulated=2.0, weapon_cycled=True)
-    preview = _preview()
-    preview.aim_time_ac = 3
-    plan = plan_fire_ac(preview, rt, "single", None)
-    assert plan.is_hip is False
-    assert plan.effective_aim_time == 2
-    ok, _ = validate_fire_ac(plan, rt, "single")
-    assert ok
 
 
 def test_burst_cap_per_impulse() -> None:
@@ -90,12 +126,19 @@ def test_clear_aim_state() -> None:
     assert rt.aim_impulses == 0
 
 
-def test_build_map_shot_context_hip_not_two() -> None:
+def test_build_map_shot_context_hip_from_stance() -> None:
     shooter = TokenPlacement(token_id="s", q=0, r=0)
     target = TokenPlacement(token_id="t", q=2, r=0)
     rt = TokenCombatRuntime()
     ctx = build_map_shot_context(shooter, rt, target, rt, None)
     assert ctx.shot_params.aim_time_ac == 1
-    from phoenix_command.models.enums import SituationStanceModifier4B
-
     assert SituationStanceModifier4B.FIRING_FROM_THE_HIP in ctx.shot_params.situation_stance_modifiers
+    assert any("Hip fire" in n for n in ctx.visibility_notes)
+
+
+def test_build_map_shot_context_firing_stance_no_hip() -> None:
+    shooter = TokenPlacement(token_id="s", q=0, r=0)
+    target = TokenPlacement(token_id="t", q=2, r=0)
+    rt = TokenCombatRuntime(firing_stance_held=True)
+    ctx = build_map_shot_context(shooter, rt, target, rt, None)
+    assert SituationStanceModifier4B.FIRING_FROM_THE_HIP not in ctx.shot_params.situation_stance_modifiers

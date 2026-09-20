@@ -1,9 +1,27 @@
 """Entry point for Phoenix Command GUI application."""
 
 import sys
+from importlib import resources
+from pathlib import Path
+
 from PyQt6.QtWidgets import QApplication
-from PyQt6.QtGui import QPalette, QColor
+from PyQt6.QtGui import QIcon, QPalette, QColor
 from phoenix_command.gui.main_window import MainWindow
+
+
+def _load_app_icon() -> QIcon:
+    """Load the window/taskbar icon from packaged assets."""
+    try:
+        root = resources.files("phoenix_command.gui.assets")
+        with resources.as_file(root.joinpath("app_icon.png")) as path:
+            if path.is_file():
+                return QIcon(str(path))
+    except (FileNotFoundError, ModuleNotFoundError, TypeError, AttributeError, OSError):
+        pass
+    fallback = Path(__file__).resolve().parent / "phoenix_command" / "gui" / "assets" / "app_icon.png"
+    if fallback.is_file():
+        return QIcon(str(fallback))
+    return QIcon()
 
 
 def _apply_light_theme(app: QApplication):
@@ -28,9 +46,16 @@ def _apply_light_theme(app: QApplication):
 
 def main():
     """Run the application."""
+    if sys.platform == "win32":
+        import ctypes
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("PhoenixCommand.App")
+
     app = QApplication(sys.argv)
     app.setApplicationName("Phoenix Command")
     app.setOrganizationName("Phoenix Command")
+    icon = _load_app_icon()
+    if not icon.isNull():
+        app.setWindowIcon(icon)
     _apply_light_theme(app)
 
     window = MainWindow()

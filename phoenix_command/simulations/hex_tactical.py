@@ -34,6 +34,28 @@ def facing_to_direction_index(facing: int) -> float:
     return (facing % 12) / 2.0
 
 
+def direction_index_to_facing(dir_index: int) -> int:
+    """Map axial neighbor direction 0..5 to even facing step (0,2,...,10)."""
+    return (int(dir_index) % 6) * 2
+
+
+def shortest_facing_delta(from_facing: int, to_facing: int) -> int:
+    """Signed shortest turn in facing steps (−6..+6). Positive = clockwise."""
+    delta = (int(to_facing) - int(from_facing)) % 12
+    if delta > 6:
+        delta -= 12
+    return delta
+
+
+def apply_free_facing(current_facing: int, desired_facing: int, free_steps: int = 2) -> int:
+    """Apply up to free_steps toward desired facing (book: ≤60° free per hex)."""
+    delta = shortest_facing_delta(current_facing, desired_facing)
+    if delta == 0:
+        return int(current_facing) % 12
+    step = max(-free_steps, min(free_steps, delta))
+    return (int(current_facing) + step) % 12
+
+
 def facing_to_radians(facing: int) -> float:
     """Facing 0-11 to radians (0 = +q / east on flat-top)."""
     return math.radians((facing % 12) * 30)

@@ -8,7 +8,7 @@ a = Analysis(
     pathex=[],
     binaries=[],
     datas=[
-        ('phoenix_command/gui/assets/tokens', 'phoenix_command/gui/assets/tokens'),
+        ('phoenix_command/gui/assets', 'phoenix_command/gui/assets'),
     ],
     hiddenimports=[
         'phoenix_command',
@@ -109,5 +109,6 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
+    icon='phoenix_command/gui/assets/app_icon.ico',
 )
 

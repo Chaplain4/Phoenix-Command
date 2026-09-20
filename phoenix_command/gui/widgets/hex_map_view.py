@@ -148,6 +148,8 @@ class HexMapView(QWidget):
         self._combat_ruler_armed = False
         self._pick_aim_hex = False
         self._fire_overlay_items: list = []
+        self._route_overlay_items: list = []
+        self._target_overlay_items: list = []
         self._combat_callbacks = None  # set by main window
 
         self._scene = HexMapScene()
@@ -378,23 +380,33 @@ class HexMapView(QWidget):
         super().wheelEvent(event)
 
     def _try_rotate_selected_token(self, event) -> bool:
-        """Rotate selected token with mouse wheel in Tokens mode (edit). Ctrl still zooms."""
+        """Rotate selected token with mouse wheel (edit free; combat = facing action)."""
         if event.modifiers() & Qt.KeyboardModifier.ControlModifier:
             return False
-        if not self._editable or self._impulse_combat.map_mode == "combat":
+        if not self._selected_token_id:
+            return False
+        in_combat = self._impulse_combat.map_mode == "combat"
+        if in_combat:
+            # Combat: wheel spends facing AC via action (not free edit mutate).
+            delta = 1 if event.angleDelta().y() > 0 else -1
+            steps = delta * 2  # one wheel notch = 60°
+            action = "facing_change_60_120"
+            rt = self._impulse_combat.token_runtime.get(self._selected_token_id)
+            if rt and rt.firing_stance_held:
+                action = "facing_change_60_firing"
+            self.combat_action_requested.emit(
+                self._selected_token_id,
+                action,
+                {"delta_steps": steps},
+            )
+            return True
+        if not self._editable:
             return False
         if self._category != EditorCategory.TOKENS:
-            return False
-        if not self._selected_token_id:
             return False
         item = self._scene._token_items.get(self._selected_token_id)
         if item is None:
             return False
-        scene_pos = self._view.mapToScene(event.position().toPoint())
-        # Only rotate when pointer is near the selected token
-        if not item.contains(item.mapFromScene(scene_pos)):
-            # Allow rotate anytime a token is selected in tokens mode
-            pass
         delta = 1 if event.angleDelta().y() > 0 else -1
         item.apply_facing_delta(delta)
         self._scene.token_state.placements[item.token.token_id] = item.token
@@ -425,13 +437,17 @@ class HexMapView(QWidget):
             return True
 
         if self._pick_move_token_id and self._pick_move_action:
+            action = self._pick_move_action
+            token_id = self._pick_move_token_id
             self.combat_action_requested.emit(
-                self._pick_move_token_id,
-                self._pick_move_action,
+                token_id,
+                action,
                 {"target_q": q, "target_r": r},
             )
-            self._pick_move_token_id = None
-            self._pick_move_action = None
+            # Chain route keeps pick mode; other picks are one-shot.
+            if action != "plan_route_chain":
+                self._pick_move_token_id = None
+                self._pick_move_action = None
             return True
 
         if self._pick_aim_hex:
@@ -1342,6 +1358,89 @@ class HexMapView(QWidget):
                 pass
         self._fire_overlay_items.clear()
 
+    def clear_route_overlay(self) -> None:
+        for item in self._route_overlay_items:
+            try:
+                if item.scene() is not None:
+                    self._scene.removeItem(item)
+            except RuntimeError:
+                pass
+        self._route_overlay_items.clear()
+
+    def clear_target_overlay(self) -> None:
+        for item in self._target_overlay_items:
+            try:
+                if item.scene() is not None:
+                    self._scene.removeItem(item)
+            except RuntimeError:
+                pass
+        self._target_overlay_items.clear()
+
+    def _refresh_route_overlay(self) -> None:
+        from PyQt6.QtWidgets import QGraphicsEllipseItem, QGraphicsLineItem
+        from phoenix_command.gui.utils.hex_geometry import axial_to_pixel
+
+        self.clear_route_overlay()
+        if self._impulse_combat.map_mode != "combat":
+            return
+        sel = self._selected_token_id or self._impulse_combat.selected_token_id
+        if not sel:
+            return
+        rt = self._impulse_combat.token_runtime.get(sel)
+        tok = self._scene.token_state.placements.get(sel)
+        if not rt or not tok or not rt.route_steps:
+            return
+        grid = self._scene.map_state.grid
+        size = grid.size
+        points: list[tuple[float, float]] = []
+        x0, y0 = axial_to_pixel(tok.q, tok.r, grid)
+        points.append((x0, y0))
+        for step in rt.route_steps[rt.route_cursor :]:
+            if step.get("kind") != "hex":
+                continue
+            x, y = axial_to_pixel(int(step["q"]), int(step["r"]), grid)
+            points.append((x, y))
+            mark = QGraphicsEllipseItem(x - size * 0.2, y - size * 0.2, size * 0.4, size * 0.4)
+            mark.setPen(QPen(QColor(40, 200, 120, 220), 2))
+            mark.setBrush(QBrush(QColor(40, 200, 120, 70)))
+            mark.setZValue(70)
+            self._scene.addItem(mark)
+            self._route_overlay_items.append(mark)
+        for i in range(len(points) - 1):
+            line = QGraphicsLineItem(
+                points[i][0], points[i][1], points[i + 1][0], points[i + 1][1]
+            )
+            line.setPen(QPen(QColor(40, 200, 120, 200), 2, Qt.PenStyle.DashLine))
+            line.setZValue(69)
+            self._scene.addItem(line)
+            self._route_overlay_items.append(line)
+
+    def _refresh_target_overlay(self) -> None:
+        from PyQt6.QtWidgets import QGraphicsEllipseItem
+        from phoenix_command.gui.utils.hex_geometry import axial_to_pixel
+
+        self.clear_target_overlay()
+        if self._impulse_combat.map_mode != "combat":
+            return
+        sel = self._selected_token_id or self._impulse_combat.selected_token_id
+        if not sel:
+            return
+        rt = self._impulse_combat.token_runtime.get(sel)
+        if not rt or not rt.declared_target_token_id:
+            return
+        target = self._scene.token_state.placements.get(rt.declared_target_token_id)
+        if not target:
+            return
+        grid = self._scene.map_state.grid
+        size = grid.size
+        tx, ty = axial_to_pixel(target.q, target.r, grid)
+        dot = QGraphicsEllipseItem(tx - size * 0.35, ty - size * 0.35, size * 0.7, size * 0.7)
+        dot.setPen(QPen(QColor(255, 40, 40, 230), 2))
+        dot.setBrush(QBrush(QColor(255, 40, 40, 50)))
+        dot.setZValue(82)
+        self._scene.addItem(dot)
+        self._target_overlay_items.append(dot)
+
     def set_fire_overlay(self, preview) -> None:
         """Draw arc/pattern/aim markers for an open shot preview."""
         from PyQt6.QtWidgets import QGraphicsEllipseItem, QGraphicsPolygonItem
@@ -1487,6 +1586,8 @@ class HexMapView(QWidget):
                 self._combat_bar.set_available_actions(self._combat_callbacks(sel))
         else:
             self._combat_bar.set_available_actions([])
+        self._refresh_route_overlay()
+        self._refresh_target_overlay()
 
     def _on_map_mode_changed(self, mode: str) -> None:
         self._impulse_combat.map_mode = mode
@@ -1511,6 +1612,16 @@ class HexMapView(QWidget):
             label = "Movement While Braced" if action == "movement_while_braced" else "Move"
             self.combat_status_hint.emit(f"{label}: click an adjacent hex on the map")
             return
+        if action in ("plan_route_chain", "plan_route_pathfind", "edit_route"):
+            self._pick_move_token_id = token_id
+            self._pick_move_action = action
+            hints = {
+                "plan_route_chain": "Plan Route (chain): click adjacent hexes to append",
+                "plan_route_pathfind": "Plan Route (to hex): click destination",
+                "edit_route": "Edit Route: click a route hex to truncate after it",
+            }
+            self.combat_status_hint.emit(hints.get(action, "Click a hex"))
+            return
         self.combat_action_requested.emit(token_id, action, args)
 
     def _on_combat_token_selected(self, token_id: str) -> None:
@@ -1525,6 +1636,28 @@ class HexMapView(QWidget):
 
     def _on_combat_lmb(self, q: int, r: int) -> bool:
         active = self._scene.map_state.get_active_layer()
+        # Prefer enemy click → declared target when a friendly shooter is selected.
+        sel = self._selected_token_id or self._impulse_combat.selected_token_id
+        shooter = self._scene.token_state.placements.get(sel or "")
+        if shooter and self._impulse_combat.map_mode == "combat":
+            for tid, tok in self._scene.token_state.placements.items():
+                if tok.q != q or tok.r != r:
+                    continue
+                if tok.layer_id and tok.layer_id != active.id:
+                    continue
+                if tid == shooter.token_id:
+                    break
+                if tok.side_id != shooter.side_id and tok.character_name:
+                    self.combat_action_requested.emit(
+                        shooter.token_id,
+                        "set_declared_target",
+                        {"target_token_id": tid},
+                    )
+                    label = tok.character_name or tok.label or tid
+                    self.combat_status_hint.emit(f"Target: {label}")
+                    self._refresh_target_overlay()
+                    return True
+
         for tid, tok in self._scene.token_state.placements.items():
             if tok.q != q or tok.r != r:
                 continue
@@ -1538,6 +1671,8 @@ class HexMapView(QWidget):
             self._combat_bar.select_token(tid)
             if self._combat_callbacks:
                 self._combat_bar.set_available_actions(self._combat_callbacks(tid))
+            self._refresh_route_overlay()
+            self._refresh_target_overlay()
             return True
         return False
 

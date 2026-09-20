@@ -58,6 +58,11 @@ class TokenCombatRuntime:
     disabled_leg: bool = False
     disabled_head_spine: bool = False
     dazed_wait_impulses: int = 0
+    # Combat designation / multi-impulse route
+    declared_target_token_id: str | None = None
+    route_steps: list[dict] = field(default_factory=list)
+    route_cursor: int = 0
+    route_braced: bool = False
 
     def has_pending(self) -> bool:
         if self.pending_action_id:
@@ -111,8 +116,21 @@ class TokenCombatRuntime:
             )
         if self.ducking:
             parts.append("ducking")
-        if self.looking_over_cover:
-            parts.append("looking")
+        if self.firing_stance_held:
+            parts.append("Stance: firing")
+        elif self.looking_over_cover:
+            parts.append("Stance: hip (−6)/cover")
+        else:
+            parts.append("Stance: hip (−6)")
+        if self.aim_ac_accumulated > 0:
+            parts.append(f"Aim: {int(self.aim_ac_accumulated)}")
+        else:
+            parts.append("Aim: 1")
+        if self.route_steps and self.route_cursor < len(self.route_steps):
+            left = len(self.route_steps) - self.route_cursor
+            parts.append(f"route {left} step(s)")
+        if self.declared_target_token_id:
+            parts.append(f"tgt:{self.declared_target_token_id[:6]}")
         if self.knockdown_phase == "falling":
             parts.append("falling")
         elif self.knockdown_phase == "grounded":
@@ -201,6 +219,10 @@ class TokenCombatRuntime:
             "disabled_leg": self.disabled_leg,
             "disabled_head_spine": self.disabled_head_spine,
             "dazed_wait_impulses": self.dazed_wait_impulses,
+            "declared_target_token_id": self.declared_target_token_id,
+            "route_steps": [dict(s) for s in self.route_steps],
+            "route_cursor": self.route_cursor,
+            "route_braced": self.route_braced,
         }
 
     @classmethod
@@ -262,6 +284,12 @@ class TokenCombatRuntime:
             disabled_leg=bool(data.get("disabled_leg", False)),
             disabled_head_spine=bool(data.get("disabled_head_spine", False)),
             dazed_wait_impulses=int(data.get("dazed_wait_impulses", 0)),
+            declared_target_token_id=data.get("declared_target_token_id"),
+            route_steps=[
+                dict(s) for s in (data.get("route_steps") or []) if isinstance(s, dict)
+            ],
+            route_cursor=int(data.get("route_cursor", 0)),
+            route_braced=bool(data.get("route_braced", False)),
         )
 
 
