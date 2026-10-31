@@ -179,6 +179,7 @@ class MainWindow(QMainWindow):
         self.hex_map_view.combat_status_hint.connect(self._on_combat_status_hint)
         self.hex_map_view.set_action_provider(self._token_available_actions)
         self._shot_preview_dialog = None
+        self._free_shot_kind: str | None = None
         self._center_tabs.addTab(self.combat_zone, "Combat")
         self._center_tabs.addTab(self.hex_map_view, "Map")
         center_splitter.addWidget(self._center_tabs)
@@ -730,6 +731,11 @@ class MainWindow(QMainWindow):
     def _on_combat_action_requested(self, token_id: str, action: str, args: dict) -> None:
         from PyQt6.QtWidgets import QMessageBox
 
+        if action in ("free_snap", "free_grenade_toss"):
+            self._free_shot_kind = action
+            self._on_declare_shot(token_id)
+            return
+
         if action == "select_weapon":
             args = dict(args)
             name = self._prompt_select_weapon(token_id)
@@ -997,6 +1003,8 @@ class MainWindow(QMainWindow):
     def _on_advance_impulse(self) -> None:
         if not self._is_combat_authority():
             return
+        # Flush same-impulse fires before refill clears hit-before-fire / MPC stamps.
+        self._drain_impulse_fire_queue(interactive=False)
         engine = self._combat_engine()
         due_proj, due_grenades, wound_logs = engine.advance_impulse()
         ic = self._game_bridge.state.impulse_combat
@@ -1221,16 +1229,27 @@ class MainWindow(QMainWindow):
         if not engine.can_control_token(player_id, tok, is_host=(player_id == "host")):
             return False, "No control of shooter"
         args = args or {}
+        free_kind = self._free_shot_kind
+        self._free_shot_kind = None
+        fire_with = args.get("fire_with")
+        gear_name = args.get("gear_name")
+        if free_kind == "free_grenade_toss":
+            fire_with = "grenade"
         # Guest intents must not pop QInputDialog on the host machine.
         preview, err = self._build_preview_from_tokens(
             shooter_token_id,
             player_id,
             interactive=(player_id == "host"),
-            fire_with=args.get("fire_with"),
-            gear_name=args.get("gear_name"),
+            fire_with=fire_with,
+            gear_name=gear_name,
         )
         if not preview:
             return False, err
+        if free_kind in ("free_snap", "free_grenade_toss"):
+            preview.free_action = True
+            preview.aim_time_ac = 1
+            if "Free action (§9.1)" not in preview.notes:
+                preview.notes = list(preview.notes) + ["Free action (§9.1)"]
         self._game_bridge.state.impulse_combat = self.hex_map_view.get_impulse_combat_state()
         self._game_bridge.state.impulse_combat.shot_preview = preview
         self.hex_map_view.set_impulse_combat_state(
@@ -1340,16 +1359,44 @@ class MainWindow(QMainWindow):
             return False, fire_msg
         fire_kind = infer_fire_kind(preview.fire_mode, weapon, ammo)
         preview.fire_kind = fire_kind
-        plan = plan_fire_ac(preview, shooter_rt, fire_kind, weapon)
+        free_action = bool(preview.free_action)
+        plan = plan_fire_ac(
+            preview, shooter_rt, fire_kind, weapon, free_action=free_action
+        )
         ok, msg = validate_fire_ac(plan, shooter_rt, fire_kind)
         if not ok:
             return False, msg
+        if free_action:
+            from phoenix_command.simulations import shot_timing
+
+            if fire_kind == "grenade":
+                if not shot_timing.can_free_toss(shooter_rt):
+                    return False, "No free toss available (need hex entered)"
+                shooter_rt.free_tosses_used_this_impulse += 1
+            else:
+                if not shot_timing.can_free_snap(shooter_rt):
+                    return False, "No free snap available (need hex entered)"
+                shooter_rt.free_snaps_used_this_impulse += 1
+
+        from phoenix_command.simulations import impulse_fire_queue
+        from phoenix_command.models.gear import Grenade
+
+        # Stamp MPC before fire AC spend (§5.7).
+        mpc_stamp = impulse_fire_queue.mpc_stamp_before_fire_cost(shooter_rt)
+        fuse_defer = 0
+        if fire_kind == "grenade" and isinstance(weapon, Grenade):
+            from phoenix_command.simulations.grenade_fuse import throw_fuse_impulses
+
+            fuse_defer = throw_fuse_impulses(shooter_rt, weapon)
 
         sync_preview_from_plan(preview, plan, shooter_rt)
         apply_fire_ac(plan, shooter_rt)
         shooter_rt.fire_mode = preview.fire_mode
         clear_aim_state(shooter_rt)
         if fire_kind == "grenade":
+            from phoenix_command.simulations.grenade_fuse import consume_grenade
+
+            consume_grenade(shooter, shooter_rt.held_grenade_name)
             clear_grenade_hand(shooter_rt)
 
         primary_ids = preview.primary_ids()
@@ -1379,11 +1426,102 @@ class MainWindow(QMainWindow):
             )
             label = ", ".join(target_names.values()) or "aim hex"
             self.combat_log.append_system(
-                f"Shot in flight: {shooter.name} → {label}, TOF {preview.tof_impulses} impulse(s)"
+                f"Shot in flight: {shooter.name} → {label}, TOF {preview.tof_impulses} impulse(s) "
+                f"(MPC={mpc_stamp:g})"
             )
             self.statusBar().showMessage(f"Projectile in flight ({preview.tof_impulses} impulses)")
             self._notify_game_state_changed(domain="impulse_combat", immediate=True)
             return True, "scheduled"
+
+        # Fused grenades keep existing land-now / blast-later path (no double-queue).
+        if fuse_defer > 0:
+            outcome = self._dispatch_map_fire_with_blast_review(
+                preview,
+                shooter,
+                weapon,
+                ammo,
+                tokens,
+                chars,
+                self.hex_map_view.get_map_state(),
+                ic.token_runtime,
+                interactive=interactive,
+            )
+            if outcome.fuse_impulses > 0 and outcome.explosive_results and not outcome.blast_cancelled:
+                engine = self._combat_engine()
+                engine.schedule_grenade_explosion(
+                    preview.shooter_token_id,
+                    outcome.fuse_impulses,
+                    preview.to_dict(),
+                    [explosive_result_to_dict(e) for e in outcome.explosive_results],
+                    preview.weapon_name,
+                    preview.ammo_name,
+                    blast_mod_overrides=outcome.blast_mod_overrides,
+                )
+                self.hex_map_view.set_impulse_combat_state(ic, rebuild=False)
+            self._apply_map_fire_outcome(outcome)
+            self.hex_map_view._refresh_combat_ui()
+            self._notify_game_state_changed(domain="impulse_combat", immediate=True)
+            return True, "resolved"
+
+        # Immediate ballistic / impact: enqueue then drain in MPC order.
+        engine = self._combat_engine()
+        engine.enqueue_impulse_fire(preview.shooter_token_id, preview, mpc_stamp)
+        self.combat_log.append_system(
+            f"Fire queued MPC={mpc_stamp:g} ({shooter.name})"
+        )
+        self.statusBar().showMessage(f"Fire queued MPC={mpc_stamp:g}")
+        self._drain_impulse_fire_queue(interactive=interactive)
+        self.hex_map_view._refresh_combat_ui()
+        self._notify_game_state_changed(domain="impulse_combat", immediate=True)
+        return True, "queued"
+
+    def _drain_impulse_fire_queue(self, *, interactive: bool = True) -> None:
+        """Resolve all pending same-impulse fires in ascending MPC order."""
+        engine = self._combat_engine()
+        fires = engine.pop_pending_impulse_fires()
+        for pf in fires:
+            self._resolve_pending_impulse_fire(pf, interactive=interactive)
+
+    def _resolve_pending_impulse_fire(self, pf, *, interactive: bool = True) -> None:
+        from phoenix_command.session.domains.impulse_combat_state import PendingShotPreview
+        from phoenix_command.simulations import impulse_fire_queue
+        from phoenix_command.simulations.map_fire_dispatch import explosive_result_to_dict
+
+        preview = PendingShotPreview.from_dict(pf.preview_snapshot)
+        ic = self._game_bridge.state.impulse_combat
+        shooter_rt = ic.token_runtime.get(pf.shooter_token_id)
+        cancel, reason = impulse_fire_queue.fire_should_cancel(shooter_rt)
+        if cancel:
+            self.combat_log.append_system(
+                f"Fire cancelled (MPC={pf.mpc_stamp:g}): {reason}"
+            )
+            return
+
+        tokens = self.hex_map_view.get_token_state()
+        shooter_tok = tokens.placements.get(pf.shooter_token_id)
+        if not shooter_tok:
+            self.combat_log.append_system(
+                f"Fire cancelled (MPC={pf.mpc_stamp:g}): shooter token missing"
+            )
+            return
+        chars = self._characters_by_name()
+        shooter = chars.get(shooter_tok.character_name or "")
+        if not shooter:
+            self.combat_log.append_system(
+                f"Fire cancelled (MPC={pf.mpc_stamp:g}): shooter character missing"
+            )
+            return
+        weapon, ammo, err = self._resolve_weapon_ammo(shooter, preview)
+        if err:
+            self.combat_log.append_system(
+                f"Fire cancelled (MPC={pf.mpc_stamp:g}): {err}"
+            )
+            return
+
+        if shooter_rt and shooter_rt.hit_before_fire_this_impulse:
+            note = "-10 ALM (hit before fire this impulse)"
+            if note not in preview.notes:
+                preview.notes = list(preview.notes) + [note]
 
         outcome = self._dispatch_map_fire_with_blast_review(
             preview,
@@ -1396,6 +1534,7 @@ class MainWindow(QMainWindow):
             ic.token_runtime,
             interactive=interactive,
         )
+        # Impact / no-fuse path should not schedule; keep safety for edge cases.
         if outcome.fuse_impulses > 0 and outcome.explosive_results and not outcome.blast_cancelled:
             engine = self._combat_engine()
             engine.schedule_grenade_explosion(
@@ -1407,11 +1546,7 @@ class MainWindow(QMainWindow):
                 preview.ammo_name,
                 blast_mod_overrides=outcome.blast_mod_overrides,
             )
-            self.hex_map_view.set_impulse_combat_state(ic, rebuild=False)
         self._apply_map_fire_outcome(outcome)
-        self.hex_map_view._refresh_combat_ui()
-        self._notify_game_state_changed(domain="impulse_combat", immediate=True)
-        return True, "resolved"
 
     def _on_blast_review_toggled(self, checked: bool) -> None:
         from phoenix_command.gui.app_settings import set_show_blast_modifier_dialog

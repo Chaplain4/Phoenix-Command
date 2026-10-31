@@ -36,6 +36,20 @@ class TokenCombatRuntime:
     impulse_burst_used: bool = False
     held_grenade_name: str | None = None
     grenade_armed: bool = False
+    # None = not cooking; int = fuse impulses remaining in hand (§3.6 cook-off)
+    grenade_fuse_remaining_impulses: int | None = None
+    # Table 7B detailed reload / equipment
+    mag_in_hand: bool = False
+    ammo_can_open: bool = False
+    detail_action_mode: bool = False  # mirrored from UI preference when applying
+    equipment_flags: dict = field(default_factory=dict)  # mount/worn toggles
+    # §5.7 MPC / §9.1 free actions
+    mpc_aim_owed: float = 0.0
+    ac_spent_this_impulse: float = 0.0
+    hexes_entered_this_impulse: int = 0
+    free_snaps_used_this_impulse: int = 0
+    free_tosses_used_this_impulse: int = 0
+    hit_before_fire_this_impulse: bool = False
     pending_action_id: str | None = None
     pending_progress_ac: float = 0.0
     pending_total_cost_ac: float = 0.0
@@ -140,10 +154,18 @@ class TokenCombatRuntime:
         if self.recoil_ac_owed > 0:
             parts.append(f"recoil {self.recoil_ac_owed:.0f}AC")
         if self.held_grenade_name:
-            parts.append(
-                f"grenade: {self.held_grenade_name}"
-                + (" armed" if self.grenade_armed else " in hand")
-            )
+            g = f"grenade: {self.held_grenade_name}"
+            if self.grenade_fuse_remaining_impulses is not None:
+                g += f" cooking {self.grenade_fuse_remaining_impulses}"
+            elif self.grenade_armed:
+                g += " armed"
+            else:
+                g += " in hand"
+            parts.append(g)
+        if self.mpc_aim_owed > 0:
+            parts.append(f"MPC aim {self.mpc_aim_owed:.0f}")
+        if self.mag_in_hand:
+            parts.append("mag in hand")
         if self.is_dead:
             parts.append("DEAD")
         elif self.incap_effect:
@@ -198,6 +220,16 @@ class TokenCombatRuntime:
             "impulse_burst_used": self.impulse_burst_used,
             "held_grenade_name": self.held_grenade_name,
             "grenade_armed": self.grenade_armed,
+            "grenade_fuse_remaining_impulses": self.grenade_fuse_remaining_impulses,
+            "mag_in_hand": self.mag_in_hand,
+            "ammo_can_open": self.ammo_can_open,
+            "equipment_flags": dict(self.equipment_flags),
+            "mpc_aim_owed": self.mpc_aim_owed,
+            "ac_spent_this_impulse": self.ac_spent_this_impulse,
+            "hexes_entered_this_impulse": self.hexes_entered_this_impulse,
+            "free_snaps_used_this_impulse": self.free_snaps_used_this_impulse,
+            "free_tosses_used_this_impulse": self.free_tosses_used_this_impulse,
+            "hit_before_fire_this_impulse": self.hit_before_fire_this_impulse,
             "pending_action_id": self.pending_action_id,
             "pending_progress_ac": self.pending_progress_ac,
             "pending_total_cost_ac": self.pending_total_cost_ac,
@@ -263,6 +295,16 @@ class TokenCombatRuntime:
             impulse_burst_used=bool(data.get("impulse_burst_used", False)),
             held_grenade_name=data.get("held_grenade_name"),
             grenade_armed=bool(data.get("grenade_armed", False)),
+            grenade_fuse_remaining_impulses=_opt_int("grenade_fuse_remaining_impulses"),
+            mag_in_hand=bool(data.get("mag_in_hand", False)),
+            ammo_can_open=bool(data.get("ammo_can_open", False)),
+            equipment_flags=dict(data.get("equipment_flags") or {}),
+            mpc_aim_owed=float(data.get("mpc_aim_owed", 0.0)),
+            ac_spent_this_impulse=float(data.get("ac_spent_this_impulse", 0.0)),
+            hexes_entered_this_impulse=int(data.get("hexes_entered_this_impulse", 0)),
+            free_snaps_used_this_impulse=int(data.get("free_snaps_used_this_impulse", 0)),
+            free_tosses_used_this_impulse=int(data.get("free_tosses_used_this_impulse", 0)),
+            hit_before_fire_this_impulse=bool(data.get("hit_before_fire_this_impulse", False)),
             pending_action_id=data.get("pending_action_id"),
             pending_progress_ac=float(data.get("pending_progress_ac", 0.0)),
             pending_total_cost_ac=float(data.get("pending_total_cost_ac", 0.0)),
@@ -332,6 +374,7 @@ class PendingShotPreview:
     cover_notes: list[str] = field(default_factory=list)
     manual_cover_pf: float | None = None
     estimated_cover_pf: float = 0.0
+    free_action: bool = False  # §9.1 free snap / toss
 
     def primary_ids(self) -> list[str]:
         if self.target_token_ids:
@@ -378,6 +421,7 @@ class PendingShotPreview:
             "cover_notes": list(self.cover_notes),
             "manual_cover_pf": self.manual_cover_pf,
             "estimated_cover_pf": self.estimated_cover_pf,
+            "free_action": self.free_action,
         }
 
     @classmethod
@@ -427,6 +471,34 @@ class PendingShotPreview:
             cover_notes=list(data.get("cover_notes", [])),
             manual_cover_pf=float(mcp) if mcp is not None else None,
             estimated_cover_pf=float(data.get("estimated_cover_pf", 0.0)),
+            free_action=bool(data.get("free_action", False)),
+        )
+
+
+@dataclass
+class PendingImpulseFire:
+    """Same-impulse fire awaiting MPC-ordered resolution (§5.7)."""
+
+    fire_id: str
+    shooter_token_id: str
+    mpc_stamp: float
+    preview_snapshot: dict = field(default_factory=dict)
+
+    def to_dict(self) -> dict:
+        return {
+            "fire_id": self.fire_id,
+            "shooter_token_id": self.shooter_token_id,
+            "mpc_stamp": self.mpc_stamp,
+            "preview_snapshot": dict(self.preview_snapshot),
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "PendingImpulseFire":
+        return cls(
+            fire_id=data.get("fire_id", ""),
+            shooter_token_id=data.get("shooter_token_id", ""),
+            mpc_stamp=float(data.get("mpc_stamp", 0.0)),
+            preview_snapshot=dict(data.get("preview_snapshot", {})),
         )
 
 
@@ -526,6 +598,7 @@ class ImpulseCombatState:
     shot_preview: PendingShotPreview | None = None
     pending_projectiles: list[PendingProjectile] = field(default_factory=list)
     pending_grenade_explosions: list[PendingGrenadeExplosion] = field(default_factory=list)
+    pending_impulse_fires: list[PendingImpulseFire] = field(default_factory=list)
 
     def to_dict(self) -> dict:
         return {
@@ -541,6 +614,9 @@ class ImpulseCombatState:
             "pending_projectiles": [p.to_dict() for p in self.pending_projectiles],
             "pending_grenade_explosions": [
                 g.to_dict() for g in self.pending_grenade_explosions
+            ],
+            "pending_impulse_fires": [
+                f.to_dict() for f in self.pending_impulse_fires
             ],
         }
 
@@ -568,5 +644,9 @@ class ImpulseCombatState:
             pending_grenade_explosions=[
                 PendingGrenadeExplosion.from_dict(g)
                 for g in data.get("pending_grenade_explosions", [])
+            ],
+            pending_impulse_fires=[
+                PendingImpulseFire.from_dict(f)
+                for f in data.get("pending_impulse_fires", [])
             ],
         )

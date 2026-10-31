@@ -250,6 +250,10 @@ def apply_shot_result_to_runtime(
 ) -> None:
     if rt.is_dead:
         return
+    from phoenix_command.simulations.shot_timing import mark_hit_this_impulse
+
+    # §5.7: marked for MPC / hit-before-fire handling this impulse
+    mark_hit_this_impulse(rt)
     if result.damage_result is not None:
         apply_damage_result_disables(rt, result.damage_result)
     if result.recovery is not None:

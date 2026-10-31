@@ -169,6 +169,11 @@ def build_map_shot_context(
         aim_ac = max(aim_ac, int(shooter_rt.aim_ac_accumulated) or aim_ac)
 
     barriers = list(los.cover.crossings) if los.cover else []
+    custom_eal: list[tuple] = []
+    if shooter_rt.hit_before_fire_this_impulse:
+        from phoenix_command.simulations.shot_timing import HIT_BEFORE_FIRE_ALM
+
+        custom_eal.append(("Hit before fire (§5.7)", HIT_BEFORE_FIRE_ALM))
     shot_params = ShotParameters(
         aim_time_ac=aim_ac,
         situation_stance_modifiers=stance_mods,
@@ -181,6 +186,7 @@ def build_map_shot_context(
         target_stance=target_rt.stance,
         reflexive_duck_shooter=bool(shooter_rt.ducking),
         reflexive_duck_target=bool(target_rt.ducking),
+        custom_eal_modifiers=custom_eal,
     )
 
     notes = [f"Range {range_hexes} rule hex ({meters:.1f} m)"]
@@ -198,6 +204,8 @@ def build_map_shot_context(
         notes.append("Shooter ducking (−10 SA)")
     if target_rt.ducking:
         notes.append("Target ducking (−5 SA)")
+    if shooter_rt.hit_before_fire_this_impulse:
+        notes.append("Hit before fire this impulse (−10 ALM §5.7)")
     bonus = second_shot_aim_bonus(
         shooter_rt, target.q, target.r, target.layer_id or ""
     )

@@ -104,3 +104,41 @@ def test_impulse_burst_resets_each_impulse() -> None:
     rt.impulse_burst_used = True
     engine.refill_impulse_ac()
     assert rt.impulse_burst_used is False
+
+
+def test_cook_grenade_and_tick() -> None:
+    engine, tok = _engine(ac=10.0)
+    engine.apply_action(tok.token_id, "pick_up_grenade", {})
+    engine.apply_action(tok.token_id, "arm_grenade", {})
+    r = engine.apply_action(tok.token_id, "cook_grenade", {})
+    assert r.success
+    rt = engine.get_runtime(tok.token_id)
+    assert rt.grenade_fuse_remaining_impulses == 8
+    # Tick down without detonating
+    for _ in range(7):
+        hand, _, _ = engine.advance_impulse()
+        # hand booms returned in due grenades slot
+    rt = engine.get_runtime(tok.token_id)
+    assert rt.grenade_fuse_remaining_impulses == 1
+    due_proj, due_g, _ = engine.advance_impulse()
+    assert rt.held_grenade_name is None
+    assert any(getattr(e, "weapon_name", None) == "HG 78 Frag Grenade" for e in due_g)
+
+
+def test_grenade_throw_costs_2_ac() -> None:
+    rt = TokenCombatRuntime(ac_remaining=5.0, grenade_armed=True, weapon_cycled=True)
+    plan = plan_fire_ac(
+        PendingShotPreview(
+            preview_id="p",
+            shooter_token_id="t1",
+            target_token_id="",
+            proposed_by="host",
+            aim_time_ac=1,
+        ),
+        rt,
+        "grenade",
+        _grenade(),
+    )
+    assert plan.fire_cost == 2.0
+    ok, _ = validate_fire_ac(plan, rt, "grenade")
+    assert ok

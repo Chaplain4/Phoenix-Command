@@ -1149,13 +1149,19 @@ def _dispatch_explosive(
     if (kind == "grenade" or isinstance(weapon, Grenade)) and isinstance(
         explosive_ammo, Grenade
     ):
-        fuse_phases = int(explosive_ammo.fuse_length or 0)
-        if fuse_phases > 0:
-            outcome.fuse_impulses = fuse_phases * 4
+        from phoenix_command.simulations.grenade_fuse import throw_fuse_impulses
+
+        shooter_rt = (token_runtime or {}).get(preview.shooter_token_id)
+        if shooter_rt is not None:
+            fuse_imp = throw_fuse_impulses(shooter_rt, explosive_ammo)
+        else:
+            fuse_imp = max(0, int(explosive_ammo.fuse_length or 0) * 4)
+        if fuse_imp > 0:
+            outcome.fuse_impulses = fuse_imp
             defer_blast = True
             outcome.messages.append(
-                f"Grenade landed; fuse {fuse_phases} phase(s) "
-                f"({outcome.fuse_impulses} impulses)"
+                f"Grenade landed; fuse {fuse_imp} impulse(s)"
+                + (" (cooked)" if shooter_rt and shooter_rt.grenade_fuse_remaining_impulses is not None else "")
             )
 
     if apply_blast and not defer_blast:

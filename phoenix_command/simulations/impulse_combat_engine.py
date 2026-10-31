@@ -22,6 +22,11 @@ from phoenix_command.simulations.hex_tactical import (
 from phoenix_command.simulations.map_fire_ac import clear_aim_state, proper_firing_stance
 from phoenix_command.simulations.map_knockdown import HANDS_FREE_AC
 from phoenix_command.simulations import map_route
+from phoenix_command.simulations import grenade_fuse
+from phoenix_command.simulations import shot_timing
+from phoenix_command.simulations import impulse_fire_queue
+from phoenix_command.simulations import catalog_side_effects as cat_fx
+from phoenix_command.simulations import equipment_mount
 from phoenix_command.simulations.map_wounds import (
     can_perform_action,
     effective_impulse_ac,
@@ -174,18 +179,84 @@ class ImpulseCombatEngine:
                 # Keep move_progress / pending_* across impulses (carry-over).
                 rt.impulse_burst_used = False
                 rt.ducking = False
+                shot_timing.clear_impulse_timing(rt)
                 if rt.knockdown_phase == "falling":
                     rt.knockdown_phase = "grounded"
+        # Leftover same-impulse fires should have been drained; drop stragglers.
+        impulse_fire_queue.clear_impulse_fires(self.impulse_combat)
+
+    def tick_cooking_grenades(self) -> list:
+        """Decrement in-hand fuses; return hand-detonation PendingGrenadeExplosion list."""
+        from phoenix_command.session.domains.impulse_combat_state import PendingGrenadeExplosion
+        import uuid
+
+        due: list = []
+        for token_id, placement in self.tokens.placements.items():
+            rt = self.get_runtime(token_id)
+            if rt.grenade_fuse_remaining_impulses is None:
+                continue
+            rt.grenade_fuse_remaining_impulses -= 1
+            if rt.grenade_fuse_remaining_impulses > 0:
+                continue
+            # Detonate in hand
+            gname = rt.held_grenade_name or ""
+            char = self.characters.get(placement.character_name or "")
+            grenade_fuse.consume_grenade(char, gname)
+            grenade_fuse.clear_grenade_state(rt)
+            expl = PendingGrenadeExplosion(
+                explosion_id=str(uuid.uuid4()),
+                resolve_phase=self.impulse_combat.phase,
+                resolve_impulse=self.impulse_combat.impulse,
+                shooter_token_id=token_id,
+                preview_snapshot={
+                    "aim_q": placement.q,
+                    "aim_r": placement.r,
+                    "layer_id": placement.layer_id or "",
+                    "hand_detonation": True,
+                    "weapon_name": gname,
+                    "ammo_name": gname,
+                },
+                explosive_results=[
+                    {
+                        "hit": True,
+                        "eal": 0,
+                        "odds": 100,
+                        "roll": 0,
+                        "scatter_hexes": 0,
+                        "center_q": placement.q,
+                        "center_r": placement.r,
+                    }
+                ],
+                weapon_name=gname,
+                ammo_name=gname,
+            )
+            due.append(expl)
+        return due
+
+    def pop_pending_impulse_fires(self) -> list:
+        """Take same-impulse fires sorted by MPC (caller resolves)."""
+        return impulse_fire_queue.take_sorted_impulse_fires(self.impulse_combat)
+
+    def enqueue_impulse_fire(self, shooter_token_id: str, preview, mpc_stamp: float):
+        return impulse_fire_queue.enqueue_impulse_fire(
+            self.impulse_combat, shooter_token_id, preview, mpc_stamp
+        )
 
     def advance_impulse(self) -> tuple[list, list, list[str]]:
-        """Move to next impulse (host only). Returns (due projectiles, due grenades, wound logs)."""
+        """Move to next impulse (host only). Returns (due projectiles, due grenades, wound logs).
+
+        Caller should drain ``pending_impulse_fires`` (MPC order) *before* this so
+        hit-before-fire / incap from same-impulse shots still apply.
+        """
+        hand_booms = self.tick_cooking_grenades()
         self.impulse_combat.impulse += 1
         if self.impulse_combat.impulse >= 4:
             self.impulse_combat.impulse = 0
             self.impulse_combat.phase += 1
         wound_logs = tick_wounds_on_impulse_advance(self)
         self.refill_impulse_ac()
-        due_proj, due_grenades = self.pop_due_projectiles(), self.pop_due_grenade_explosions()
+        due_proj = self.pop_due_projectiles()
+        due_grenades = hand_booms + self.pop_due_grenade_explosions()
         return due_proj, due_grenades, wound_logs
 
     def absolute_impulse_index(self) -> int:
@@ -398,6 +469,20 @@ class ImpulseCombatEngine:
             return self._apply_pick_up_grenade(placement, args.get("grenade_name"))
         if action == "arm_grenade":
             return self._apply_arm_grenade(placement)
+        if action == "cook_grenade":
+            return self._apply_cook_grenade(placement)
+        if action == "free_break_stance":
+            return self._apply_free_break_stance(placement)
+        if action == "free_snap":
+            return ActionResult(
+                False,
+                "Free snap is declared via Declare Shot with free_action flag",
+            )
+        if action == "free_grenade_toss":
+            return ActionResult(
+                False,
+                "Free toss is declared via Declare Shot with free_action flag",
+            )
         if action == "custom_action":
             return self._apply_custom_action(
                 placement, float(args.get("ac", 1)), str(args.get("label", "Custom"))
@@ -409,7 +494,7 @@ class ImpulseCombatEngine:
         if action == "duck_from_firing":
             return self._apply_duck_from_firing(placement)
         if action in BUILTIN_ACTIONS and action != "pick_up_grenade":
-            return self._apply_catalog_action(placement, action)
+            return self._apply_catalog_action(placement, action, args)
         return ActionResult(False, f"Unknown action: {action}")
 
     def _pending_conflict(
@@ -530,6 +615,7 @@ class ImpulseCombatEngine:
         if spend <= 0:
             return ActionResult(False, "No AC remaining")
         rt.ac_remaining -= spend
+        shot_timing.record_ac_spend(rt, spend)
         rt.pending_progress_ac += spend
         if rt.pending_progress_ac + 1e-9 >= rt.pending_total_cost_ac:
             on_complete(rt)
@@ -545,7 +631,10 @@ class ImpulseCombatEngine:
             spend,
         )
 
-    def _apply_catalog_action(self, placement: TokenPlacement, action_id: str) -> ActionResult:
+    def _apply_catalog_action(
+        self, placement: TokenPlacement, action_id: str, args: dict[str, Any] | None = None
+    ) -> ActionResult:
+        args = args or {}
         action_def = BUILTIN_ACTIONS.get(action_id)
         if not action_def:
             return ActionResult(False, "Unknown action")
@@ -560,19 +649,31 @@ class ImpulseCombatEngine:
             cost = float(cost_raw)
 
         def _complete(rt: TokenCombatRuntime) -> None:
-            self._apply_catalog_completion(rt, action_id)
+            self._apply_catalog_completion(placement, rt, action_id, args)
 
         return self._partial_spend(
             placement,
             action_id,
             cost,
-            {},
+            dict(args),
             on_complete=_complete,
             label=action_def.name,
-            interrupt_aim=action_id in AIM_INTERRUPT_ACTIONS,
+            interrupt_aim=action_id in AIM_INTERRUPT_ACTIONS
+            or action_id in cat_fx.DRAW_ACTIONS
+            or action_id in cat_fx.RELOAD_MICRO
+            or action_id in cat_fx.WINDOW_ACTIONS
+            or action_id in equipment_mount.EQUIP_ACTIONS,
         )
 
-    def _apply_catalog_completion(self, rt: TokenCombatRuntime, action_id: str) -> None:
+    def _apply_catalog_completion(
+        self,
+        placement: TokenPlacement,
+        rt: TokenCombatRuntime,
+        action_id: str,
+        args: dict[str, Any] | None = None,
+    ) -> None:
+        args = args or {}
+        char = self.characters.get(placement.character_name or "")
         if action_id == "brace_weapon":
             rt.braced = True
         elif action_id == "look_over_cover":
@@ -581,13 +682,40 @@ class ImpulseCombatEngine:
             rt.firing_stance_held = True
             rt.looking_over_cover = True
         elif action_id == "assume_hip_firing_stance_cover":
-            # Hip over cover: ready over cover but keep −6 hip ALM
             rt.firing_stance_held = False
             rt.looking_over_cover = True
         elif action_id == "duck_from_firing":
             rt.firing_stance_held = False
             rt.looking_over_cover = False
             rt.ducking = True
+        elif action_id == "safety_fire_select":
+            mode = args.get("fire_mode") or (
+                "auto" if rt.fire_mode == "single" else "single"
+            )
+            if mode in ("single", "3rb", "auto"):
+                rt.fire_mode = mode
+        elif action_id in cat_fx.RELOAD_MICRO:
+            cat_fx.apply_reload_micro(rt, action_id)
+        elif action_id in cat_fx.DRAW_ACTIONS:
+            cat_fx.apply_draw(rt, char, action_id, args.get("weapon_name"))
+        elif action_id in equipment_mount.EQUIP_ACTIONS:
+            equipment_mount.apply_equipment_action(rt, action_id)
+        elif action_id in cat_fx.WINDOW_ACTIONS:
+            layer = self._get_layer(placement.layer_id)
+
+            def _trench(q: int, r: int) -> bool:
+                if not layer:
+                    return False
+                tile = layer.terrain.get(f"{q},{r}")
+                if tile and "trench" in (tile.terrain_type or "").lower():
+                    return True
+                if getattr(layer, "kind", "") == "trench":
+                    return True
+                return False
+
+            cat_fx.apply_window_or_trench(
+                placement, rt, action_id, layer, terrain_is_trench=_trench
+            )
 
     def _apply_brace(self, placement: TokenPlacement) -> ActionResult:
         return self._partial_spend(
@@ -649,10 +777,30 @@ class ImpulseCombatEngine:
         if rt.ac_remaining < ac:
             return ActionResult(False, f"Need {ac} AC, have {rt.ac_remaining:.1f}")
         rt.ac_remaining -= ac
+        shot_timing.record_ac_spend(rt, ac)
+        shot_timing.apply_aim_toward_mpc(rt, ac)
         rt.aim_ac_this_impulse += ac
         rt.aim_ac_accumulated += ac
         rt.aimed_this_impulse = True
         return ActionResult(True, f"Aim {ac} AC", ac)
+
+    def _apply_cook_grenade(self, placement: TokenPlacement) -> ActionResult:
+        rt = self.get_runtime(placement.token_id)
+        char = self.characters.get(placement.character_name or "")
+        g = self._held_grenade(char, rt)
+        if not g:
+            return ActionResult(False, "No grenade in hand")
+        ok, msg = grenade_fuse.start_cook(rt, g)
+        return ActionResult(ok, msg)
+
+    def _apply_free_break_stance(self, placement: TokenPlacement) -> ActionResult:
+        rt = self.get_runtime(placement.token_id)
+        if rt.pending_id() not in STANCE_ACTION_MAP:
+            return ActionResult(False, "Free break stance only during stance change")
+        if not rt.firing_stance_held:
+            return ActionResult(False, "Not in firing stance")
+        rt.firing_stance_held = False
+        return ActionResult(True, "Broke firing stance (free)")
 
     def _apply_select_weapon(self, placement: TokenPlacement, weapon_name: str) -> ActionResult:
         char = self.characters.get(placement.character_name or "")
@@ -904,12 +1052,14 @@ class ImpulseCombatEngine:
             rt.braced = False
         rt.hexes_moved_this_impulse += spend / hex_cost if hex_cost else 0
 
+        shot_timing.record_ac_spend(rt, spend)
         if rt.move_progress >= 1.0 - 1e-9:
             placement.q = target_q
             placement.r = target_r
             # Book §2.3: up to 60° (2 facing steps) free per entered hex.
             desired = direction_index_to_facing(dir_idx)
             placement.facing = apply_free_facing(placement.facing, desired, free_steps=2)
+            shot_timing.note_hex_entered(rt)
             rt.move_progress = 0.0
             rt.move_target_q = None
             rt.move_target_r = None
@@ -1480,4 +1630,105 @@ class ImpulseCombatEngine:
                     actions.append(
                         ("arm_grenade", f"Arm {g.name}", float(g.arm_time))
                     )
+                if g and rt.grenade_armed and (g.fuse_length or 0) > 0:
+                    if rt.grenade_fuse_remaining_impulses is None:
+                        actions.append(("cook_grenade", f"Cook {g.name}", 0))
+        # §9.1 free actions
+        if shot_timing.can_free_snap(rt) and rt.incap_effect not in ("Dazed", "Disoriented"):
+            actions.append(("free_snap", "Free Snap (while moving)", 0))
+            if rt.held_grenade_name and rt.grenade_armed:
+                actions.append(("free_grenade_toss", "Free Toss Grenade", 0))
+        if rt.firing_stance_held and rt.pending_id() in STANCE_ACTION_MAP:
+            actions.append(("free_break_stance", "Free Break Stance", 0))
+        # Table 7B detailed micro-steps (dual-path)
+        if rt.incap_effect not in ("Dazed", "Disoriented"):
+            actions.extend(self._detailed_7b_actions(rt, char, placement))
         return actions
+
+    def _detailed_7b_actions(
+        self,
+        rt: TokenCombatRuntime,
+        char: Character | None,
+        placement: TokenPlacement,
+    ) -> list[tuple[str, str, float | str]]:
+        """Contextual Table 7B micro-steps (Detailed path)."""
+        out: list[tuple[str, str, float | str]] = []
+        # Reload micro
+        if rt.mag_in_hand:
+            out.append(
+                (
+                    "replace_bullet_magazine",
+                    "[7B] Replace Magazine",
+                    float(BUILTIN_ACTIONS["replace_bullet_magazine"].cost),
+                )
+            )
+        else:
+            out.append(
+                (
+                    "take_bullet_magazine",
+                    "[7B] Take Magazine from Pouch",
+                    float(BUILTIN_ACTIONS["take_bullet_magazine"].cost),
+                )
+            )
+        out.append(
+            (
+                "cock_revolver_pistol",
+                "[7B] Cock Revolver/Pistol",
+                float(BUILTIN_ACTIONS["cock_revolver_pistol"].cost),
+            )
+        )
+        out.append(("unload_weapon", "[7B] Unload Weapon", "RT"))
+        out.append(
+            (
+                "open_hinged_ammo_can",
+                "[7B] Open Ammo Can",
+                float(BUILTIN_ACTIONS["open_hinged_ammo_can"].cost),
+            )
+        )
+        out.append(
+            (
+                "link_belt_ammo",
+                "[7B] Link Belt Ammo",
+                float(BUILTIN_ACTIONS["link_belt_ammo"].cost),
+            )
+        )
+        # Holster / draw
+        for aid in (
+            "draw_modern_holster",
+            "draw_belt_holster",
+            "draw_shoulder_holster",
+            "draw_police_holster",
+            "draw_old_west_holster",
+            "grab_slung_weapon",
+            "pick_up_weapon",
+        ):
+            ad = BUILTIN_ACTIONS[aid]
+            out.append((aid, f"[7B] {ad.name}", float(ad.cost)))
+        out.append(
+            (
+                "safety_fire_select",
+                "[7B] Safety / Fire Select",
+                float(BUILTIN_ACTIONS["safety_fire_select"].cost),
+            )
+        )
+        # Equipment
+        out.extend(equipment_mount.detailed_equipment_actions(char, rt))
+        # Window / trench
+        layer = self._get_layer(placement.layer_id)
+        if cat_fx.find_adjacent_opening(layer, placement, "window"):
+            for aid in (
+                "open_window_two_hands",
+                "break_clear_glass",
+                "climb_through_window",
+            ):
+                ad = BUILTIN_ACTIONS[aid]
+                out.append((aid, f"[7B] {ad.name}", float(ad.cost)))
+        tile = layer.terrain.get(f"{placement.q},{placement.r}") if layer else None
+        in_trench = bool(
+            (tile and "trench" in (tile.terrain_type or "").lower())
+            or (layer and getattr(layer, "kind", "") == "trench")
+        )
+        if in_trench:
+            ad = BUILTIN_ACTIONS["get_out_trench"]
+            out.append((ad.id, f"[7B] {ad.name}", float(ad.cost)))
+        return out

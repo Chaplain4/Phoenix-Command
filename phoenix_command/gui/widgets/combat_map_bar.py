@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import (
+    QCheckBox,
     QComboBox,
     QFrame,
     QHBoxLayout,
@@ -33,6 +34,7 @@ class CombatMapBar(QWidget):
         self._is_host = True
         self._impulse_combat = ImpulseCombatState()
         self._available_actions: list[tuple[str, str, float | str]] = []
+        self._all_actions: list[tuple[str, str, float | str]] = []
         self._selected_token_id: str | None = None
 
         outer = QVBoxLayout(self)
@@ -124,6 +126,14 @@ class CombatMapBar(QWidget):
         self._shot_btn.clicked.connect(self._emit_declare_shot)
         row2.addWidget(self._shot_btn)
 
+        self._detail_7b = QCheckBox("7B Detail")
+        self._detail_7b.setToolTip(
+            "Show Table 7B micro-steps (reload/draw/equipment/climb). "
+            "Simple macros (Reload, Select Weapon) always remain."
+        )
+        self._detail_7b.toggled.connect(self._on_detail_toggled)
+        row2.addWidget(self._detail_7b)
+
         self._ruler_btn = QPushButton("Ruler")
         self._ruler_btn.clicked.connect(self.ruler_requested.emit)
         row2.addWidget(self._ruler_btn)
@@ -187,6 +197,20 @@ class CombatMapBar(QWidget):
         # Fire mode is set via the combo; avoid a no-args Do Action for guests.
         if not self._is_host:
             actions = [a for a in actions if a[0] != "set_fire_mode"]
+        self._all_actions = list(actions)
+        self._rebuild_action_combo()
+
+    def _on_detail_toggled(self, _checked: bool) -> None:
+        self._rebuild_action_combo()
+
+    def _rebuild_action_combo(self) -> None:
+        show_7b = self._detail_7b.isChecked()
+        actions = []
+        for a in self._all_actions:
+            label = a[1]
+            if label.startswith("[7B]") and not show_7b:
+                continue
+            actions.append(a)
         self._available_actions = actions
         self._action_combo.clear()
         for action_id, label, cost in actions:
