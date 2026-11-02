@@ -662,6 +662,7 @@ class CombatSimulator:
             log.append(f"  BSHC: {bshc}, Base concussion: {base_concussion}")
 
             # Process shrapnel hits (Table 5B: behind solid cover is immune)
+            shrapnel_results = []
             if BlastModifier.BEHIND_SOLID_COVER in modifiers:
                 log.append("  Shrapnel skipped (behind solid cover)")
             elif bshc is not None:
@@ -670,10 +671,19 @@ class CombatSimulator:
                 )
                 results.extend(shrapnel_results)
 
+            prior_incap, prior_incap_time = CombatSimulatorUtils.explosion_incap_floor(
+                shrapnel_results
+            )
+
             # Process concussion damage
             if base_concussion is not None and base_concussion > 0:
                 concussion_result = CombatSimulatorUtils.process_concussion_damage(
-                    target, base_concussion, modifiers, log
+                    target,
+                    base_concussion,
+                    modifiers,
+                    log,
+                    prior_incap=prior_incap,
+                    prior_incap_time=prior_incap_time,
                 )
                 if concussion_result is not None:
                     results.append(concussion_result)

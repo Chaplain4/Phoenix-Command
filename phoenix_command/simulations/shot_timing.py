@@ -1,4 +1,4 @@
-"""§5.7 Master Phasing Count and §9.1 free-action gates."""
+"""§5.7 Master Phasing Count and §9.1 free-action gates (non-fire)."""
 
 from __future__ import annotations
 
@@ -53,18 +53,6 @@ def validate_aim_vs_mpc(rt: TokenCombatRuntime, effective_aim_time: int) -> tupl
             f"before Aim Time {effective_aim_time}"
         )
     return True, ""
-
-
-def can_free_snap(rt: TokenCombatRuntime) -> bool:
-    """One free snap or toss per hex entered this impulse."""
-    if rt.hexes_entered_this_impulse <= 0:
-        return False
-    used = rt.free_snaps_used_this_impulse + rt.free_tosses_used_this_impulse
-    return used < rt.hexes_entered_this_impulse
-
-
-def can_free_toss(rt: TokenCombatRuntime) -> bool:
-    return can_free_snap(rt)
 
 
 def note_hex_entered(rt: TokenCombatRuntime) -> None:

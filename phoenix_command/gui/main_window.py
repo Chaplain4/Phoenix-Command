@@ -179,7 +179,6 @@ class MainWindow(QMainWindow):
         self.hex_map_view.combat_status_hint.connect(self._on_combat_status_hint)
         self.hex_map_view.set_action_provider(self._token_available_actions)
         self._shot_preview_dialog = None
-        self._free_shot_kind: str | None = None
         self._center_tabs.addTab(self.combat_zone, "Combat")
         self._center_tabs.addTab(self.hex_map_view, "Map")
         center_splitter.addWidget(self._center_tabs)
@@ -517,6 +516,9 @@ class MainWindow(QMainWindow):
                 self._notify_game_state_changed(immediate=True)
             return
         if action == "cancel_shot":
+            # Idempotent: Confirm / prior cancel already cleared preview — do not nack.
+            if not self._game_bridge.state.impulse_combat.shot_preview:
+                return
             if not self._can_edit_preview(player_id):
                 self._send_nack(player_id, intent_id, "Cannot cancel this shot preview")
                 return
@@ -731,17 +733,19 @@ class MainWindow(QMainWindow):
     def _on_combat_action_requested(self, token_id: str, action: str, args: dict) -> None:
         from PyQt6.QtWidgets import QMessageBox
 
-        if action in ("free_snap", "free_grenade_toss"):
-            self._free_shot_kind = action
-            self._on_declare_shot(token_id)
-            return
-
         if action == "select_weapon":
             args = dict(args)
             name = self._prompt_select_weapon(token_id)
             if not name:
                 return
             args["weapon_name"] = name
+        if action == "pick_up_grenade":
+            args = dict(args)
+            if not args.get("grenade_name"):
+                name = self._prompt_select_grenade(token_id)
+                if not name:
+                    return
+                args["grenade_name"] = name
         if action == "aim":
             args = dict(args)
             target_id = self._pick_enemy_token_id(token_id)
@@ -761,11 +765,15 @@ class MainWindow(QMainWindow):
             if reply != QMessageBox.StandardButton.Yes:
                 return
         if action == "abandon_pending":
-            pending = (rt.pending_id() if rt else None) or "action"
+            pending = rt.pending_id() if rt else None
+            has_route = bool(
+                rt and rt.route_steps and rt.route_cursor < len(rt.route_steps)
+            )
+            what = pending or ("route" if has_route else "action")
             reply = QMessageBox.question(
                 self,
-                "Abandon pending",
-                f"Abandon pending {pending}? Progress will be lost.",
+                "Abandon",
+                f"Abandon {what}? Progress / route will be lost.",
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             )
             if reply != QMessageBox.StandardButton.Yes:
@@ -822,6 +830,10 @@ class MainWindow(QMainWindow):
                     self.combat_log.append_system(hint)
         if result.success:
             self.hex_map_view._refresh_combat_ui()
+            if action == "abandon_pending" and hasattr(
+                self.hex_map_view, "_refresh_route_overlay"
+            ):
+                self.hex_map_view._refresh_route_overlay()
             self._notify_game_state_changed(domain="impulse_combat")
 
     def _prompt_select_weapon(self, token_id: str) -> str | None:
@@ -838,6 +850,28 @@ class MainWindow(QMainWindow):
         if not names:
             return None
         choice, ok = QInputDialog.getItem(self, "Select Weapon", "Weapon:", names, 0, False)
+        return choice if ok else None
+
+    def _prompt_select_grenade(self, token_id: str) -> str | None:
+        """Pick grenade name for Pick up; skip dialog when only one is available."""
+        from PyQt6.QtWidgets import QInputDialog
+        from phoenix_command.models.gear import Grenade
+
+        tokens = self.hex_map_view.get_token_state()
+        tok = tokens.placements.get(token_id)
+        if not tok or not tok.character_name:
+            return None
+        char = self._characters_by_name().get(tok.character_name)
+        if not char:
+            return None
+        names = [i.name for i in char.equipment if isinstance(i, Grenade)]
+        if not names:
+            return None
+        if len(names) == 1:
+            return names[0]
+        choice, ok = QInputDialog.getItem(
+            self, "Select Grenade", "Grenade:", names, 0, False
+        )
         return choice if ok else None
 
     def _prompt_fire_gear(
@@ -1015,6 +1049,11 @@ class MainWindow(QMainWindow):
             self._resolve_pending_projectile(proj)
         for expl in due_grenades:
             self._resolve_pending_grenade_explosion(expl)
+        if due_proj or due_grenades:
+            # Refresh tooltips after wounds/CTP/incap applied to runtime.
+            self.hex_map_view.set_impulse_combat_state(ic, rebuild=False)
+            self.combat_zone.refresh_cards()
+            self._refresh_selected_stats()
         sel = ic.selected_token_id
         rt = ic.token_runtime.get(sel or "")
         ac_txt = f" AC {rt.ac_remaining:.1f}" if rt else ""
@@ -1204,6 +1243,10 @@ class MainWindow(QMainWindow):
             target_token_ids=[target_id],
             cover_notes=list(cover.notes) if cover else [],
             estimated_cover_pf=float(cover.estimated_cover_pf) if cover else 0.0,
+            custom_eal_modifiers=[
+                {"label": str(lab), "alm": int(val)}
+                for lab, val in (ctx.shot_params.custom_eal_modifiers or [])
+            ],
         )
         from phoenix_command.simulations.map_fire_dispatch import enrich_preview_targets
 
@@ -1229,12 +1272,8 @@ class MainWindow(QMainWindow):
         if not engine.can_control_token(player_id, tok, is_host=(player_id == "host")):
             return False, "No control of shooter"
         args = args or {}
-        free_kind = self._free_shot_kind
-        self._free_shot_kind = None
         fire_with = args.get("fire_with")
         gear_name = args.get("gear_name")
-        if free_kind == "free_grenade_toss":
-            fire_with = "grenade"
         # Guest intents must not pop QInputDialog on the host machine.
         preview, err = self._build_preview_from_tokens(
             shooter_token_id,
@@ -1245,11 +1284,6 @@ class MainWindow(QMainWindow):
         )
         if not preview:
             return False, err
-        if free_kind in ("free_snap", "free_grenade_toss"):
-            preview.free_action = True
-            preview.aim_time_ac = 1
-            if "Free action (§9.1)" not in preview.notes:
-                preview.notes = list(preview.notes) + ["Free action (§9.1)"]
         self._game_bridge.state.impulse_combat = self.hex_map_view.get_impulse_combat_state()
         self._game_bridge.state.impulse_combat.shot_preview = preview
         self.hex_map_view.set_impulse_combat_state(
@@ -1294,13 +1328,24 @@ class MainWindow(QMainWindow):
 
     def _resolve_weapon_ammo(self, shooter, preview):
         from phoenix_command.models.gear import AmmoType, Grenade, Weapon
+        from phoenix_command.simulations.grenade_fuse import lookup_grenade_by_name
 
+        wanted = getattr(preview, "weapon_name", "") or ""
+        ammo_wanted = getattr(preview, "ammo_name", "") or wanted
         weapon = None
-        for item in shooter.equipment:
-            if isinstance(item, (Weapon, Grenade)) and item.name == preview.weapon_name:
-                weapon = item
-                break
+        if shooter is not None:
+            for item in shooter.equipment:
+                if isinstance(item, (Weapon, Grenade)) and item.name == wanted:
+                    weapon = item
+                    break
+        # Thrown/fused grenade may already be consumed from inventory.
         if weapon is None:
+            catalog_g = lookup_grenade_by_name(wanted) or lookup_grenade_by_name(
+                ammo_wanted
+            )
+            if catalog_g is not None:
+                return catalog_g, catalog_g, ""
+        if weapon is None and shooter is not None:
             for item in shooter.equipment:
                 if isinstance(item, (Weapon, Grenade)):
                     weapon = item
@@ -1311,9 +1356,9 @@ class MainWindow(QMainWindow):
         ammo = None
         if isinstance(weapon, Grenade):
             ammo = weapon
-        elif preview.ammo_name:
+        elif ammo_wanted:
             for a in getattr(weapon, "ammunition_types", None) or []:
-                if isinstance(a, AmmoType) and a.name == preview.ammo_name:
+                if isinstance(a, AmmoType) and a.name == ammo_wanted:
                     ammo = a
                     break
         if ammo is None and getattr(weapon, "ammunition_types", None):
@@ -1359,24 +1404,10 @@ class MainWindow(QMainWindow):
             return False, fire_msg
         fire_kind = infer_fire_kind(preview.fire_mode, weapon, ammo)
         preview.fire_kind = fire_kind
-        free_action = bool(preview.free_action)
-        plan = plan_fire_ac(
-            preview, shooter_rt, fire_kind, weapon, free_action=free_action
-        )
+        plan = plan_fire_ac(preview, shooter_rt, fire_kind, weapon)
         ok, msg = validate_fire_ac(plan, shooter_rt, fire_kind)
         if not ok:
             return False, msg
-        if free_action:
-            from phoenix_command.simulations import shot_timing
-
-            if fire_kind == "grenade":
-                if not shot_timing.can_free_toss(shooter_rt):
-                    return False, "No free toss available (need hex entered)"
-                shooter_rt.free_tosses_used_this_impulse += 1
-            else:
-                if not shot_timing.can_free_snap(shooter_rt):
-                    return False, "No free snap available (need hex entered)"
-                shooter_rt.free_snaps_used_this_impulse += 1
 
         from phoenix_command.simulations import impulse_fire_queue
         from phoenix_command.models.gear import Grenade
@@ -1396,8 +1427,8 @@ class MainWindow(QMainWindow):
         if fire_kind == "grenade":
             from phoenix_command.simulations.grenade_fuse import consume_grenade
 
+            # Consume gear now; clear hand/fuse runtime *after* dispatch so cook fuse is read.
             consume_grenade(shooter, shooter_rt.held_grenade_name)
-            clear_grenade_hand(shooter_rt)
 
         primary_ids = preview.primary_ids()
         target_names = {}
@@ -1416,6 +1447,12 @@ class MainWindow(QMainWindow):
         self.hex_map_view.clear_fire_overlay()
         self.hex_map_view.set_impulse_combat_state(ic, rebuild=False)
 
+        def _finish_grenade_hand() -> None:
+            if fire_kind == "grenade":
+                clear_grenade_hand(shooter_rt)
+                self.combat_zone.refresh_cards()
+                self._refresh_selected_stats()
+
         if preview.tof_impulses and preview.tof_impulses > 0:
             engine = self._combat_engine()
             engine.schedule_projectile(
@@ -1424,6 +1461,7 @@ class MainWindow(QMainWindow):
                 preview.tof_impulses,
                 snapshot,
             )
+            _finish_grenade_hand()
             label = ", ".join(target_names.values()) or "aim hex"
             self.combat_log.append_system(
                 f"Shot in flight: {shooter.name} → {label}, TOF {preview.tof_impulses} impulse(s) "
@@ -1446,11 +1484,13 @@ class MainWindow(QMainWindow):
                 ic.token_runtime,
                 interactive=interactive,
             )
+            # Prefer fuse stamped before clear_grenade_hand (cook remaining).
+            outcome.fuse_impulses = fuse_defer
             if outcome.fuse_impulses > 0 and outcome.explosive_results and not outcome.blast_cancelled:
                 engine = self._combat_engine()
                 engine.schedule_grenade_explosion(
                     preview.shooter_token_id,
-                    outcome.fuse_impulses,
+                    fuse_defer,
                     preview.to_dict(),
                     [explosive_result_to_dict(e) for e in outcome.explosive_results],
                     preview.weapon_name,
@@ -1458,6 +1498,7 @@ class MainWindow(QMainWindow):
                     blast_mod_overrides=outcome.blast_mod_overrides,
                 )
                 self.hex_map_view.set_impulse_combat_state(ic, rebuild=False)
+            _finish_grenade_hand()
             self._apply_map_fire_outcome(outcome)
             self.hex_map_view._refresh_combat_ui()
             self._notify_game_state_changed(domain="impulse_combat", immediate=True)
@@ -1471,6 +1512,7 @@ class MainWindow(QMainWindow):
         )
         self.statusBar().showMessage(f"Fire queued MPC={mpc_stamp:g}")
         self._drain_impulse_fire_queue(interactive=interactive)
+        _finish_grenade_hand()
         self.hex_map_view._refresh_combat_ui()
         self._notify_game_state_changed(domain="impulse_combat", immediate=True)
         return True, "queued"
@@ -1630,16 +1672,18 @@ class MainWindow(QMainWindow):
             self.combat_log.append_miss(f"Miss: {reason}")
         for msg in outcome.messages:
             self.combat_log.append_system(msg)
-        for expl in outcome.explosive_results:
-            if expl.hit:
-                self.combat_log.append_hit(
-                    f"Explosive HIT (roll {expl.roll} vs {expl.odds}%)"
-                )
-            else:
-                self.combat_log.append_miss(
-                    f"Explosive miss — scatter {expl.scatter_hexes} "
-                    f"({'long' if expl.is_long else 'short'})"
-                )
+        # Grenade accuracy already in messages (Grenade HIT/scatter with roll).
+        if getattr(outcome, "kind", "") != "grenade":
+            for expl in outcome.explosive_results:
+                if expl.hit:
+                    self.combat_log.append_hit(
+                        f"Explosive HIT (roll {expl.roll} vs {expl.odds}%)"
+                    )
+                else:
+                    self.combat_log.append_miss(
+                        f"Explosive miss — scatter {expl.scatter_hexes} "
+                        f"({'long' if expl.is_long else 'short'})"
+                    )
         for result in outcome.shot_results:
             self._append_shot_result(result)
         if not outcome.shot_results and not outcome.explosive_results and not outcome.miss_reasons:
@@ -1648,10 +1692,59 @@ class MainWindow(QMainWindow):
         self.combat_zone.refresh_cards()
 
     def _append_shot_result(self, result) -> None:
-        if result.hit:
-            self.combat_log.append_hit(result.log or "Hit")
+        """Combat Log: short summary with character name; Detailed: full result.log."""
+        from phoenix_command.models.enums import AdvancedHitLocation
+
+        target_name = (
+            result.target.name
+            if getattr(result, "target", None) is not None
+            else "Unknown"
+        )
+        source = getattr(result, "damage_source", None)
+        dr = getattr(result, "damage_result", None)
+        loc = getattr(dr, "location", None) if dr is not None else None
+        is_blast = source == "blast" or loc == AdvancedHitLocation.BLAST_DAMAGE
+        is_shrapnel = source == "shrapnel"
+
+        if is_blast and result.hit and dr is not None:
+            msg = (
+                f"{target_name} - blast: {dr.damage} damage, {dr.shock} shock"
+            )
+            if getattr(result, "incapacitation_effect", None):
+                msg += f" ({result.incapacitation_effect.name})"
+                self.combat_log.append_critical(msg)
+            else:
+                self.combat_log.append_hit(msg)
+        elif is_shrapnel and result.hit and dr is not None:
+            loc_name = loc.name if loc is not None else "?"
+            msg = (
+                f"{target_name} - shrapnel HIT ({loc_name}): "
+                f"{dr.damage} damage, {dr.shock} shock"
+            )
+            if getattr(result, "incapacitation_effect", None):
+                msg += f" ({result.incapacitation_effect.name})"
+                self.combat_log.append_critical(msg)
+            else:
+                self.combat_log.append_hit(msg)
+        elif is_shrapnel and not result.hit:
+            self.combat_log.append_miss(f"{target_name} - shrapnel MISS")
+        elif result.hit:
+            if dr is not None:
+                msg = (
+                    f"{target_name} - {dr.location.name}: "
+                    f"{dr.damage} damage, {dr.shock} shock"
+                )
+                if getattr(result, "incapacitation_effect", None):
+                    msg += f" ({result.incapacitation_effect.name})"
+                    self.combat_log.append_critical(msg)
+                else:
+                    self.combat_log.append_hit(msg)
+            else:
+                self.combat_log.append_hit(f"{target_name} - Hit")
         else:
-            self.combat_log.append_miss(result.log or "Miss")
+            self.combat_log.append_miss(
+                f"{target_name} - Miss (Roll: {result.roll} vs {result.odds}%)"
+            )
         if result.log:
             self.combat_log.append_detailed(result.log)
         self.body_diagram.refresh()
@@ -1770,7 +1863,8 @@ class MainWindow(QMainWindow):
         preview = self._game_bridge.state.impulse_combat.shot_preview
         if not preview or preview.status != "open":
             if self._shot_preview_dialog:
-                self._shot_preview_dialog.close()
+                # Dismiss without Cancel intent (e.g. after Confirm sync cleared preview).
+                self._shot_preview_dialog.accept_after_confirm()
                 self._shot_preview_dialog = None
             self.hex_map_view.clear_fire_overlay()
             return
@@ -1826,6 +1920,10 @@ class MainWindow(QMainWindow):
                 aim_accumulated=aim_accumulated,
                 is_hip_fire=is_hip,
             )
+            if not self._shot_preview_dialog.isVisible():
+                self._shot_preview_dialog.show()
+            self._shot_preview_dialog.raise_()
+            self._shot_preview_dialog.activateWindow()
         self.hex_map_view.set_fire_overlay(preview)
 
     def _on_pick_aim_hex(self) -> None:
@@ -2123,6 +2221,12 @@ class MainWindow(QMainWindow):
         for char in self.characters:
             self.character_list.addItem(char.name)
 
+    def _refresh_selected_stats(self) -> None:
+        """Rebuild Equipment / stats pane for the selected character (no notify)."""
+        row = self.character_list.currentRow()
+        if 0 <= row < len(self.characters):
+            self.stats_display.set_character(self.characters[row])
+
     def _on_character_selected(self, index):
         """Display character details when selected."""
         if 0 <= index < len(self.characters):
@@ -2133,6 +2237,16 @@ class MainWindow(QMainWindow):
             self.body_diagram.clear()
         self._notify_game_state_changed()
 
+    def _rename_character_token_refs(self, old_name: str, new_name: str) -> None:
+        """Keep map tokens linked after a character rename."""
+        if not old_name or old_name == new_name:
+            return
+        tokens = self.hex_map_view.get_token_state()
+        for tok in tokens.placements.values():
+            if tok.character_name == old_name:
+                tok.character_name = new_name
+        self.hex_map_view.set_character_names([c.name for c in self.characters])
+
     def _edit_character(self):
         """Edit selected character stats."""
         current_row = self.character_list.currentRow()
@@ -2142,14 +2256,21 @@ class MainWindow(QMainWindow):
 
         from phoenix_command.gui.dialogs.character_dialog import CharacterDialog
         char = self.characters[current_row]
+        old_name = char.name
         dialog = CharacterDialog(character=char, parent=self)
         if dialog.exec():
             dialog.get_character()
+            renamed = char.name != old_name
+            if renamed:
+                self._rename_character_token_refs(old_name, char.name)
             self._refresh_character_list()
             self._on_character_selected(current_row)
             self.combat_zone.refresh_cards()
             self.statusBar().showMessage(f"Updated character: {char.name}")
-            self._notify_game_state_changed()
+            self._notify_game_state_changed(
+                domain="tokens" if renamed else "combat",
+                immediate=renamed,
+            )
 
     def _remove_character(self):
         """Remove selected character from the session."""
@@ -2196,6 +2317,9 @@ class MainWindow(QMainWindow):
         dialog = EquipmentDialog(character=char, parent=self)
         dialog.exec()
         self._on_character_selected(current_row)
+        self.combat_zone.refresh_cards()
+        if hasattr(self.hex_map_view, "_refresh_combat_ui"):
+            self.hex_map_view._refresh_combat_ui()
         self.statusBar().showMessage(f"Equipment updated for {char.name}")
         self._notify_game_state_changed()
 

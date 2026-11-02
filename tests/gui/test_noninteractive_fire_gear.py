@@ -87,3 +87,40 @@ def test_reject_confirm_keep_open_leaves_dialog(qapp):
     assert "Not enough AC" in dlg.windowTitle()
     assert dlg.confirm_btn.isEnabled()
     dlg.close()
+
+
+def test_cancel_shot_idempotent_when_preview_gone(qapp, rifle_pair):
+    """Late guest cancel after Confirm must not nack (S21)."""
+    win = MainWindow()
+    nacks: list[str] = []
+    win._send_nack = lambda player_id, intent_id, reason: nacks.append(reason)  # type: ignore[method-assign]
+    win._game_bridge.state.impulse_combat.shot_preview = None
+    win._handle_player_intent(
+        {
+            "player_id": "guest-1",
+            "intent_id": "i-late-cancel",
+            "token_id": "s",
+            "action": "cancel_shot",
+            "args": {},
+        }
+    )
+    assert nacks == []
+    win.close()
+
+
+def test_prompt_select_grenade_single_skips_dialog(qapp, rifle_pair):
+    from phoenix_command.models.gear import Grenade
+    from phoenix_command.session.domains.token_state import TokenPlacement
+
+    win = MainWindow()
+    char = rifle_pair[0]
+    # Template may already include a grenade; keep exactly one for no-dialog path.
+    char.equipment = [i for i in char.equipment if not isinstance(i, Grenade)]
+    char.add_gear(m67)
+    win.characters = [char]
+    tokens = win.hex_map_view.get_token_state()
+    tokens.placements["t1"] = TokenPlacement(
+        token_id="t1", character_name=char.name, q=0, r=0
+    )
+    assert win._prompt_select_grenade("t1") == m67.name
+    win.close()

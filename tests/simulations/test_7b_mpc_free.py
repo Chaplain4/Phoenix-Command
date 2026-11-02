@@ -102,6 +102,8 @@ def test_climb_through_window() -> None:
 
 
 def test_mpc_blocks_non_snap_after_fire() -> None:
+    from phoenix_command.simulations.map_fire_ac import apply_fire_ac, clear_aim_state
+
     rt = TokenCombatRuntime(ac_remaining=5.0, weapon_cycled=True, aim_ac_accumulated=3.0)
     preview = PendingShotPreview(
         preview_id="p",
@@ -114,31 +116,32 @@ def test_mpc_blocks_non_snap_after_fire() -> None:
     assert plan.effective_aim_time == 3
     ok, _ = validate_fire_ac(plan, rt, "single")
     assert ok
-    from phoenix_command.simulations.map_fire_ac import apply_fire_ac
 
     apply_fire_ac(plan, rt)
     assert rt.mpc_aim_owed >= 1.0
+    # Confirm path clears aim bank — requested Aim Time>1 must still hit MPC gate.
+    clear_aim_state(rt)
+    preview.aim_time_ac = 3
     plan2 = plan_fire_ac(preview, rt, "single", None)
+    assert plan2.effective_aim_time == 1
+    assert plan2.requested_aim_time == 3
     ok2, msg = validate_fire_ac(plan2, rt, "single")
     assert not ok2
     assert "MPC" in msg
     # Snap still OK
     preview.aim_time_ac = 1
-    rt.aim_ac_accumulated = 0
     plan3 = plan_fire_ac(preview, rt, "single", None)
     assert plan3.effective_aim_time == 1
     ok3, _ = validate_fire_ac(plan3, rt, "single")
     assert ok3
 
 
-def test_free_snap_eligibility_per_hex() -> None:
+def test_hex_entered_still_tracked() -> None:
     engine, tok = _engine(ac=10.0)
     rt = engine.get_runtime("t1")
-    assert not shot_timing.can_free_snap(rt)
     engine.apply_action("t1", "move", {"target_q": 1, "target_r": 0})
     assert tok.q == 1
     assert rt.hexes_entered_this_impulse == 1
-    assert shot_timing.can_free_snap(rt)
 
 
 def test_safety_fire_select() -> None:

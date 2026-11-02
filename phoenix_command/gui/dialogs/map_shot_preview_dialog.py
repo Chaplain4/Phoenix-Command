@@ -67,6 +67,7 @@ class MapShotPreviewDialog(QDialog):
         self._aim_accumulated = aim_accumulated
         self._is_hip_fire = is_hip_fire
         self._ammo_options = ammo_options or []
+        self._cancel_emitted = False
         self._setup_ui()
         self._load_preview()
         if not editable:
@@ -318,54 +319,63 @@ class MapShotPreviewDialog(QDialog):
         oidx = self.orient_combo.findData(p.orientation)
         if oidx >= 0:
             self.orient_combo.setCurrentIndex(oidx)
-        midx = self.fire_mode_combo.findData(p.fire_mode)
-        if midx >= 0:
-            self.fire_mode_combo.setCurrentIndex(midx)
 
-        self.target_list.clear()
-        selected = set(p.primary_ids())
-        # Show all known targets from per_target + primary
-        all_ids = list(dict.fromkeys(list(p.primary_ids()) + list(p.per_target.keys())))
-        for tid in all_ids:
-            item = QListWidgetItem(self._label_for(tid))
-            item.setData(256, tid)  # Qt.UserRole
-            self.target_list.addItem(item)
-            item.setSelected(tid in selected)
+        # fire_mode / target selection emit → _collect before custom_table is filled
+        # would wipe custom_eal_modifiers (Y6 Hit-before-fire −10).
+        self.fire_mode_combo.blockSignals(True)
+        self.target_list.blockSignals(True)
+        try:
+            midx = self.fire_mode_combo.findData(p.fire_mode)
+            if midx >= 0:
+                self.fire_mode_combo.setCurrentIndex(midx)
 
-        self.secondary_list.clear()
-        sec_selected: set[str] = set()
-        for secs in p.secondary_by_primary.values():
-            sec_selected.update(secs)
-        for tid in sec_selected:
-            item = QListWidgetItem(self._label_for(tid))
-            item.setData(256, tid)
-            self.secondary_list.addItem(item)
-            item.setSelected(True)
-        # Also offer other pattern candidates already in per_target but not primary
-        for tid in p.per_target:
-            if tid in selected or tid in sec_selected:
-                continue
-            item = QListWidgetItem(self._label_for(tid))
-            item.setData(256, tid)
-            self.secondary_list.addItem(item)
+            self.target_list.clear()
+            selected = set(p.primary_ids())
+            # Show all known targets from per_target + primary
+            all_ids = list(dict.fromkeys(list(p.primary_ids()) + list(p.per_target.keys())))
+            for tid in all_ids:
+                item = QListWidgetItem(self._label_for(tid))
+                item.setData(256, tid)  # Qt.UserRole
+                self.target_list.addItem(item)
+                item.setSelected(tid in selected)
 
-        for i in range(self.stance_list.count()):
-            item = self.stance_list.item(i)
-            item.setSelected(item.text() in p.stance_mods)
-        for i in range(self.vis_list.count()):
-            item = self.vis_list.item(i)
-            item.setSelected(item.text() in p.visibility_mods)
+            self.secondary_list.clear()
+            sec_selected: set[str] = set()
+            for secs in p.secondary_by_primary.values():
+                sec_selected.update(secs)
+            for tid in sec_selected:
+                item = QListWidgetItem(self._label_for(tid))
+                item.setData(256, tid)
+                self.secondary_list.addItem(item)
+                item.setSelected(True)
+            # Also offer other pattern candidates already in per_target but not primary
+            for tid in p.per_target:
+                if tid in selected or tid in sec_selected:
+                    continue
+                item = QListWidgetItem(self._label_for(tid))
+                item.setData(256, tid)
+                self.secondary_list.addItem(item)
 
-        self.custom_table.setRowCount(0)
-        for entry in p.custom_eal_modifiers:
-            label = entry.get("label", "") if isinstance(entry, dict) else str(entry[0])
-            alm = entry.get("alm", 0) if isinstance(entry, dict) else int(entry[1])
-            row = self.custom_table.rowCount()
-            self.custom_table.insertRow(row)
-            self.custom_table.setItem(row, 0, QTableWidgetItem(label))
-            self.custom_table.setItem(row, 1, QTableWidgetItem(str(alm)))
+            for i in range(self.stance_list.count()):
+                item = self.stance_list.item(i)
+                item.setSelected(item.text() in p.stance_mods)
+            for i in range(self.vis_list.count()):
+                item = self.vis_list.item(i)
+                item.setSelected(item.text() in p.visibility_mods)
 
-        self._update_mode_visibility()
+            self.custom_table.setRowCount(0)
+            for entry in p.custom_eal_modifiers:
+                label = entry.get("label", "") if isinstance(entry, dict) else str(entry[0])
+                alm = entry.get("alm", 0) if isinstance(entry, dict) else int(entry[1])
+                row = self.custom_table.rowCount()
+                self.custom_table.insertRow(row)
+                self.custom_table.setItem(row, 0, QTableWidgetItem(label))
+                self.custom_table.setItem(row, 1, QTableWidgetItem(str(alm)))
+
+            self._update_mode_visibility()
+        finally:
+            self.fire_mode_combo.blockSignals(False)
+            self.target_list.blockSignals(False)
         self._emit_overlay()
 
     def _set_read_only(self) -> None:
@@ -500,8 +510,16 @@ class MapShotPreviewDialog(QDialog):
         else:
             self.setWindowTitle("Shot Preview — Map Combat")
 
-    def _on_cancel(self) -> None:
+    def _emit_cancel_once(self) -> None:
+        """Emit cancelled at most once (Cancel button, Esc, or window X)."""
+        if self._cancel_emitted:
+            return
+        self._cancel_emitted = True
         self.cancelled.emit(self._preview.preview_id)
+        self.overlay_refresh_requested.emit(None)
+
+    def _on_cancel(self) -> None:
+        self._emit_cancel_once()
         self.reject()
 
     def apply_remote_preview(
@@ -519,5 +537,9 @@ class MapShotPreviewDialog(QDialog):
         self._load_preview()
 
     def closeEvent(self, event) -> None:
-        self.overlay_refresh_requested.emit(None)
+        # X / Esc / reject: treat as Cancel. Successful Confirm uses accept().
+        if self.result() != QDialog.DialogCode.Accepted:
+            self._emit_cancel_once()
+        else:
+            self.overlay_refresh_requested.emit(None)
         super().closeEvent(event)

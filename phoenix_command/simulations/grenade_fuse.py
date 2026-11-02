@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from copy import deepcopy
+
 from phoenix_command.models.character import Character
 from phoenix_command.models.gear import Grenade
 from phoenix_command.session.domains.impulse_combat_state import TokenCombatRuntime
@@ -9,6 +11,18 @@ from phoenix_command.session.domains.impulse_combat_state import TokenCombatRunt
 
 def fuse_impulses_for(grenade: Grenade) -> int:
     return max(0, int(grenade.fuse_length or 0) * 4)
+
+
+def lookup_grenade_by_name(name: str | None) -> Grenade | None:
+    """Catalog grenade by display name (works after consume from inventory)."""
+    if not name:
+        return None
+    from phoenix_command.session.gear_registry import get_gear_registry
+
+    item = get_gear_registry().get(name)
+    if isinstance(item, Grenade):
+        return deepcopy(item)
+    return None
 
 
 def start_cook(rt: TokenCombatRuntime, grenade: Grenade) -> tuple[bool, str]:

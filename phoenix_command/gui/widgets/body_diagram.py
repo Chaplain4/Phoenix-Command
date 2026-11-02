@@ -429,7 +429,10 @@ class BodyDiagramWidget(QWidget):
         # Process hit history
         if hasattr(self._character, 'hit_history'):
             for dr in self._character.hit_history:
-                if dr.location == AdvancedHitLocation.MISS:
+                if dr.location in (
+                    AdvancedHitLocation.MISS,
+                    AdvancedHitLocation.BLAST_DAMAGE,
+                ):
                     continue
                 zone = LOCATION_TO_ZONE.get(dr.location)
                 if zone is None:

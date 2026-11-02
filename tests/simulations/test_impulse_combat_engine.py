@@ -162,3 +162,20 @@ def test_refill_promotes_falling_to_grounded() -> None:
     rt.knockdown_phase = "falling"
     engine.refill_impulse_ac()
     assert rt.knockdown_phase == "grounded"
+
+
+def test_medical_aid_available_while_dazed_wait_or_grounded() -> None:
+    engine, _ = _engine()
+    char = engine.characters["Fighter"]
+    char.physical_damage_total = 50
+    rt = engine.get_runtime("t1")
+    rt.incap_effect = "Dazed"
+    rt.dazed_wait_impulses = 2
+    acts = engine.available_actions("t1")
+    assert any(a[0] == "set_medical_aid" for a in acts)
+    rt.incap_effect = None
+    rt.dazed_wait_impulses = 0
+    rt.knockdown_phase = "grounded"
+    rt.hands_free = False
+    acts = engine.available_actions("t1")
+    assert any(a[0] == "set_medical_aid" for a in acts)

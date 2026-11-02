@@ -89,6 +89,7 @@ PENDING_EXEMPT = frozenset(
         "plan_route_chain",
         "plan_route_pathfind",
         "edit_route",
+        "free_break_stance",  # §9.1 free secondary during stance-change pending
     }
 )
 
@@ -203,15 +204,22 @@ class ImpulseCombatEngine:
             char = self.characters.get(placement.character_name or "")
             grenade_fuse.consume_grenade(char, gname)
             grenade_fuse.clear_grenade_state(rt)
+            layer = placement.layer_id or ""
             expl = PendingGrenadeExplosion(
                 explosion_id=str(uuid.uuid4()),
                 resolve_phase=self.impulse_combat.phase,
                 resolve_impulse=self.impulse_combat.impulse,
                 shooter_token_id=token_id,
                 preview_snapshot={
+                    "preview_id": f"hand-boom-{token_id}",
+                    "shooter_token_id": token_id,
+                    "target_token_id": "",
+                    "proposed_by": "host",
                     "aim_q": placement.q,
                     "aim_r": placement.r,
-                    "layer_id": placement.layer_id or "",
+                    "aim_layer_id": layer,
+                    "layer_id": layer,
+                    "fire_kind": "grenade",
                     "hand_detonation": True,
                     "weapon_name": gname,
                     "ammo_name": gname,
@@ -473,16 +481,6 @@ class ImpulseCombatEngine:
             return self._apply_cook_grenade(placement)
         if action == "free_break_stance":
             return self._apply_free_break_stance(placement)
-        if action == "free_snap":
-            return ActionResult(
-                False,
-                "Free snap is declared via Declare Shot with free_action flag",
-            )
-        if action == "free_grenade_toss":
-            return ActionResult(
-                False,
-                "Free toss is declared via Declare Shot with free_action flag",
-            )
         if action == "custom_action":
             return self._apply_custom_action(
                 placement, float(args.get("ac", 1)), str(args.get("label", "Custom"))
@@ -535,13 +533,35 @@ class ImpulseCombatEngine:
         if action in AIM_INTERRUPT_ACTIONS:
             clear_aim_state(rt)
 
+    def _append_medical_aid_action(
+        self,
+        actions: list[tuple[str, str, float | str]],
+        char,
+        rt: TokenCombatRuntime,
+    ) -> None:
+        if char and (
+            char.physical_damage_total > 0
+            or rt.ctp_deadline_abs_impulse is not None
+            or rt.healing_days > 0
+        ):
+            actions.append(("set_medical_aid", "Set Medical Aid", 0))
+
     def _apply_abandon_pending(self, placement: TokenPlacement) -> ActionResult:
+        from phoenix_command.simulations import map_route
+
         rt = self.get_runtime(placement.token_id)
         pending = rt.pending_id()
-        if not pending:
+        has_route = bool(rt.route_steps and rt.route_cursor < len(rt.route_steps))
+        if not pending and not has_route:
             return ActionResult(False, "No pending action")
-        rt.clear_pending()
-        return ActionResult(True, f"Abandoned pending {pending}")
+        parts: list[str] = []
+        if pending:
+            rt.clear_pending()
+            parts.append(f"Abandoned pending {pending}")
+        if has_route or rt.route_steps:
+            map_route.clear_route(rt)
+            parts.append("route cleared")
+        return ActionResult(True, " — ".join(parts) if parts else "Abandoned")
 
     def _apply_free_duck(self, placement: TokenPlacement) -> ActionResult:
         rt = self.get_runtime(placement.token_id)
@@ -1515,17 +1535,17 @@ class ImpulseCombatEngine:
             ]
         if rt.incap_effect in ("Knocked Out", "Stunned"):
             actions = [("skip_impulse", "Skip Impulse", 0)]
-            if char and (
-                char.physical_damage_total > 0
-                or rt.ctp_deadline_abs_impulse is not None
-                or rt.healing_days > 0
-            ):
-                actions.append(("set_medical_aid", "Set Medical Aid", 0))
+            self._append_medical_aid_action(actions, char, rt)
             return actions
         actions: list[tuple[str, str, float | str]] = []
-        if rt.has_pending():
-            pid = rt.pending_id() or "action"
-            actions.append(("abandon_pending", f"Abandon pending ({pid})", 0))
+        has_route = bool(rt.route_steps and rt.route_cursor < len(rt.route_steps))
+        if rt.has_pending() or has_route:
+            if rt.has_pending():
+                pid = rt.pending_id() or "action"
+                label = f"Abandon pending ({pid})"
+            else:
+                label = "Abandon route"
+            actions.append(("abandon_pending", label, 0))
         owed = self._owed(rt)
         if owed > 0:
             actions.append(("recover", f"Recover recoil/balance ({owed:.0f} AC)", owed))
@@ -1533,9 +1553,12 @@ class ImpulseCombatEngine:
             actions.append(("recover_hands", "Use hands (roll)", HANDS_FREE_AC))
             actions.append(("duck", "Duck", 0))
             actions.append(("skip_impulse", "Skip Impulse", 0))
+            self._append_medical_aid_action(actions, char, rt)
             return actions
         if rt.incap_effect == "Dazed" and rt.dazed_wait_impulses > 0:
-            return [("skip_impulse", "Skip Impulse", 0)]
+            wait_actions = [("skip_impulse", "Skip Impulse", 0)]
+            self._append_medical_aid_action(wait_actions, char, rt)
+            return wait_actions
         actions.extend(
             [
                 ("duck", "Duck", 0),
@@ -1633,11 +1656,7 @@ class ImpulseCombatEngine:
                 if g and rt.grenade_armed and (g.fuse_length or 0) > 0:
                     if rt.grenade_fuse_remaining_impulses is None:
                         actions.append(("cook_grenade", f"Cook {g.name}", 0))
-        # §9.1 free actions
-        if shot_timing.can_free_snap(rt) and rt.incap_effect not in ("Dazed", "Disoriented"):
-            actions.append(("free_snap", "Free Snap (while moving)", 0))
-            if rt.held_grenade_name and rt.grenade_armed:
-                actions.append(("free_grenade_toss", "Free Toss Grenade", 0))
+        # §9.1 non-fire free secondary (shots always cost ≥1 AC in this engine)
         if rt.firing_stance_held and rt.pending_id() in STANCE_ACTION_MAP:
             actions.append(("free_break_stance", "Free Break Stance", 0))
         # Table 7B detailed micro-steps (dual-path)

@@ -93,8 +93,15 @@ def test_aimed_caps_to_accumulated() -> None:
     plan = plan_fire_ac(preview, rt, "single", None)
     assert plan.is_hip is False
     assert plan.effective_aim_time == 2
-    ok, _ = validate_fire_ac(plan, rt, "single")
-    assert ok
+    assert plan.requested_aim_time == 3
+    # Preview Aim Time must be backed by banked Aim AC (no silent under-aim Confirm).
+    ok, msg = validate_fire_ac(plan, rt, "single")
+    assert not ok
+    assert "aim" in msg.lower()
+    preview2 = _preview(2)
+    plan2 = plan_fire_ac(preview2, rt, "single", None)
+    ok2, _ = validate_fire_ac(plan2, rt, "single")
+    assert ok2
 
 
 def test_confirm_rejects_without_ac() -> None:

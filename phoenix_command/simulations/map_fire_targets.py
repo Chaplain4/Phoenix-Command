@@ -163,12 +163,15 @@ def tokens_in_blast(
     shooter: TokenPlacement | None = None,
     layer_id: str = "",
 ) -> list[tuple[str, float]]:
-    """(token_id, distance_m) within blast radius."""
+    """(token_id, distance_m) within blast radius.
+
+    ``shooter`` is kept for call-site compatibility but is not excluded —
+    distance decides (hand detonation / scatter onto self included).
+    """
+    _ = shooter
     mph = _meters_per_hex(map_state)
     result: list[tuple[str, float]] = []
     for tid, tok in tokens.placements.items():
-        if shooter and tid == shooter.token_id:
-            continue
         if not tok.character_name:
             continue
         if layer_id and tok.layer_id and tok.layer_id != layer_id:

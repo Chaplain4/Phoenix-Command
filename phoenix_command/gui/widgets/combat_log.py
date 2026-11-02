@@ -1,5 +1,7 @@
 """Combat log widget with color-coded messages and detailed log tab."""
 
+import html
+
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QTabWidget, QTextEdit
 from PyQt6.QtGui import QTextCursor
 
@@ -31,6 +33,11 @@ class CombatLogWidget(QWidget):
 
         layout.addWidget(self._tabs)
 
+    @staticmethod
+    def _html_message(message: str) -> str:
+        """Escape for insertHtml so <= / < tags are not eaten as markup."""
+        return html.escape(message or "").replace("\n", "<br>")
+
     # ── Normal log methods ────────────────────────────────────────────────
 
     def append_hit(self, message: str):
@@ -60,7 +67,8 @@ class CombatLogWidget(QWidget):
         from phoenix_command.session.domains.combat_state import CombatLogEntry
         self._log_entries.append(CombatLogEntry(message=message, category=category))
         self._log_text.moveCursor(QTextCursor.MoveOperation.End)
-        self._log_text.insertHtml(f'<span style="color: {color};">{message}</span><br>')
+        safe = self._html_message(message)
+        self._log_text.insertHtml(f'<span style="color: {color};">{safe}</span><br>')
         self._log_text.moveCursor(QTextCursor.MoveOperation.End)
 
     # ── Detailed log methods ──────────────────────────────────────────────
@@ -105,8 +113,9 @@ class CombatLogWidget(QWidget):
             self._log_entries.append(entry)
             color = color_map.get(entry.category, "#2471a3")
             self._log_text.moveCursor(QTextCursor.MoveOperation.End)
+            safe = self._html_message(entry.message)
             self._log_text.insertHtml(
-                f'<span style="color: {color};">{entry.message}</span><br>'
+                f'<span style="color: {color};">{safe}</span><br>'
             )
         if detailed_lines:
             for line in detailed_lines:

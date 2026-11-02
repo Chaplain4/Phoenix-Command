@@ -57,3 +57,53 @@ def test_confirm_sets_status(qapp):
     dlg._on_confirm()
     assert confirmed
     assert confirmed[0].status == "confirmed"
+
+
+def test_close_event_emits_cancelled_once(qapp):
+    dlg = MapShotPreviewDialog(_preview(), editable=True)
+    cancelled: list[str] = []
+    dlg.cancelled.connect(cancelled.append)
+    dlg.close()
+    assert cancelled == ["p1"]
+    assert dlg._cancel_emitted is True
+    dlg.close()
+    assert cancelled == ["p1"]
+
+
+def test_cancel_button_then_close_does_not_double_emit(qapp):
+    dlg = MapShotPreviewDialog(_preview(), editable=True)
+    cancelled: list[str] = []
+    dlg.cancelled.connect(cancelled.append)
+    dlg._on_cancel()
+    assert cancelled == ["p1"]
+    dlg.close()
+    assert cancelled == ["p1"]
+
+
+def test_accept_after_confirm_does_not_emit_cancelled(qapp):
+    dlg = MapShotPreviewDialog(_preview(), editable=True)
+    cancelled: list[str] = []
+    dlg.cancelled.connect(cancelled.append)
+    dlg.accept_after_confirm()
+    assert cancelled == []
+
+
+def test_load_preview_preserves_custom_eal_modifiers(qapp):
+    """Opening the dialog must not wipe Hit-before-fire customs via early _collect."""
+    preview = _preview(
+        custom_eal_modifiers=[
+            {"label": "Hit before fire (§5.7)", "alm": -10},
+        ],
+        target_token_ids=["t"],
+        per_target={"t": {"range_hexes": 3}},
+    )
+    dlg = MapShotPreviewDialog(preview, editable=True)
+    assert dlg.custom_table.rowCount() == 1
+    assert dlg.custom_table.item(0, 0).text() == "Hit before fire (§5.7)"
+    assert dlg.custom_table.item(0, 1).text() == "-10"
+    collected = dlg._collect()
+    assert any(
+        c.get("alm") == -10 and "Hit before fire" in c.get("label", "")
+        for c in collected.custom_eal_modifiers
+    )
+    dlg.close()

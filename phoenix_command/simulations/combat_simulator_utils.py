@@ -21,8 +21,67 @@ from phoenix_command.tables.advanced_rules.knock_down import (
 )
 
 
+# Severity ranks for explosion multi-hit clamp (mirror map_wounds; avoid import cycle).
+_INCAP_SEVERITY_RANK: dict[IncapacitationEffect, int] = {
+    IncapacitationEffect.DISORIENTED: 1,
+    IncapacitationEffect.DAZED: 2,
+    IncapacitationEffect.STUNNED: 3,
+    IncapacitationEffect.KNOCKED_OUT: 4,
+}
+
+
+def _incap_rank(effect: IncapacitationEffect | None) -> int:
+    if effect is None:
+        return 0
+    return _INCAP_SEVERITY_RANK.get(effect, 0)
+
+
+def _clamp_explosion_incap(
+    rolled: IncapacitationEffect | None,
+    rolled_time: int | None,
+    running_worst: IncapacitationEffect | None,
+    running_time: int | None,
+) -> tuple[IncapacitationEffect | None, int | None, IncapacitationEffect | None, int | None]:
+    """Never emit a milder incap than already seen this explosion; keep longer equal-severity time.
+
+    Returns (effect_for_shot, time_for_shot, new_running_worst, new_running_time).
+    """
+    if rolled is None:
+        return None, None, running_worst, running_time
+    rolled_rank = _incap_rank(rolled)
+    worst_rank = _incap_rank(running_worst)
+    if rolled_rank < worst_rank:
+        return None, None, running_worst, running_time
+    if rolled_rank == worst_rank and running_worst is not None:
+        merged_time = running_time
+        if rolled_time is not None:
+            merged_time = max(int(running_time or 0), int(rolled_time))
+        return rolled, merged_time, running_worst, merged_time
+    # Strictly worse (or first effect)
+    return rolled, rolled_time, rolled, rolled_time
+
+
 class CombatSimulatorUtils:
     """Utility methods for combat simulation."""
+
+    @staticmethod
+    def explosion_incap_floor(
+        results: List[ShotResult],
+    ) -> tuple[Optional[IncapacitationEffect], Optional[int]]:
+        """Worst incap (+ longest equal-severity time) among ShotResults this explosion."""
+        worst: Optional[IncapacitationEffect] = None
+        worst_time: Optional[int] = None
+        for sr in results:
+            if sr.incapacitation_effect is None:
+                continue
+            rank = _incap_rank(sr.incapacitation_effect)
+            wr = _incap_rank(worst)
+            if rank > wr:
+                worst = sr.incapacitation_effect
+                worst_time = sr.incapacitation_time_phases
+            elif rank == wr and sr.incapacitation_time_phases is not None:
+                worst_time = max(int(worst_time or 0), int(sr.incapacitation_time_phases))
+        return worst, worst_time
 
     @staticmethod
     def redistribute_hits_by_eal(
@@ -821,6 +880,19 @@ class CombatSimulatorUtils:
 
         if shrapnel_hits == 0:
             log.append("  No shrapnel hits")
+            # Combat Log MISS only when ≥1 hit was possible (chance existed).
+            if base_hits > 0 or is_guaranteed:
+                return [
+                    ShotResult(
+                        hit=False,
+                        eal=0,
+                        odds=base_hits if not is_guaranteed else 100,
+                        roll=0,
+                        target=target,
+                        log="No shrapnel hits",
+                        damage_source="shrapnel",
+                    )
+                ]
             return []
 
         pen = ammo.get_explosion_pen(range_from_burst)
@@ -828,6 +900,8 @@ class CombatSimulatorUtils:
         log.append(f"  Shrapnel PEN: {pen}, DC: {dc}")
 
         results = []
+        running_worst: Optional[IncapacitationEffect] = None
+        running_time: Optional[int] = None
         for i in range(shrapnel_hits):
             hit_log = [f"--- Shrapnel hit {i + 1}/{shrapnel_hits} ---"]
 
@@ -868,7 +942,7 @@ class CombatSimulatorUtils:
                 target.apply_damage(damage_result.damage, damage_result)
                 hit_log.append(f"  Damage: {damage_result.damage}, Shock: {damage_result.shock}")
 
-            incap_effect = CombatSimulatorUtils.determine_incapacitation(
+            rolled_incap = CombatSimulatorUtils.determine_incapacitation(
                 target, target.physical_damage_total, damage_result.shock, hit_log
             )
 
@@ -876,17 +950,25 @@ class CombatSimulatorUtils:
                 target.physical_damage_total, target.health
             )
 
-            incap_time = None
-            if incap_effect:
+            rolled_time = None
+            if rolled_incap:
                 modifier = 0
-                if incap_effect == IncapacitationEffect.DAZED:
+                if rolled_incap == IncapacitationEffect.DAZED:
                     modifier = -1
-                elif incap_effect == IncapacitationEffect.DISORIENTED:
+                elif rolled_incap == IncapacitationEffect.DISORIENTED:
                     modifier = -2
-                incap_time = Table8HealingAndRecovery.get_incapacitation_time_8b(
+                rolled_time = Table8HealingAndRecovery.get_incapacitation_time_8b(
                     target.physical_damage_total, modifier
                 )
-                hit_log.append(f"  Incap time: {incap_time} phases")
+                hit_log.append(f"  Incap time: {rolled_time} phases")
+
+            incap_effect, incap_time, running_worst, running_time = _clamp_explosion_incap(
+                rolled_incap, rolled_time, running_worst, running_time
+            )
+            if rolled_incap is not None and incap_effect is None:
+                hit_log.append(
+                    f"  Incap clamped (kept {_incap_rank(running_worst)}≥{_incap_rank(rolled_incap)})"
+                )
 
             log.extend(hit_log)
             results.append(ShotResult(
@@ -899,7 +981,8 @@ class CombatSimulatorUtils:
                 incapacitation_effect=incap_effect,
                 recovery=recovery,
                 incapacitation_time_phases=incap_time,
-                log="\n".join(hit_log)
+                log="\n".join(hit_log),
+                damage_source="shrapnel",
             ))
 
         return results
@@ -909,9 +992,15 @@ class CombatSimulatorUtils:
         target: Character,
         base_concussion: int,
         blast_modifiers: List[BlastModifier],
-        log: List[str]
+        log: List[str],
+        prior_incap: Optional[IncapacitationEffect] = None,
+        prior_incap_time: Optional[int] = None,
     ) -> Optional[ShotResult]:
-        """Process concussion damage from explosion."""
+        """Process concussion damage from explosion.
+
+        prior_incap / prior_incap_time: worst effect already applied this explosion
+        (e.g. from shrapnel) so blast cannot emit a milder ShotResult.
+        """
         log.append(f"[Concussion] Target: {target.name}, Base: {base_concussion}")
 
         if base_concussion <= 0:
@@ -933,13 +1022,13 @@ class CombatSimulatorUtils:
         log.append(f"  Concussion damage: {concussion_damage}")
 
         damage_result = DamageResult(
-            location=AdvancedHitLocation.MISS,
+            location=AdvancedHitLocation.BLAST_DAMAGE,
             damage=concussion_damage,
             shock=0
         )
         target.apply_damage(concussion_damage, damage_result)
 
-        incap_effect = CombatSimulatorUtils.determine_incapacitation(
+        rolled_incap = CombatSimulatorUtils.determine_incapacitation(
             target, target.physical_damage_total, 0, log
         )
 
@@ -947,17 +1036,23 @@ class CombatSimulatorUtils:
             target.physical_damage_total, target.health
         )
 
-        incap_time = None
-        if incap_effect:
+        rolled_time = None
+        if rolled_incap:
             modifier = 0
-            if incap_effect == IncapacitationEffect.DAZED:
+            if rolled_incap == IncapacitationEffect.DAZED:
                 modifier = -1
-            elif incap_effect == IncapacitationEffect.DISORIENTED:
+            elif rolled_incap == IncapacitationEffect.DISORIENTED:
                 modifier = -2
-            incap_time = Table8HealingAndRecovery.get_incapacitation_time_8b(
+            rolled_time = Table8HealingAndRecovery.get_incapacitation_time_8b(
                 target.physical_damage_total, modifier
             )
-            log.append(f"  Incap time: {incap_time} phases")
+            log.append(f"  Incap time: {rolled_time} phases")
+
+        incap_effect, incap_time, _, _ = _clamp_explosion_incap(
+            rolled_incap, rolled_time, prior_incap, prior_incap_time
+        )
+        if rolled_incap is not None and incap_effect is None:
+            log.append("  Incap clamped (prior shrapnel worse or equal)")
 
         armor_class = infantry_armor_class(target, None, True)
         knock_down = explosive_knock_down(int(base_concussion), armor_class)
@@ -978,4 +1073,5 @@ class CombatSimulatorUtils:
             incapacitation_time_phases=incap_time,
             log="\n".join(log),
             knock_down=knock_down,
+            damage_source="blast",
         )

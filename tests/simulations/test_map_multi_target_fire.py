@@ -114,6 +114,18 @@ def test_tokens_in_blast() -> None:
     assert "e2" in ids
 
 
+def test_tokens_in_blast_includes_shooter_at_center() -> None:
+    """BUG-04: thrower/hand boom at epicenter is a blast victim."""
+    tokens, shooter = _tokens_line()
+    map_state = MapState()
+    map_state.ensure_default_layer()
+    hits = tokens_in_blast(0, 0, 3.0, tokens, map_state, shooter=shooter)
+    ids = [tid for tid, _ in hits]
+    assert "s" in ids
+    assert hits[0][0] == "s"
+    assert hits[0][1] == 0.0
+
+
 def test_pending_shot_preview_multi_round_trip() -> None:
     preview = PendingShotPreview(
         preview_id="p1",

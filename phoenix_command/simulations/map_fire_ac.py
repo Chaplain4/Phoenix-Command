@@ -31,10 +31,10 @@ class FireAcPlan:
     fire_cost: float = FIRE_COST_AC
     is_hip: bool = False
     effective_aim_time: int = 1
+    requested_aim_time: int = 1
     is_burst: bool = False
     is_grenade: bool = False
     grenade_arm_time: int = 0
-    is_free: bool = False
 
 
 def proper_firing_stance(rt: TokenCombatRuntime) -> bool:
@@ -47,8 +47,6 @@ def plan_fire_ac(
     shooter_rt: TokenCombatRuntime,
     fire_kind: str,
     weapon: Weapon | Grenade | None,
-    *,
-    free_action: bool = False,
 ) -> FireAcPlan:
     """Derive hip from stance and aim time from accumulated Aim AC (independent)."""
     is_grenade = fire_kind == "grenade" or isinstance(weapon, Grenade)
@@ -59,21 +57,19 @@ def plan_fire_ac(
 
     accumulated = int(shooter_rt.aim_ac_accumulated or 0)
     is_hip = not is_grenade and not proper_firing_stance(shooter_rt)
+    requested = max(1, int(preview.aim_time_ac or 1))
 
-    if free_action:
-        # §9.1 free snap / toss: Aim Time forced to 1; 0 fire AC
-        effective = 1
-        fire_cost = 0.0
-    elif is_grenade:
+    if is_grenade:
         if accumulated > 0:
-            effective = max(1, min(int(preview.aim_time_ac or accumulated), accumulated))
+            effective = max(1, min(requested, accumulated))
         else:
-            effective = max(1, int(preview.aim_time_ac or 1))
+            effective = requested
         fire_cost = GRENADE_THROW_AC
     elif accumulated > 0:
-        effective = max(1, min(int(preview.aim_time_ac or accumulated), accumulated))
+        effective = max(1, min(requested, accumulated))
         fire_cost = FIRE_COST_AC
     else:
+        # No Aim banked: hip/snap column only (Aim Time 1). Requested >1 is gated in validate.
         effective = 1
         fire_cost = FIRE_COST_AC
 
@@ -81,10 +77,10 @@ def plan_fire_ac(
         fire_cost=fire_cost,
         is_hip=is_hip,
         effective_aim_time=effective,
+        requested_aim_time=requested,
         is_burst=is_burst,
         is_grenade=is_grenade,
         grenade_arm_time=grenade_arm_time,
-        is_free=free_action,
     )
 
 
@@ -107,10 +103,6 @@ def sync_preview_from_plan(
     aim_note = f"Aim time {plan.effective_aim_time}"
     if aim_note not in " ".join(preview.notes):
         preview.notes = list(preview.notes) + [aim_note]
-    if plan.is_free:
-        note = "Free action (§9.1)"
-        if note not in " ".join(preview.notes):
-            preview.notes = list(preview.notes) + [note]
 
 
 def validate_fire_ac(
@@ -123,26 +115,27 @@ def validate_fire_ac(
         return False, f"Need {owed:.0f} AC to recover (recoil/balance) first"
     if fire_kind in SINGLE_FIRE_KINDS and not rt.weapon_cycled:
         return False, "Cycle weapon first"
-    if not plan.is_free and rt.ac_remaining < plan.fire_cost:
+    if rt.ac_remaining < plan.fire_cost:
         return False, f"Need {plan.fire_cost:.0f} AC, have {rt.ac_remaining:.1f}"
     if plan.is_burst and rt.impulse_burst_used:
         return False, "Already fired a burst this impulse"
     if plan.is_grenade and plan.grenade_arm_time > 0 and not rt.grenade_armed:
         return False, "Arm grenade first"
-    if not plan.is_grenade and plan.effective_aim_time > 1:
-        if rt.aim_ac_accumulated < plan.effective_aim_time:
-            return False, (
-                f"Need {plan.effective_aim_time} AC aim, "
-                f"have {int(rt.aim_ac_accumulated)}"
-            )
-    ok_mpc, mpc_msg = validate_aim_vs_mpc(rt, plan.effective_aim_time)
+    # Use requested Aim Time so preview Aim Time>1 cannot silently become snap after fire.
+    ok_mpc, mpc_msg = validate_aim_vs_mpc(rt, plan.requested_aim_time)
     if not ok_mpc:
         return False, mpc_msg
+    if not plan.is_grenade and plan.requested_aim_time > 1:
+        if rt.aim_ac_accumulated < plan.requested_aim_time:
+            return False, (
+                f"Need {plan.requested_aim_time} AC aim, "
+                f"have {int(rt.aim_ac_accumulated)}"
+            )
     return True, ""
 
 
 def apply_fire_ac(plan: FireAcPlan, rt: TokenCombatRuntime) -> None:
-    if not plan.is_free and plan.fire_cost > 0:
+    if plan.fire_cost > 0:
         rt.ac_remaining -= plan.fire_cost
         record_ac_spend(rt, plan.fire_cost)
     if plan.is_burst:

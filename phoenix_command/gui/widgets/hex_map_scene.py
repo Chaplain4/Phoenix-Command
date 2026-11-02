@@ -73,7 +73,11 @@ class HexMapScene(QGraphicsScene):
             item.set_token_selected(tid == token_id)
 
     def set_token_status(self, status_by_token: dict[str, str]) -> None:
-        self._status_by_token = status_by_token
+        self._status_by_token = dict(status_by_token or {})
+        for tid, item in self._token_items.items():
+            text = self._status_by_token.get(tid, "")
+            if hasattr(item, "set_status_text"):
+                item.set_status_text(text)
 
     def set_editable(self, editable: bool) -> None:
         self._editable = editable

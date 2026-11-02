@@ -53,6 +53,8 @@ class ShotResult:
     incapacitation_time_phases: Optional[int] = None
     log: Optional[str] = None
     knock_down: Optional[KnockDownEffect] = None
+    # "blast" / "shrapnel" for explosion Combat Log; None = ballistic / other
+    damage_source: Optional[str] = None
 
 
 @dataclass

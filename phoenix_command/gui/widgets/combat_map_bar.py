@@ -168,7 +168,8 @@ class CombatMapBar(QWidget):
             metrics = self._status_label.fontMetrics()
             elided = metrics.elidedText(full, Qt.TextElideMode.ElideRight, 220)
             self._status_label.setText(elided)
-            self._abandon_btn.setEnabled(rt.has_pending())
+            has_route = bool(rt.route_steps and rt.route_cursor < len(rt.route_steps))
+            self._abandon_btn.setEnabled(rt.has_pending() or has_route)
             idx = self._fire_mode_combo.findData(rt.fire_mode)
             if idx >= 0:
                 self._fire_mode_combo.blockSignals(True)
@@ -268,6 +269,25 @@ class CombatMapBar(QWidget):
             mode = self._fire_mode_combo.currentData()
             if mode:
                 args["fire_mode"] = mode
+        if action_id == "set_medical_aid":
+            from PyQt6.QtWidgets import QInputDialog
+            from phoenix_command.models.enums import MedicalAid
+
+            choices = [aid.value for aid in MedicalAid]
+            current = "No Aid"
+            rt = self._impulse_combat.token_runtime.get(self._selected_token_id or "")
+            # Prefer showing current aid if character card tracks it — default No Aid
+            choice, ok = QInputDialog.getItem(
+                self,
+                "Medical Aid",
+                "Aid level:",
+                choices,
+                max(0, choices.index(current)) if current in choices else 0,
+                False,
+            )
+            if not ok or not choice:
+                return
+            args["medical_aid"] = choice
         self.combat_action_requested.emit(self._selected_token_id, action_id, args)
 
     def _emit_duck(self) -> None:

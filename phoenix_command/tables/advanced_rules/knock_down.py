@@ -96,7 +96,11 @@ NONE = KnockDownEffect()
 
 def location_band(location: AdvancedHitLocation) -> LocationBand | None:
     """Map an advanced hit location to the projectile KD column."""
-    if location in (AdvancedHitLocation.MISS, AdvancedHitLocation.WEAPON_CRITICAL):
+    if location in (
+        AdvancedHitLocation.MISS,
+        AdvancedHitLocation.BLAST_DAMAGE,
+        AdvancedHitLocation.WEAPON_CRITICAL,
+    ):
         return None
     name = location.name
     if name.startswith(_HEAD_PREFIXES) or name in ("BASE_OF_NECK",):
@@ -142,7 +146,10 @@ def infantry_armor_class(
     is_front: bool = True,
 ) -> ArmorClass:
     """Infantry column if the struck location (or torso vitals for concussion) has PF > 0."""
-    if location is not None and location != AdvancedHitLocation.MISS:
+    if location is not None and location not in (
+        AdvancedHitLocation.MISS,
+        AdvancedHitLocation.BLAST_DAMAGE,
+    ):
         if location_ballistic_pf(character, location, is_front) > 0:
             return "infantry"
         return "normal"

@@ -78,6 +78,23 @@ def test_hit_before_fire_adds_minus_10_alm_in_context() -> None:
     assert any("Hit before fire" in lab for lab in labels)
     vals = [m[1] for m in mods if "Hit before fire" in m[0]]
     assert vals and vals[0] == shot_timing.HIT_BEFORE_FIRE_ALM
+    # Preview bridge shape used by GUI → dispatch (_params_from_preview).
+    from phoenix_command.simulations import map_fire_dispatch as mfd
+
+    preview = PendingShotPreview(
+        preview_id="p-hit",
+        shooter_token_id="s1",
+        target_token_id="t1",
+        proposed_by="host",
+        custom_eal_modifiers=[
+            {"label": str(lab), "alm": int(val)} for lab, val in mods
+        ],
+    )
+    params = mfd._shot_params_from_preview(preview)
+    assert any(
+        "Hit before fire" in str(lab) and int(val) == shot_timing.HIT_BEFORE_FIRE_ALM
+        for lab, val in (params.custom_eal_modifiers or [])
+    )
 
 
 def test_tof_path_does_not_require_queue() -> None:

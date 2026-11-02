@@ -112,11 +112,17 @@ def resolve_pending_grenade_explosion(
     abs_impulse: int = 0,
 ) -> MapFireOutcome:
     """Apply blast damage for a fuse-delayed grenade."""
-    preview = PendingShotPreview.from_dict(pending.preview_snapshot)
+    preview = PendingShotPreview.from_dict(pending.preview_snapshot or {})
+    if not preview.shooter_token_id and pending.shooter_token_id:
+        preview.shooter_token_id = pending.shooter_token_id
+    snap = pending.preview_snapshot or {}
+    if not preview.aim_layer_id:
+        preview.aim_layer_id = str(snap.get("aim_layer_id") or snap.get("layer_id") or "")
+    # Accuracy was logged at throw; do not re-attach explosive_results for Combat Log.
     explosive_results = [
         explosive_result_from_dict(d) for d in pending.explosive_results
     ]
-    outcome = MapFireOutcome(kind="grenade", explosive_results=explosive_results)
+    outcome = MapFireOutcome(kind="grenade", explosive_results=[])
     explosive_ammo = ammo if getattr(ammo, "explosive_data", None) else weapon
     if not getattr(explosive_ammo, "explosive_data", None):
         outcome.messages.append("Grenade exploded (no blast data)")
@@ -1109,9 +1115,16 @@ def _dispatch_explosive(
             params.visibility_modifiers,
         )
         outcome.explosive_results = [expl]
-        outcome.messages.append(
-            f"Grenade {'HIT' if expl.hit else f'scatter {expl.scatter_hexes}'}"
-        )
+        if expl.hit:
+            outcome.messages.append(
+                f"Grenade HIT (roll {expl.roll} vs {expl.odds}%)"
+            )
+        else:
+            outcome.messages.append(
+                f"Grenade scatter {expl.scatter_hexes} "
+                f"({'long' if expl.is_long else 'short'}; "
+                f"roll {expl.roll} vs {expl.odds}%)"
+            )
     else:
         expl = CombatSimulator.explosive_weapon_shot(
             shooter, weapon, range_hex, ExplosiveTarget.HEX, params

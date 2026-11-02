@@ -95,7 +95,11 @@ def merge_incapacitation(
 
 def classify_disable(location: AdvancedHitLocation) -> DisableKind:
     """Map advanced hit location to disabling injury category."""
-    if location in (AdvancedHitLocation.MISS, AdvancedHitLocation.WEAPON_CRITICAL):
+    if location in (
+        AdvancedHitLocation.MISS,
+        AdvancedHitLocation.BLAST_DAMAGE,
+        AdvancedHitLocation.WEAPON_CRITICAL,
+    ):
         return "none"
     name = location.name
     if (
@@ -222,8 +226,18 @@ def apply_incap_to_runtime(
     if effect is None:
         return False
     effect_name = effect.value if isinstance(effect, IncapacitationEffect) else str(effect)
-    if incap_severity(effect_name) < incap_severity(rt.incap_effect):
+    new_sev = incap_severity(effect_name)
+    cur_sev = incap_severity(rt.incap_effect)
+    if new_sev < cur_sev:
         return False
+    if new_sev == cur_sev:
+        if time_phases is not None:
+            rt.incap_remaining_phases = max(
+                int(rt.incap_remaining_phases or 0), max(0, int(time_phases))
+            )
+        if rt.incap_effect == IncapacitationEffect.DAZED.value:
+            rt.dazed_wait_impulses = max(rt.dazed_wait_impulses, 1)
+        return True
     rt.incap_effect = effect_name
     if time_phases is not None:
         rt.incap_remaining_phases = max(0, int(time_phases))

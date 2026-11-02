@@ -251,6 +251,7 @@ class AdvancedHitLocation(Enum):
     FOOT_RIGHT = "Foot (Right) (Table 40)"
 
     MISS = "Miss"
+    BLAST_DAMAGE = "Blast Damage"
 
 class MedicalAid(Enum):
     NO_AID = "No Aid"

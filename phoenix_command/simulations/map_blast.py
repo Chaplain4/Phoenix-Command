@@ -198,7 +198,7 @@ def _hex_key(q: int, r: int) -> str:
 def _layer_for(map_state: MapState | None, layer_id: str) -> MapLayer | None:
     if not map_state:
         return None
-    return map_state.get_layer(layer_id) or map_state.active_layer()
+    return map_state.get_layer(layer_id) or map_state.get_active_layer()
 
 
 def _custom(map_state: MapState | None) -> dict:

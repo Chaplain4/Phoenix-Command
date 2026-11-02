@@ -60,15 +60,7 @@ class TokenGraphicsItem(QGraphicsPixmapItem):
         self._label.setFont(font)
         self._label.setPos(-20, self.pixmap().height() / 2)
         self._status = None
-        if status_text:
-            self.setToolTip(status_text)
-            self._status = QGraphicsTextItem(status_text, self)
-            self._status.setDefaultTextColor(QColor(200, 255, 200))
-            self._status.setAcceptedMouseButtons(Qt.MouseButton.NoButton)
-            sf = QFont()
-            sf.setPointSize(6)
-            self._status.setFont(sf)
-            self._status.setPos(-24, self.pixmap().height() / 2 + 14)
+        self.set_status_text(status_text or "")
         self._selection_ring = self._make_selection_ring()
         self._facing_arrow = self._make_facing_arrow()
         self._apply_facing()
@@ -77,6 +69,24 @@ class TokenGraphicsItem(QGraphicsPixmapItem):
     def display_size(self) -> tuple[float, float]:
         """Return current pixmap width/height in scene pixels."""
         return float(self.pixmap().width()), float(self.pixmap().height())
+
+    def set_status_text(self, status_text: str) -> None:
+        """Update hover tooltip and optional on-map status line from combat runtime."""
+        text = status_text or ""
+        self.setToolTip(text)
+        if self._status is None:
+            if not text:
+                return
+            self._status = QGraphicsTextItem(text, self)
+            self._status.setDefaultTextColor(QColor(200, 255, 200))
+            self._status.setAcceptedMouseButtons(Qt.MouseButton.NoButton)
+            sf = QFont()
+            sf.setPointSize(6)
+            self._status.setFont(sf)
+            self._status.setPos(-24, self.pixmap().height() / 2 + 14)
+        else:
+            self._status.setPlainText(text)
+            self._status.setVisible(bool(text))
 
     def _make_selection_ring(self) -> QGraphicsEllipseItem:
         w = self.pixmap().width()
