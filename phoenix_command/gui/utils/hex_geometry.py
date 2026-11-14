@@ -14,20 +14,23 @@ def _sqrt3() -> float:
 
 
 def offset_to_axial(col: int, row: int, grid: "HexGridConfig") -> tuple[int, int]:
-    """Convert offset (col, row) to axial (q, r)."""
+    """Convert offset (col, row) to axial (q, r).
+
+    Flat uses even-q vertical layout; pointy uses even-r horizontal layout.
+    """
     if grid.orientation == "flat":
-        # odd-q vertical layout
+        # even-q vertical layout
         q = col
         r = row - (col + (col & 1)) // 2
     else:
-        # odd-r horizontal layout
+        # even-r horizontal layout
         q = col - (row + (row & 1)) // 2
         r = row
     return q, r
 
 
 def axial_to_offset(q: int, r: int, grid: "HexGridConfig") -> tuple[int, int]:
-    """Convert axial (q, r) to offset (col, row)."""
+    """Convert axial (q, r) to offset (col, row) (even-q / even-r)."""
     if grid.orientation == "flat":
         col = q
         row = r + (q + (q & 1)) // 2
@@ -250,7 +253,7 @@ def facing_labels(orientation: str) -> list[tuple[str, int]]:
         ]
     return [
         ("E", 0),
-        ("Corner NE", 1),
+        ("Corner SE", 1),
         ("SE", 2),
         ("Corner S", 3),
         ("SW", 4),
@@ -260,7 +263,7 @@ def facing_labels(orientation: str) -> list[tuple[str, int]]:
         ("NW", 8),
         ("Corner N", 9),
         ("NE", 10),
-        ("Corner NW", 11),
+        ("Corner NE", 11),
     ]
 
 

@@ -99,18 +99,18 @@ def test_abandon_mid_reload() -> None:
 
 
 def test_move_progress_survives_refill() -> None:
-    engine, tok = _engine(ac=0.5)
-    engine.apply_action("t1", "move", {"target_q": -1, "target_r": 0})
+    engine, tok = _engine(ac=0.25)
+    engine.apply_action("t1", "move", {"target_q": 1, "target_r": 0})
     rt = engine.get_runtime("t1")
     progress = rt.move_progress
     assert progress > 0
     assert tok.q == 0
     engine.refill_impulse_ac()
     assert rt.move_progress == progress
-    assert rt.move_target_q == -1
-    result = engine.apply_action("t1", "move", {"target_q": -1, "target_r": 0})
+    assert rt.move_target_q == 1
+    result = engine.apply_action("t1", "move", {"target_q": 1, "target_r": 0})
     assert result.success
-    assert tok.q == -1
+    assert tok.q == 1
     assert rt.move_progress == 0.0
 
 

@@ -36,12 +36,14 @@ def check_los(
     *,
     pen: float | None = None,
     shooter_stance: str | None = None,
+    source_height: float | None = None,
 ) -> LosResult:
     """
     Check LOS from shooter to target using intervening barrier geometry.
 
     Optical transparency (glass) does not block vision; ballistic Blocking vs
     Nonblocking uses PEN vs cover PF when ``pen`` is provided.
+    ``source_height`` overrides shooter muzzle (blast on floor, etc.).
     """
     target_rt = target_rt or TokenCombatRuntime()
     shooter_st = shooter_stance or "standing"
@@ -62,6 +64,7 @@ def check_los(
         target_stance=target_rt.stance,
         shooter_stance=shooter_st,
         moved=bool(target_rt.moved_this_impulse),
+        source_height=source_height,
     )
     notes.extend(analysis.notes)
 

@@ -100,6 +100,7 @@ class HexMapView(QWidget):
     declare_shot_requested = pyqtSignal(str)
     aim_hex_picked = pyqtSignal(int, int, str)  # q, r, layer_id
     combat_status_hint = pyqtSignal(str)
+    combat_token_changed = pyqtSignal(str)  # roster/stats sync in MainWindow
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -1633,6 +1634,8 @@ class HexMapView(QWidget):
         rt = self._impulse_combat.token_runtime.get(token_id)
         if rt:
             self._combat_bar.set_impulse_combat(self._impulse_combat)
+        if token_id:
+            self.combat_token_changed.emit(token_id)
 
     def _on_combat_lmb(self, q: int, r: int) -> bool:
         active = self._scene.map_state.get_active_layer()

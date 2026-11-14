@@ -14,9 +14,13 @@ from phoenix_command.models.enums import (
 from phoenix_command.models.gear import Weapon
 from phoenix_command.models.hit_result_advanced import ShotParameters
 from phoenix_command.session.domains.impulse_combat_state import TokenCombatRuntime
-from phoenix_command.session.domains.map_state import MapLayer, MapState, rules_hexes
+from phoenix_command.session.domains.map_state import (
+    MapLayer,
+    MapState,
+    rule_range_hexes,
+)
 from phoenix_command.session.domains.token_state import TokenPlacement
-from phoenix_command.simulations.hex_tactical import line_hexes, relative_orientation
+from phoenix_command.simulations.hex_frame import line_hexes, relative_orientation
 from phoenix_command.simulations.map_los import LosResult, check_los
 from phoenix_command.simulations.map_knockdown import second_shot_aim_bonus
 from phoenix_command.simulations.map_wounds import one_hand_alm_for_shot
@@ -113,7 +117,7 @@ def build_map_shot_context(
         axial_distance(shooter.q, shooter.r, target.q, target.r)
         * (map_state.grid.meters_per_hex if map_state else 1.0)
     )
-    range_hexes = max(1, round(rules_hexes(meters)))
+    range_hexes = rule_range_hexes(meters)
 
     shooter_speed = shooter_rt.hexes_moved_this_impulse
     target_speed = target_rt.hexes_moved_this_impulse
@@ -135,8 +139,9 @@ def build_map_shot_context(
         shooter_stance=shooter_rt.stance,
     )
 
+    grid = map_state.grid if map_state else None
     rel = relative_orientation(
-        target.facing, target.q, target.r, shooter.q, shooter.r
+        target.facing, target.q, target.r, shooter.q, shooter.r, grid
     )
     orientation = ORIENTATION_MAP.get(rel, TargetOrientation.FRONT_REAR)
     is_front = rel == "front"

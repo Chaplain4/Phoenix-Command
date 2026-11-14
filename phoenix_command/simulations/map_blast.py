@@ -21,17 +21,28 @@ from phoenix_command.session.domains.map_state import (
     layer_has_hex_wall,
 )
 from phoenix_command.session.domains.token_state import TokenPlacement
-from phoenix_command.simulations.hex_tactical import AXIAL_NEIGHBORS, neighbor_direction_index
+from phoenix_command.simulations.hex_frame import (
+    EDGE_NEIGHBORS,
+    bearing,
+    neighbor_direction_index,
+    wall_on_edge,
+)
 from phoenix_command.simulations.map_los import check_los
 from phoenix_command.tables.catalogs.barrier_catalog import resolve_blocks_vision
+
+# Flat screen-CW neighbor order (same 6 deltas as legacy, GUI index order).
+AXIAL_NEIGHBORS = EDGE_NEIGHBORS["flat"]
 
 DEFAULT_ENCLOSURE_RAY_HEXES = 4
 ROOM_MIN_BLOCKED_RAYS = 4
 TRENCH_DEPRESSION_M = 1.0
+TRENCH_LIP_NEIGHBOR_MIN = 4
+BLAST_SOURCE_HEIGHT_M = 0.2
 COMBAT_SUIT_HEAD_BPF = 3
 COMBAT_SUIT_CHEST_BPF = 5
 INDOOR_LAYER_KINDS = frozenset({"floor", "basement"})
 INDOOR_TERRAIN_TYPES = frozenset({"indoor", "enclosed", "small_room", "interior"})
+TRENCH_TERRAIN_TYPES = frozenset({"trench", "foxhole"})
 DEEP_WATER_TERRAIN = frozenset({"water_deep"})
 
 
@@ -90,9 +101,7 @@ def scatter_blast_hex(
 
 
 def _bearing_from_hex(q0: int, r0: int, q1: int, r1: int) -> float:
-    dq = q1 - q0
-    dr = r1 - r0
-    return math.atan2(dr * math.sqrt(3) / 2, dq * 1.5 + dr * 0.75)
+    return bearing(q0, r0, q1, r1)
 
 
 def _angle_diff(a: float, b: float) -> float:
@@ -133,6 +142,7 @@ def blast_centers_from_results(
     shooter_r: int,
     explosive_results: Iterable[ExplosiveShotResult],
     rng: random.Random | None = None,
+    map_state: MapState | None = None,
 ) -> list[tuple[int, int]]:
     """One blast center per grenade: aim hex on hit, scatter hex on miss."""
     centers: list[tuple[int, int]] = []
@@ -166,7 +176,7 @@ def blast_centers_from_results(
             )
         else:
             centers.append((aim_q, aim_r))
-    return centers
+    return [_clamp_hex_to_grid(q, r, map_state) for q, r in centers]
 
 
 def concussion_radius_hexes(explosive_ammo: Any | None) -> int:
@@ -178,6 +188,34 @@ def concussion_radius_hexes(explosive_ammo: Any | None) -> int:
         if rh is not None and bc > 0:
             best = max(best, int(rh))
     return max(1, best) if best > 0 else DEFAULT_ENCLOSURE_RAY_HEXES
+
+
+def enclosure_ray_map_hexes(
+    rule_hexes: int, meters_per_hex: float = 1.0
+) -> int:
+    """Convert concussion radius (rule hexes @ 2 m) to map hex steps."""
+    mph = max(0.01, float(meters_per_hex))
+    return max(1, int(math.ceil(float(rule_hexes) * 2.0 / mph)))
+
+
+def _clamp_hex_to_grid(
+    q: int, r: int, map_state: MapState | None
+) -> tuple[int, int]:
+    if map_state is None:
+        return q, r
+    from phoenix_command.gui.utils.hex_geometry import (
+        axial_to_offset,
+        is_in_bounds,
+        offset_to_axial,
+    )
+
+    grid = map_state.grid
+    if is_in_bounds(q, r, grid):
+        return q, r
+    col, row = axial_to_offset(q, r, grid)
+    col = max(0, min(grid.cols - 1, col))
+    row = max(0, min(grid.rows - 1, row))
+    return offset_to_axial(col, row, grid)
 
 
 def layer_has_ceiling(layer: MapLayer | None) -> bool:
@@ -198,7 +236,14 @@ def _hex_key(q: int, r: int) -> str:
 def _layer_for(map_state: MapState | None, layer_id: str) -> MapLayer | None:
     if not map_state:
         return None
-    return map_state.get_layer(layer_id) or map_state.get_active_layer()
+    if layer_id:
+        found = map_state.get_layer(layer_id)
+        if found:
+            return found
+    for layer in map_state.layers:
+        if layer.kind == "ground":
+            return layer
+    return map_state.layers[0] if map_state.layers else None
 
 
 def _custom(map_state: MapState | None) -> dict:
@@ -226,19 +271,16 @@ def _opaque_wall_on_edge(
     r: int,
     dir_index: int,
     custom: dict,
+    orientation: str = "flat",
 ) -> bool:
     """True if a vision-blocking wall sits on this hex edge (either side). Openings still count."""
     if layer is None or dir_index is None:
         return False
-    wall = layer.walls.get(f"{q},{r}:{dir_index}")
-    if _wall_blocks_vision(wall, custom):
+    found = wall_on_edge(layer, q, r, dir_index, orientation)
+    if found is not None and _wall_blocks_vision(found[1], custom):
         return True
-    nq = q + AXIAL_NEIGHBORS[dir_index][0]
-    nr = r + AXIAL_NEIGHBORS[dir_index][1]
-    opp = (dir_index + 3) % 6
-    wall2 = layer.walls.get(f"{nq},{nr}:{opp}")
-    if _wall_blocks_vision(wall2, custom):
-        return True
+    nq = q + EDGE_NEIGHBORS.get(orientation, AXIAL_NEIGHBORS)[dir_index % 6][0]
+    nr = r + EDGE_NEIGHBORS.get(orientation, AXIAL_NEIGHBORS)[dir_index % 6][1]
     if layer_has_hex_wall(layer, nq, nr):
         if _wall_blocks_vision(layer.walls.get(hex_wall_key(nq, nr)), custom):
             return True
@@ -253,14 +295,20 @@ def count_enclosure_rays(
     """How many of 6 axial rays hit a solid wall within max_hexes."""
     layer = _layer_for(map_state, tok.layer_id)
     custom = _custom(map_state)
+    orientation = (
+        map_state.grid.orientation if map_state and map_state.grid else "flat"
+    )
+    neighbors = EDGE_NEIGHBORS.get(orientation, AXIAL_NEIGHBORS)
     blocked = 0
-    for di, dj in AXIAL_NEIGHBORS:
+    for di, dj in neighbors:
         cq, cr = tok.q, tok.r
         ray_hit = False
         for _ in range(max(1, max_hexes)):
             nq, nr = cq + di, cr + dj
-            edge = neighbor_direction_index(cq, cr, nq, nr)
-            if edge is not None and _opaque_wall_on_edge(layer, cq, cr, edge, custom):
+            edge = neighbor_direction_index(cq, cr, nq, nr, orientation)
+            if edge is not None and _opaque_wall_on_edge(
+                layer, cq, cr, edge, custom, orientation
+            ):
                 ray_hit = True
                 break
             cq, cr = nq, nr
@@ -282,9 +330,12 @@ def surrounding_lip_m(map_state: MapState | None, tok: TokenPlacement) -> float:
     best = floor
     if layer is None:
         return best
-    for nq, nr, _di in (
-        (tok.q + dq, tok.r + dr, i) for i, (dq, dr) in enumerate(AXIAL_NEIGHBORS)
-    ):
+    orientation = (
+        map_state.grid.orientation if map_state and map_state.grid else "flat"
+    )
+    neighbors = EDGE_NEIGHBORS.get(orientation, AXIAL_NEIGHBORS)
+    for dq, dr in neighbors:
+        nq, nr = tok.q + dq, tok.r + dr
         obs = layer.obstacles.get(_hex_key(nq, nr))
         if obs is not None:
             best = max(best, floor + float(obs.height))
@@ -293,6 +344,31 @@ def surrounding_lip_m(map_state: MapState | None, tok: TokenPlacement) -> float:
             if wall is not None:
                 best = max(best, floor + float(wall.height))
     return best
+
+
+def _high_neighbor_count(map_state: MapState | None, tok: TokenPlacement) -> int:
+    """How many of 6 neighbors have obstacle/:hex wall ≥ trench lip height."""
+    layer = _layer_for(map_state, tok.layer_id)
+    if layer is None:
+        return 0
+    orientation = (
+        map_state.grid.orientation if map_state and map_state.grid else "flat"
+    )
+    neighbors = EDGE_NEIGHBORS.get(orientation, AXIAL_NEIGHBORS)
+    count = 0
+    for dq, dr in neighbors:
+        nq, nr = tok.q + dq, tok.r + dr
+        h = 0.0
+        obs = layer.obstacles.get(_hex_key(nq, nr))
+        if obs is not None:
+            h = max(h, float(obs.height))
+        if layer_has_hex_wall(layer, nq, nr):
+            wall = layer.walls.get(hex_wall_key(nq, nr))
+            if wall is not None:
+                h = max(h, float(wall.height))
+        if h >= TRENCH_DEPRESSION_M:
+            count += 1
+    return count
 
 
 def _is_deep_water(layer: MapLayer | None, q: int, r: int) -> bool:
@@ -306,12 +382,22 @@ def _is_indoor_tag(layer: MapLayer | None, q: int, r: int) -> bool:
     """Referee indoor tag (implies roofed interior even without walls)."""
     if layer is None:
         return False
-    if not layer_has_ceiling(layer):
-        return False
-    if layer.kind in INDOOR_LAYER_KINDS:
-        return True
     t = _terrain_type(layer, q, r).lower()
-    return t in INDOOR_TERRAIN_TYPES
+    tagged = t in INDOOR_TERRAIN_TYPES or layer.kind in INDOOR_LAYER_KINDS
+    if not tagged:
+        return False
+    # Explicit has_ceiling=False opts out of roofed indoor.
+    if layer.has_ceiling is False:
+        return False
+    return True
+
+
+def _is_explicit_trench(layer: MapLayer | None, q: int, r: int) -> bool:
+    if layer is None:
+        return False
+    if layer.kind == "trench":
+        return True
+    return _terrain_type(layer, q, r).lower() in TRENCH_TERRAIN_TYPES
 
 
 def _min_front_bpf(character: Character | None, locations) -> float:
@@ -346,16 +432,14 @@ def _pick_environment(
     enclosed = rays >= ROOM_MIN_BLOCKED_RAYS
     ceiling = layer_has_ceiling(layer)
     indoor = _is_indoor_tag(layer, victim_tok.q, victim_tok.r)
-    floor = _floor_mark(layer)
-    lip = surrounding_lip_m(map_state, victim_tok)
-    depression = (lip - floor) >= TRENCH_DEPRESSION_M
-    explicit_trench = bool(layer and layer.kind == "trench")
+    explicit_trench = _is_explicit_trench(layer, victim_tok.q, victim_tok.r)
+    ring_trench = _high_neighbor_count(map_state, victim_tok) >= TRENCH_LIP_NEIGHBOR_MIN
 
     # Roofed room: referee indoor tag, or enclosed with ceiling
     if indoor or (enclosed and ceiling):
         return BlastModifier.IN_SMALL_ROOM
-    # Open-top enclosure (pool/pit) or foxhole / painted trench
-    if enclosed or explicit_trench or depression:
+    # Open-top enclosure (pool/pit) or foxhole / painted trench / deep ring
+    if enclosed or explicit_trench or ring_trench:
         return BlastModifier.IN_OPEN_TRENCH
     return BlastModifier.IN_THE_OPEN
 
@@ -378,7 +462,13 @@ def _cover_from_blast(
     )
     if blast_q == victim_tok.q and blast_r == victim_tok.r:
         return []
-    los = check_los(map_state, blast_tok, victim_tok, victim_rt)
+    los = check_los(
+        map_state,
+        blast_tok,
+        victim_tok,
+        victim_rt,
+        source_height=BLAST_SOURCE_HEIGHT_M,
+    )
     if los.blocked:
         return [BlastModifier.BEHIND_SOLID_COVER]
     cover = los.cover
@@ -404,11 +494,13 @@ def derive_blast_modifiers(
 ) -> list[BlastModifier]:
     """One Table 5B environment row plus stacked posture/protection."""
     if enclosure_max_hexes is None:
-        enclosure_max_hexes = (
+        rule_hexes = (
             concussion_radius_hexes(explosive_ammo)
             if explosive_ammo is not None
             else DEFAULT_ENCLOSURE_RAY_HEXES
         )
+        mph = map_state.grid.meters_per_hex if map_state else 1.0
+        enclosure_max_hexes = enclosure_ray_map_hexes(rule_hexes, mph)
     env = _pick_environment(map_state, victim_tok, enclosure_max_hexes=enclosure_max_hexes)
     mods: list[BlastModifier] = [env]
     rt = token_rt or TokenCombatRuntime()

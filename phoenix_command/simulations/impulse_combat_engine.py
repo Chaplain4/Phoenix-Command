@@ -41,8 +41,8 @@ from phoenix_command.tables.catalogs.movement_catalog import (
     compute_movement_cost,
 )
 
-# Table 7A costs are per 2 m hex; our grid is 1 m per hex.
-METER_SCALE = 0.5
+# Table 7A costs are per 2 m rule hex; scale via map_route.hex_movement_scale.
+METER_SCALE = 0.5  # legacy alias for 1 m/hex maps
 
 STANCE_MODIFIER_MAP = {
     "standing": "stance_standing",
@@ -733,8 +733,18 @@ class ImpulseCombatEngine:
                     return True
                 return False
 
+            orientation = (
+                self.map_state.grid.orientation if self.map_state else "flat"
+            )
+            grid = self.map_state.grid if self.map_state else None
             cat_fx.apply_window_or_trench(
-                placement, rt, action_id, layer, terrain_is_trench=_trench
+                placement,
+                rt,
+                action_id,
+                layer,
+                terrain_is_trench=_trench,
+                orientation=orientation,
+                grid=grid,
             )
 
     def _apply_brace(self, placement: TokenPlacement) -> ActionResult:
@@ -1007,27 +1017,55 @@ class ImpulseCombatEngine:
                     False,
                     f"{rt.incap_effect} — cannot move closer to an enemy",
                 )
-        dir_idx = neighbor_direction_index(placement.q, placement.r, target_q, target_r)
+        orientation = (
+            self.map_state.grid.orientation if self.map_state else "flat"
+        )
+        mph = self.map_state.grid.meters_per_hex if self.map_state else 1.0
+        dir_idx = neighbor_direction_index(
+            placement.q, placement.r, target_q, target_r, orientation
+        )
         if dir_idx is None:
             return ActionResult(False, "Target is not an adjacent hex")
 
+        if self.map_state is not None:
+            from phoenix_command.gui.utils.hex_geometry import is_in_bounds
+
+            if not is_in_bounds(target_q, target_r, self.map_state.grid):
+                return ActionResult(False, "Target hex is out of bounds")
+
         layer = self._get_layer(placement.layer_id)
         if layer:
+            from phoenix_command.simulations.map_movement import edge_blocks_movement
+
             key = f"{target_q},{target_r}"
             if key in layer.obstacles and layer.obstacles[key].blocks_movement:
                 return ActionResult(False, "Hex blocked by obstacle")
             from phoenix_command.session.domains.map_state import hex_wall_key
             if hex_wall_key(target_q, target_r) in layer.walls:
                 return ActionResult(False, "Hex blocked by wall")
+            if edge_blocks_movement(
+                layer,
+                placement.q,
+                placement.r,
+                target_q,
+                target_r,
+                orientation,
+            ):
+                return ActionResult(False, "Hex blocked by wall")
 
-        base_id = classify_movement_base(placement.facing, dir_idx)
+        # Book: free ≤60° on enter — cost uses facing after that free turn.
+        desired_facing = direction_index_to_facing(dir_idx, orientation)
+        facing_after_free = apply_free_facing(
+            placement.facing, desired_facing, free_steps=2
+        )
+        base_id = classify_movement_base(facing_after_free, dir_idx, orientation)
         terrain_cost, modifier_ids = self._terrain_modifiers(layer, target_q, target_r, rt.stance)
         if rt.disabled_leg and "injury_below_waist" not in modifier_ids:
             modifier_ids.append("injury_below_waist")
         rule_cost = compute_movement_cost(base_id, modifier_ids, terrain_cost)
         if rule_cost < 0:
             return ActionResult(False, "Impassable terrain")
-        hex_cost = rule_cost * METER_SCALE
+        hex_cost = rule_cost * map_route.hex_movement_scale(mph)
         if braced:
             hex_cost += 1.0  # brace while moving
 
@@ -1077,8 +1115,9 @@ class ImpulseCombatEngine:
             placement.q = target_q
             placement.r = target_r
             # Book §2.3: up to 60° (2 facing steps) free per entered hex.
-            desired = direction_index_to_facing(dir_idx)
-            placement.facing = apply_free_facing(placement.facing, desired, free_steps=2)
+            placement.facing = apply_free_facing(
+                placement.facing, desired_facing, free_steps=2
+            )
             shot_timing.note_hex_entered(rt)
             rt.move_progress = 0.0
             rt.move_target_q = None
@@ -1122,7 +1161,10 @@ class ImpulseCombatEngine:
             found = self.map_state.get_layer(layer_id)
             if found:
                 return found
-        return self.map_state.get_active_layer()
+        for layer in self.map_state.layers:
+            if layer.kind == "ground":
+                return layer
+        return self.map_state.layers[0] if self.map_state.layers else None
 
     @staticmethod
     def _first_weapon(char: Character) -> Weapon | None:
@@ -1314,6 +1356,11 @@ class ImpulseCombatEngine:
         else:
             q, r, facing = placement.q, placement.r, placement.facing % 12
             rt.route_cursor = 0
+        orientation = (
+            self.map_state.grid.orientation if self.map_state else "flat"
+        )
+        mph = self.map_state.grid.meters_per_hex if self.map_state else 1.0
+        grid = self.map_state.grid if self.map_state else None
         new_route, _facing, err = map_route.append_adjacent_hex(
             rt.route_steps,
             from_q=q,
@@ -1325,6 +1372,9 @@ class ImpulseCombatEngine:
             braced=braced,
             layer=layer,
             terrain_fn=self._terrain_modifiers,
+            orientation=orientation,
+            meters_per_hex=mph,
+            grid=grid,
         )
         if err:
             return ActionResult(False, err)
@@ -1353,6 +1403,11 @@ class ImpulseCombatEngine:
         # If mid-route edit with empty cursor, pathfind from live position.
         if not prefix:
             q, r, facing = placement.q, placement.r, placement.facing % 12
+        orientation = (
+            self.map_state.grid.orientation if self.map_state else "flat"
+        )
+        mph = self.map_state.grid.meters_per_hex if self.map_state else 1.0
+        grid = self.map_state.grid if self.map_state else None
         steps, err = map_route.pathfind_to(
             start_q=q,
             start_r=r,
@@ -1363,6 +1418,9 @@ class ImpulseCombatEngine:
             braced=braced,
             layer=layer,
             terrain_fn=self._terrain_modifiers,
+            orientation=orientation,
+            meters_per_hex=mph,
+            grid=grid,
         )
         if err:
             return ActionResult(False, err)
@@ -1475,17 +1533,18 @@ class ImpulseCombatEngine:
         layer = self._get_layer(placement.layer_id)
         if not layer:
             return None
-        from phoenix_command.simulations.hex_tactical import axial_neighbors
+        from phoenix_command.simulations.hex_frame import axial_neighbors, wall_on_edge
 
-        for nq, nr, edge in axial_neighbors(placement.q, placement.r):
-            wall = layer.walls.get(f"{placement.q},{placement.r}:{edge}")
-            key = f"{placement.q},{placement.r}:{edge}"
-            if not wall:
-                opp = (edge + 3) % 6
-                key = f"{nq},{nr}:{opp}"
-                wall = layer.walls.get(key)
-            if not wall:
+        orientation = (
+            self.map_state.grid.orientation if self.map_state else "flat"
+        )
+        for nq, nr, edge in axial_neighbors(placement.q, placement.r, orientation):
+            found = wall_on_edge(
+                layer, placement.q, placement.r, edge, orientation
+            )
+            if not found:
                 continue
+            key, wall = found
             for opening in wall.openings:
                 if opening.kind == "door" and opening.state in ("closed", "locked"):
                     return key, opening
@@ -1497,7 +1556,7 @@ class ImpulseCombatEngine:
         found = self._find_adjacent_door(placement)
         if not found:
             return ActionResult(False, "No closed door on an adjacent edge")
-        _key, opening = found
+        wall_key, opening = found
         if action_id == "kick_open_door" and opening.state == "locked":
             # Kick can open locked; open_door cannot.
             pass
@@ -1508,6 +1567,11 @@ class ImpulseCombatEngine:
 
         def _complete(_rt: TokenCombatRuntime) -> None:
             opening.state = "open"
+            from phoenix_command.simulations.map_movement import sync_open_door_opposite
+
+            sync_open_door_opposite(
+                self._get_layer(placement.layer_id), wall_key, opening
+            )
 
         return self._partial_spend(
             placement,
@@ -1734,7 +1798,16 @@ class ImpulseCombatEngine:
         out.extend(equipment_mount.detailed_equipment_actions(char, rt))
         # Window / trench
         layer = self._get_layer(placement.layer_id)
-        if cat_fx.find_adjacent_opening(layer, placement, "window"):
+        orientation = (
+            self.map_state.grid.orientation if self.map_state else "flat"
+        )
+        if cat_fx.find_adjacent_opening(
+            layer,
+            placement,
+            "window",
+            orientation=orientation,
+            allow_open_window=True,
+        ):
             for aid in (
                 "open_window_two_hands",
                 "break_clear_glass",

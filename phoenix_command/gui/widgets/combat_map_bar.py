@@ -212,11 +212,18 @@ class CombatMapBar(QWidget):
             if label.startswith("[7B]") and not show_7b:
                 continue
             actions.append(a)
+        prev_id = self._action_combo.currentData()
         self._available_actions = actions
+        self._action_combo.blockSignals(True)
         self._action_combo.clear()
         for action_id, label, cost in actions:
             cost_str = f" ({cost} AC)" if isinstance(cost, (int, float)) else ""
             self._action_combo.addItem(f"{label}{cost_str}", action_id)
+        if prev_id is not None:
+            idx = self._action_combo.findData(prev_id)
+            if idx >= 0:
+                self._action_combo.setCurrentIndex(idx)
+        self._action_combo.blockSignals(False)
 
     def select_token(self, token_id: str) -> None:
         idx = self._token_combo.findData(token_id)

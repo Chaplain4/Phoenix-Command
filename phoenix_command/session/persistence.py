@@ -19,7 +19,7 @@ from phoenix_command.session.serialization import (
 
 MAP_FILE_KIND = "phoenix_command_map"
 CHARACTER_FILE_KIND = "phoenix_command_character"
-MAP_SCHEMA_VERSION = 2
+MAP_SCHEMA_VERSION = 3
 CHARACTER_SCHEMA_VERSION = 1
 
 

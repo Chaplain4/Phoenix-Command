@@ -10,7 +10,7 @@ from phoenix_command.session.domains.impulse_combat_state import TokenCombatRunt
 from phoenix_command.session.domains.map_state import MapLayer, Opening
 from phoenix_command.session.domains.token_state import TokenPlacement
 from phoenix_command.simulations.equipment_mount import EQUIP_ACTIONS, apply_equipment_action
-from phoenix_command.simulations.hex_tactical import axial_neighbors
+from phoenix_command.simulations.hex_frame import axial_neighbors, wall_on_edge
 
 DRAW_ACTIONS = frozenset(
     {
@@ -107,29 +107,28 @@ def find_adjacent_opening(
     layer: MapLayer | None,
     placement: TokenPlacement,
     kind: str,
+    *,
+    orientation: str = "flat",
+    allow_open_window: bool = False,
 ) -> tuple[str, Opening, int, int, int] | None:
-    """Return (wall_key, opening, nq, nr, edge) for adjacent closed opening of kind."""
+    """Return (wall_key, opening, nq, nr, edge) for adjacent opening of kind."""
     if not layer:
         return None
-    for nq, nr, edge in axial_neighbors(placement.q, placement.r):
-        key = f"{placement.q},{placement.r}:{edge}"
-        wall = layer.walls.get(key)
-        if not wall:
-            opp = (edge + 3) % 6
-            key = f"{nq},{nr}:{opp}"
-            wall = layer.walls.get(key)
-        if not wall:
+    for nq, nr, edge in axial_neighbors(placement.q, placement.r, orientation):
+        found = wall_on_edge(layer, placement.q, placement.r, edge, orientation)
+        if not found:
             continue
+        key, wall = found
         for opening in wall.openings:
             if opening.kind != kind:
                 continue
-            if kind == "window" and opening.state == "open":
-                continue
+            if kind == "window":
+                if opening.state == "open" and not allow_open_window:
+                    continue
+                if opening.state not in ("closed", "locked", "broken", "open"):
+                    continue
             if kind == "door" and opening.state not in ("closed", "locked"):
                 continue
-            if kind == "window" and opening.state not in ("closed", "locked", "broken"):
-                # treat missing/closed glass
-                pass
             return key, opening, nq, nr, edge
     return None
 
@@ -140,17 +139,32 @@ def apply_window_or_trench(
     action_id: str,
     layer: MapLayer | None,
     terrain_is_trench: Callable[[int, int], bool] | None = None,
+    *,
+    orientation: str = "flat",
+    grid=None,
 ) -> str:
     if action_id == "get_out_trench":
         # Move to first adjacent non-trench hex if possible
         if terrain_is_trench and terrain_is_trench(placement.q, placement.r):
-            for nq, nr, _ in axial_neighbors(placement.q, placement.r):
+            for nq, nr, _ in axial_neighbors(placement.q, placement.r, orientation):
+                if grid is not None:
+                    from phoenix_command.gui.utils.hex_geometry import is_in_bounds
+
+                    if not is_in_bounds(nq, nr, grid):
+                        continue
                 if not terrain_is_trench(nq, nr):
                     placement.q, placement.r = nq, nr
                     return f"Climbed out of trench to ({nq},{nr})"
         return "Left trench (no adjacent clear hex)"
 
-    found = find_adjacent_opening(layer, placement, "window")
+    allow_open = action_id == "climb_through_window"
+    found = find_adjacent_opening(
+        layer,
+        placement,
+        "window",
+        orientation=orientation,
+        allow_open_window=allow_open,
+    )
     if not found:
         return "No adjacent window"
     _key, opening, nq, nr, _edge = found
@@ -161,7 +175,12 @@ def apply_window_or_trench(
         opening.state = "open"
         return "Glass broken and cleared"
     if action_id == "climb_through_window":
-        if opening.state not in ("open",):
+        if grid is not None:
+            from phoenix_command.gui.utils.hex_geometry import is_in_bounds
+
+            if not is_in_bounds(nq, nr, grid):
+                return "Window leads out of bounds"
+        if opening.state not in ("open", "broken"):
             opening.state = "open"
         placement.q, placement.r = nq, nr
         return f"Climbed through window to ({nq},{nr})"

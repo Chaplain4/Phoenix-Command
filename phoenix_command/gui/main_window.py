@@ -177,6 +177,7 @@ class MainWindow(QMainWindow):
         self.hex_map_view.declare_shot_requested.connect(self._on_declare_shot)
         self.hex_map_view.aim_hex_picked.connect(self._on_aim_hex_picked)
         self.hex_map_view.combat_status_hint.connect(self._on_combat_status_hint)
+        self.hex_map_view.combat_token_changed.connect(self._select_character_for_token)
         self.hex_map_view.set_action_provider(self._token_available_actions)
         self._shot_preview_dialog = None
         self._center_tabs.addTab(self.combat_zone, "Combat")
@@ -728,7 +729,27 @@ class MainWindow(QMainWindow):
 
     def _on_combat_status_hint(self, message: str) -> None:
         self.statusBar().showMessage(message)
+        # Target: is also logged via set_declared_target ActionResult — avoid duplicate.
+        if message.startswith("Target:"):
+            return
         self.combat_log.append_system(message)
+
+    def _select_character_for_token(self, token_id: str) -> None:
+        """Align roster / stats / body diagram with the combat-selected token."""
+        tok = self.hex_map_view.get_token_state().placements.get(token_id)
+        if not tok or not tok.character_name:
+            return
+        name = tok.character_name
+        for i, char in enumerate(self.characters):
+            if char.name != name:
+                continue
+            if self.character_list.currentRow() != i:
+                self.character_list.blockSignals(True)
+                self.character_list.setCurrentRow(i)
+                self.character_list.blockSignals(False)
+            self.stats_display.set_character(char)
+            self.body_diagram.set_character(char)
+            return
 
     def _on_combat_action_requested(self, token_id: str, action: str, args: dict) -> None:
         from PyQt6.QtWidgets import QMessageBox

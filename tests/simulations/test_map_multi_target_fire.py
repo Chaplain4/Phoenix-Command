@@ -59,10 +59,10 @@ def _ammo(name: str = "Ball") -> AmmoType:
 
 
 def _tokens_line() -> tuple[TokenState, TokenPlacement]:
-    """Shooter at (0,0) facing east; enemies at (2,0) and (3,0); friend at (1,1)."""
+    """Shooter at (0,0) facing SE (flat edge 0); enemies at (2,0) and (3,0); friend at (1,1)."""
     tokens = TokenState()
     shooter = TokenPlacement(
-        token_id="s", character_name="Shooter", q=0, r=0, facing=0, side_id="alpha"
+        token_id="s", character_name="Shooter", q=0, r=0, facing=1, side_id="alpha"
     )
     e1 = TokenPlacement(
         token_id="e1", character_name="Enemy1", q=2, r=0, facing=6, side_id="bravo"

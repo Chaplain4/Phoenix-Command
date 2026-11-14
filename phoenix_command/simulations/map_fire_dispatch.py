@@ -308,7 +308,7 @@ def enrich_preview_targets(
         infos = tokens_in_arc(
             shooter, tokens, map_state, runtime, half_angle_deg=half_angle, ammo=ammo
         )
-        clear = [i for i in infos if i.los_clear] or infos
+        clear = [i for i in infos if i.los_clear]
         preview.target_token_ids = [i.token_id for i in clear]
         preview.per_target = {i.token_id: build_per_target_entry(i) for i in clear}
         if preview.target_token_ids:
@@ -952,7 +952,9 @@ def _build_blast_package(
     shooter_tok = tokens.placements.get(preview.shooter_token_id)
     sq = shooter_tok.q if shooter_tok else aim_q
     sr = shooter_tok.r if shooter_tok else aim_r
-    centers = blast_centers_from_results(aim_q, aim_r, sq, sr, explosive_results)
+    centers = blast_centers_from_results(
+        aim_q, aim_r, sq, sr, explosive_results, map_state=map_state
+    )
     max_blast_m = _max_blast_m(explosive_ammo)
     runtime = token_runtime or {}
     package = PendingBlastPackage()

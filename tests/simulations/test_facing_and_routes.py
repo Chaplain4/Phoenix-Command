@@ -111,12 +111,12 @@ def test_proper_cover_stance_sets_firing_stance() -> None:
 
 
 def test_free_facing_60_on_hex_enter() -> None:
-    # Move east (dir 0) from facing 10 (need +2 = 60°) → free
-    engine, tok = _engine(ac=5.0, facing=10)
+    # Move SE (edge 0) from facing 11: desired facing_for_edge=1, free +2 → 1
+    engine, tok = _engine(ac=5.0, facing=11)
     result = engine.apply_action("t1", "move", {"target_q": 1, "target_r": 0})
     assert result.success
     assert tok.q == 1
-    assert tok.facing == 0  # desired east
+    assert tok.facing == 1  # SE side midpoint (GUI frame)
 
 
 def test_free_facing_partial_90() -> None:

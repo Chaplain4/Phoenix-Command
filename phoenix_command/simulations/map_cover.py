@@ -11,12 +11,17 @@ from phoenix_command.session.domains.map_state import (
     MapLayer,
     MapState,
     Obstacle,
+    Opening,
     WallSegment,
     hex_wall_key,
     layer_has_hex_wall,
 )
 from phoenix_command.session.domains.token_state import TokenPlacement
-from phoenix_command.simulations.hex_tactical import line_hexes, neighbor_direction_index
+from phoenix_command.simulations.hex_frame import (
+    line_hexes,
+    neighbor_direction_index,
+    wall_on_edge,
+)
 from phoenix_command.tables.catalogs.barrier_catalog import (
     resolve_blocks_vision,
     resolve_protection_factor,
@@ -27,8 +32,8 @@ def stance_height_range(stance: str) -> tuple[float, float]:
     if stance == "prone":
         return (0.1, 0.5)
     if stance == "kneeling":
-        return (0.5, 1.4)
-    return (0.8, 1.8)
+        return (0.0, 1.2)
+    return (0.0, 1.8)
 
 
 def muzzle_height(stance: str) -> float:
@@ -128,31 +133,57 @@ def _custom(map_state: MapState | None) -> dict:
     return map_state.custom_barriers if map_state else {}
 
 
+def _opening_is_clear(opening: Opening) -> bool:
+    """Open or broken openings leave a clear LOS gap."""
+    return opening.state in ("open", "broken")
+
+
+def _opening_gap(opening: Opening, wall_height: float) -> tuple[float, float]:
+    if opening.kind == "door":
+        return 0.0, max(float(opening.head_height), wall_height)
+    return float(opening.sill_height), float(opening.head_height)
+
+
 def _wall_slabs(
     wall: WallSegment,
     path_t: float,
     label_prefix: str,
     custom: dict,
+    extra_openings: list[Opening] | None = None,
 ) -> list[BarrierCrossing]:
-    """Solid wall bands minus open openings; closed openings keep material PF."""
+    """Solid wall bands with open gaps and closed leaf/glass slabs."""
     pf = wall.resolved_pf(custom)
     blocks_vision = resolve_blocks_vision(wall.material, custom)
     height = max(0.0, float(wall.height))
     if height <= 0:
         return []
 
-    # Start with full solid, punch open gaps
+    openings = list(wall.openings) + list(extra_openings or [])
     solid: list[tuple[float, float]] = [(0.0, height)]
-    for opening in wall.openings:
-        if opening.state == "open":
-            if opening.kind == "door":
-                gap_lo, gap_hi = 0.0, height
-            else:
-                gap_lo, gap_hi = opening.sill_height, opening.head_height
+    leaf_slabs: list[BarrierCrossing] = []
+
+    for opening in openings:
+        gap_lo, gap_hi = _opening_gap(opening, height)
+        if gap_hi <= gap_lo:
+            continue
+        if _opening_is_clear(opening):
             solid = _subtract_interval(solid, gap_lo, gap_hi)
-        else:
-            # Closed window/door: sill–head still material (glass/door leaf)
-            pass
+            continue
+        # Closed/locked: replace wall band with leaf/glass material.
+        solid = _subtract_interval(solid, gap_lo, gap_hi)
+        leaf_mat = opening.default_material(wall.material)
+        leaf_pf = resolve_protection_factor(leaf_mat, 0.25, custom, None)
+        leaf_vision = resolve_blocks_vision(leaf_mat, custom)
+        leaf_slabs.append(
+            BarrierCrossing(
+                pf=leaf_pf,
+                z_low=gap_lo,
+                z_high=min(gap_hi, height),
+                label=f"{label_prefix} {opening.kind} PF={leaf_pf:.1f}",
+                blocks_vision=leaf_vision,
+                path_t=path_t,
+            )
+        )
 
     out: list[BarrierCrossing] = []
     for z0, z1 in solid:
@@ -168,6 +199,7 @@ def _wall_slabs(
                 path_t=path_t,
             )
         )
+    out.extend(leaf_slabs)
     return out
 
 
@@ -216,20 +248,76 @@ def gather_barrier_crossings(
     if not map_state:
         return []
     custom = _custom(map_state)
+    orientation = map_state.grid.orientation if map_state.grid else "flat"
     shooter_layer = _layer(map_state, shooter.layer_id)
     target_layer = _layer(map_state, target.layer_id)
+    # Deduplicate when both tokens share a layer (avoid double PF).
+    mid_layers: list[MapLayer] = []
+    for layer in (shooter_layer, target_layer):
+        if layer is not None and layer not in mid_layers:
+            mid_layers.append(layer)
     line = line_hexes(shooter.q, shooter.r, target.q, target.r)
     if len(line) < 2:
         return []
     n_seg = max(1, len(line) - 1)
     crossings: list[BarrierCrossing] = []
 
+    def _add_edge_wall(
+        layer: MapLayer,
+        q: int,
+        r: int,
+        nq: int,
+        nr: int,
+        path_t: float,
+        label_prefix: str,
+    ) -> None:
+        edge = neighbor_direction_index(q, r, nq, nr, orientation)
+        if edge is None:
+            return
+        found = wall_on_edge(layer, q, r, edge, orientation)
+        if found is None:
+            return
+        key, wall = found
+        crossings.extend(
+            _wall_slabs(wall, path_t, f"{label_prefix} ({key})", custom)
+        )
+
+    def _edge_openings_for_hex(
+        layer: MapLayer, hex_i: int
+    ) -> list[Opening]:
+        """Openings on edges where the fire line enters/leaves this hex."""
+        openings: list[Opening] = []
+        if hex_i > 0:
+            pq, pr = line[hex_i - 1]
+            q, r = line[hex_i]
+            edge = neighbor_direction_index(q, r, pq, pr, orientation)
+            if edge is not None:
+                found = wall_on_edge(layer, q, r, edge, orientation)
+                if found:
+                    openings.extend(found[1].openings)
+        if hex_i + 1 < len(line):
+            q, r = line[hex_i]
+            nq, nr = line[hex_i + 1]
+            edge = neighbor_direction_index(q, r, nq, nr, orientation)
+            if edge is not None:
+                found = wall_on_edge(layer, q, r, edge, orientation)
+                if found:
+                    openings.extend(found[1].openings)
+        return openings
+
+    # Edge crossings between consecutive hexes (includes shooter→first step).
+    for i in range(len(line) - 1):
+        q, r = line[i]
+        nq, nr = line[i + 1]
+        path_t = (i + 0.5) / n_seg
+        for layer in mid_layers:
+            _add_edge_wall(layer, q, r, nq, nr, path_t, "Wall")
+
+    # Mid-hex obstacles / solid hex-walls (not endpoints).
     for i in range(1, len(line) - 1):
         q, r = line[i]
         path_t = i / n_seg
-        for layer, tag in ((shooter_layer, "mid"), (target_layer, "mid-tgt")):
-            if layer is None:
-                continue
+        for layer in mid_layers:
             obs = layer.obstacles.get(f"{q},{r}")
             if obs is not None:
                 c = _obstacle_crossing(obs, path_t, f"Obstacle ({q},{r})", custom)
@@ -239,37 +327,32 @@ def gather_barrier_crossings(
                 wall = layer.walls.get(hex_wall_key(q, r))
                 if wall:
                     crossings.extend(
-                        _wall_slabs(wall, path_t, f"Hex wall ({q},{r})", custom)
-                    )
-            if i + 1 < len(line):
-                nq, nr = line[i + 1]
-                edge = neighbor_direction_index(q, r, nq, nr)
-                if edge is not None:
-                    wall = layer.walls.get(f"{q},{r}:{edge}")
-                    if wall is not None:
-                        crossings.extend(
-                            _wall_slabs(
-                                wall, path_t, f"Wall ({q},{r}:{edge})", custom
-                            )
+                        _wall_slabs(
+                            wall,
+                            path_t,
+                            f"Hex wall ({q},{r})",
+                            custom,
+                            extra_openings=_edge_openings_for_hex(layer, i),
                         )
+                    )
 
-    # Final edge into target hex
-    if len(line) >= 2 and target_layer:
-        pq, pr = line[-2]
+    # Target hex cover (facade already counted as last edge; hex-wall / obstacle).
+    if target_layer is not None:
         tq, tr = line[-1]
-        path_t = (len(line) - 1) / n_seg
-        edge = neighbor_direction_index(tq, tr, pq, pr)
-        if edge is not None:
-            wall = target_layer.walls.get(f"{tq},{tr}:{edge}")
-            if wall is not None:
-                crossings.extend(
-                    _wall_slabs(wall, path_t, f"Facade ({tq},{tr}:{edge})", custom)
-                )
+        path_t = 1.0
         if layer_has_hex_wall(target_layer, tq, tr):
             wall = target_layer.walls.get(hex_wall_key(tq, tr))
             if wall:
                 crossings.extend(
-                    _wall_slabs(wall, path_t, f"Hex wall cover ({tq},{tr})", custom)
+                    _wall_slabs(
+                        wall,
+                        path_t,
+                        f"Hex wall cover ({tq},{tr})",
+                        custom,
+                        extra_openings=_edge_openings_for_hex(
+                            target_layer, len(line) - 1
+                        ),
+                    )
                 )
         obs = target_layer.obstacles.get(f"{tq},{tr}")
         if obs is not None:
@@ -300,13 +383,19 @@ def cover_pf_for_location(
     location: AdvancedHitLocation,
     target_stance: str,
     shooter_stance: str,
+    *,
+    source_height: float | None = None,
 ) -> float:
     """Sum PF of solid slabs intersected by muzzle→hit-location ray."""
     if not crossings:
         return 0.0
     h_lo, h_hi = location_height_band(location, target_stance)
     part_mid = (h_lo + h_hi) / 2.0
-    muzzle = muzzle_height(shooter_stance)
+    muzzle = (
+        float(source_height)
+        if source_height is not None
+        else muzzle_height(shooter_stance)
+    )
     total = 0.0
     for c in crossings:
         z = _ray_height_at(muzzle, part_mid, c.path_t)
@@ -351,12 +440,14 @@ def classify_cover_for_shot(
     target_stance: str,
     shooter_stance: str,
     moved: bool = False,
+    source_height: float | None = None,
 ) -> CoverAnalysis:
     """
     Classify LOF vs body height samples.
 
     Without pen: optical rules only (opaque slabs block vision unless cleared over).
     With pen: opaque + PF>=PEN is ballistic block; PF<PEN is nonblocking.
+    ``source_height`` overrides muzzle height (e.g. grenade on floor ≈ 0.2 m).
     """
     notes: list[str] = []
     for c in crossings:
@@ -364,7 +455,11 @@ def classify_cover_for_shot(
         notes.append(f"{c.label} [{c.z_low:.1f}-{c.z_high:.1f}m, {vision}]")
 
     body_low, body_high = stance_height_range(target_stance)
-    muzzle = muzzle_height(shooter_stance)
+    muzzle = (
+        float(source_height)
+        if source_height is not None
+        else muzzle_height(shooter_stance)
+    )
     samples = [
         body_low + (body_high - body_low) * f
         for f in (0.1, 0.3, 0.5, 0.7, 0.9)

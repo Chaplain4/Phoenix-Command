@@ -147,7 +147,8 @@ def test_check_los_uses_cover_for_furniture():
 
 def test_open_window_removes_sill_to_head_band():
     layer = MapLayer(id="g", name="Ground")
-    layer.walls["0,0:1"] = WallSegment(
+    # Edge 0 of (0,0) faces neighbor (1,0) in screen-CW convention.
+    layer.walls["0,0:0"] = WallSegment(
         material="wall_cinder_block",
         height=2.5,
         protection_factor=4.0,
@@ -161,3 +162,65 @@ def test_open_window_removes_sill_to_head_band():
     # Mid-height of open window should not be covered by any solid slab
     covered_at_15 = any(c.z_low <= 1.5 <= c.z_high for c in crossings)
     assert covered_at_15 is False
+
+
+def test_closed_door_on_cinder_uses_exterior_door_pf():
+    from phoenix_command.session.domains.map_state import Opening
+
+    layer = MapLayer(id="g", name="Ground")
+    layer.walls["0,0:0"] = WallSegment(
+        material="wall_cinder_block",
+        height=2.5,
+        protection_factor=4.0,
+        openings=[Opening(kind="door", state="closed")],
+    )
+    ms = MapState(layers=[layer], active_layer_id="g")
+    shooter = TokenPlacement(token_id="s", q=0, r=0, layer_id="g")
+    target = TokenPlacement(token_id="t", q=1, r=0, layer_id="g")
+    crossings = gather_barrier_crossings(ms, shooter, target)
+    door_slabs = [c for c in crossings if "door" in c.label.lower()]
+    assert door_slabs
+    assert door_slabs[0].pf >= 2.0  # exterior wood, not interior 0.3
+
+
+def test_closed_window_uses_glass_slab():
+    layer = MapLayer(id="g", name="Ground")
+    layer.walls["0,0:0"] = WallSegment(
+        material="wall_cinder_block",
+        height=2.5,
+        protection_factor=4.0,
+        openings=[Opening(kind="window", state="closed", sill_height=0.9, head_height=2.1)],
+    )
+    ms = MapState(layers=[layer], active_layer_id="g")
+    shooter = TokenPlacement(token_id="s", q=0, r=0, layer_id="g")
+    target = TokenPlacement(token_id="t", q=1, r=0, layer_id="g")
+    crossings = gather_barrier_crossings(ms, shooter, target)
+    mid = [c for c in crossings if c.z_low <= 1.5 <= c.z_high]
+    assert mid
+    assert all(c.pf < 4.0 for c in mid)  # glass, not cinder
+    assert all(c.blocks_vision is False for c in mid)
+
+
+def test_broken_window_clear_like_open():
+    layer = MapLayer(id="g", name="Ground")
+    layer.walls["0,0:0"] = WallSegment(
+        material="wall_cinder_block",
+        height=2.5,
+        protection_factor=4.0,
+        openings=[Opening(kind="window", state="broken", sill_height=0.9, head_height=2.1)],
+    )
+    ms = MapState(layers=[layer], active_layer_id="g")
+    shooter = TokenPlacement(token_id="s", q=0, r=0, layer_id="g")
+    target = TokenPlacement(token_id="t", q=1, r=0, layer_id="g")
+    crossings = gather_barrier_crossings(ms, shooter, target)
+    assert not any(c.z_low <= 1.5 <= c.z_high for c in crossings)
+
+
+def test_standing_legs_blocked_by_low_wall():
+    crossings = [
+        BarrierCrossing(pf=4.0, z_low=0.0, z_high=0.7, label="berm", path_t=1.0),
+    ]
+    shin_pf = cover_pf_for_location(
+        crossings, AdvancedHitLocation.SHIN_FLESH_LEFT, "standing", "standing"
+    )
+    assert shin_pf >= 4.0

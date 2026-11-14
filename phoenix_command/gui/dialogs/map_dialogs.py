@@ -130,8 +130,8 @@ class MapSizeDialog(QDialog):
         layout.addRow("Rows (hexes):", self.rows_spin)
 
         self.orientation_combo = QComboBox()
-        self.orientation_combo.addItem("Flat-top (odd-q)", "flat")
-        self.orientation_combo.addItem("Pointy-top (odd-r)", "pointy")
+        self.orientation_combo.addItem("Flat-top (even-q)", "flat")
+        self.orientation_combo.addItem("Pointy-top (even-r)", "pointy")
         idx = self.orientation_combo.findData(grid.orientation)
         if idx >= 0:
             self.orientation_combo.setCurrentIndex(idx)

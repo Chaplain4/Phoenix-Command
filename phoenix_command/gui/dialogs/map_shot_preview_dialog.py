@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import QEvent, QObject, Qt, pyqtSignal
 from PyQt6.QtGui import QGuiApplication
 from PyQt6.QtWidgets import (
     QComboBox,
@@ -24,6 +24,19 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+
+
+class _NoScrollWhenUnfocused(QObject):
+    """Ignore wheel on combo/spin unless the widget has focus (scroll the dialog instead)."""
+
+    def eventFilter(self, obj: QObject, event: QEvent) -> bool:  # noqa: N802
+        if event.type() == QEvent.Type.Wheel and isinstance(
+            obj, (QComboBox, QSpinBox, QDoubleSpinBox)
+        ):
+            if isinstance(obj, QWidget) and not obj.hasFocus():
+                event.ignore()
+                return True
+        return super().eventFilter(obj, event)
 
 from phoenix_command.models.enums import (
     SituationStanceModifier4B,
@@ -95,6 +108,7 @@ class MapShotPreviewDialog(QDialog):
         layout.addWidget(self.notes)
 
         form = QFormLayout()
+        self._wheel_guard = _NoScrollWhenUnfocused(self)
         self.range_spin = QSpinBox()
         self.range_spin.setRange(1, 500)
         form.addRow("Range (rule hex):", self.range_spin)
@@ -162,6 +176,20 @@ class MapShotPreviewDialog(QDialog):
         )
         form.addRow("Manual Cover PF:", self.manual_cover_pf)
 
+        for w in (
+            self.range_spin,
+            self.aim_spin,
+            self.exposure_combo,
+            self.orient_combo,
+            self.fire_mode_combo,
+            self.arc_spin,
+            self.cont_burst_spin,
+            self.ammo_combo,
+            self.manual_cover_pf,
+        ):
+            w.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+            w.installEventFilter(self._wheel_guard)
+
         layout.addLayout(form)
 
         layout.addWidget(QLabel("Primary targets:"))
@@ -208,17 +236,24 @@ class MapShotPreviewDialog(QDialog):
         custom_row.addWidget(rem_custom)
         layout.addLayout(custom_row)
 
+        scroll.setWidget(content)
+        outer.addWidget(scroll)
+
+        # Sticky footer — Confirm/Cancel always visible without scrolling.
         buttons = QDialogButtonBox()
-        self.confirm_btn = buttons.addButton("Confirm Shot", QDialogButtonBox.ButtonRole.AcceptRole)
-        self.cancel_btn = buttons.addButton("Cancel", QDialogButtonBox.ButtonRole.RejectRole)
-        self.apply_btn = buttons.addButton("Apply Edits", QDialogButtonBox.ButtonRole.ActionRole)
+        self.confirm_btn = buttons.addButton(
+            "Confirm Shot", QDialogButtonBox.ButtonRole.AcceptRole
+        )
+        self.cancel_btn = buttons.addButton(
+            "Cancel", QDialogButtonBox.ButtonRole.RejectRole
+        )
+        self.apply_btn = buttons.addButton(
+            "Apply Edits", QDialogButtonBox.ButtonRole.ActionRole
+        )
         self.confirm_btn.clicked.connect(self._on_confirm)
         self.cancel_btn.clicked.connect(self._on_cancel)
         self.apply_btn.clicked.connect(self._on_apply)
-        layout.addWidget(buttons)
-
-        scroll.setWidget(content)
-        outer.addWidget(scroll)
+        outer.addWidget(buttons)
 
     def _on_mode_changed(self) -> None:
         self._update_mode_visibility()

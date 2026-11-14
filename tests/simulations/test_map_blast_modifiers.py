@@ -9,6 +9,7 @@ from phoenix_command.models.gear import ExplosiveData
 from phoenix_command.models.hit_result_advanced import ExplosiveShotResult
 from phoenix_command.session.domains.impulse_combat_state import TokenCombatRuntime
 from phoenix_command.session.domains.map_state import (
+    HexGridConfig,
     MapLayer,
     MapState,
     Obstacle,
@@ -197,6 +198,34 @@ def test_deep_water_terrain() -> None:
     assert _env_only(mods) == [BlastModifier.UNDERWATER]
 
 
+def test_enclosure_rays_pointy_orientation() -> None:
+    """Pointy maps must walk EDGE_NEIGHBORS['pointy'], not flat deltas."""
+    layer = MapLayer(id="g", name="Ground", kind="ground")
+    # Pointy edge 0 = SE = (0, +1); wall on far side of (0,1)→(0,2).
+    layer.walls["0,2:3"] = _brick()
+    ms = MapState(
+        layers=[layer],
+        active_layer_id="g",
+        grid=HexGridConfig(orientation="pointy", cols=20, rows=20),
+    )
+    assert count_enclosure_rays(ms, _tok(), max_hexes=3) >= 1
+    # Same key with flat walk would look along different deltas — still ok if wall
+    # is on a flat ray; use a flat-only neighbor that pointy would miss if swapped.
+    ms_flat, layer_f = _map()
+    layer_f.walls["2,0:3"] = _brick()
+    assert count_enclosure_rays(ms_flat, _tok(), max_hexes=3) >= 1
+    # Pointy map must NOT falsely use flat E=(1,0) for edge 0
+    layer_miss = MapLayer(id="g", name="Ground", kind="ground")
+    layer_miss.walls["2,0:3"] = _brick()  # flat ray east
+    ms_pointy_miss = MapState(
+        layers=[layer_miss],
+        active_layer_id="g",
+        grid=HexGridConfig(orientation="pointy", cols=20, rows=20),
+    )
+    # East wall is irrelevant to pointy SE ray; enclosure may still be 0
+    assert count_enclosure_rays(ms_pointy_miss, _tok(), max_hexes=3) == 0
+
+
 def test_four_walls_open_door_with_ceiling_still_room() -> None:
     ms, layer = _map(kind="floor")
     openings = [
@@ -250,11 +279,31 @@ def test_floor_with_ceiling_false_and_walls_is_trench() -> None:
 
 
 def test_linear_foxhole_depression_is_trench() -> None:
+    # Single neighbor berm is not a trench; need ≥4 high neighbors or terrain tag.
     ms, layer = _map()
     layer.obstacles["1,0"] = Obstacle(height=1.5, material="common_furniture", blocks_los=True)
-    layer.obstacles["-1,0"] = Obstacle(height=1.5, material="common_furniture", blocks_los=True)
+    mods = derive_blast_modifiers(ms, 5, 0, _tok(), _char())
+    assert _env_only(mods) == [BlastModifier.IN_THE_OPEN]
+    for dq, dr in ((1, 0), (0, 1), (-1, 1), (-1, 0)):
+        layer.obstacles[f"{dq},{dr}"] = Obstacle(
+            height=1.5, material="common_furniture", blocks_los=True
+        )
+    mods2 = derive_blast_modifiers(ms, 5, 0, _tok(), _char())
+    assert _env_only(mods2) == [BlastModifier.IN_OPEN_TRENCH]
+
+
+def test_foxhole_terrain_tag_is_trench() -> None:
+    ms, layer = _map()
+    layer.terrain["0,0"] = TerrainTile(terrain_type="foxhole")
     mods = derive_blast_modifiers(ms, 5, 0, _tok(), _char())
     assert _env_only(mods) == [BlastModifier.IN_OPEN_TRENCH]
+
+
+def test_indoor_terrain_on_ground_is_room() -> None:
+    ms, layer = _map(kind="ground")
+    layer.terrain["0,0"] = TerrainTile(terrain_type="indoor")
+    mods = derive_blast_modifiers(ms, 5, 0, _tok(), _char())
+    assert _env_only(mods) == [BlastModifier.IN_SMALL_ROOM]
 
 
 def test_room_prone_suit_stacks() -> None:

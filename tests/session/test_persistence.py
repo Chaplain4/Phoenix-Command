@@ -151,7 +151,7 @@ def test_map_file_includes_linked_characters(tmp_path):
     )
 
     raw = json.loads(path.read_text(encoding="utf-8"))
-    assert raw["schema_version"] == 2
+    assert raw["schema_version"] == 3
     assert set(raw["characters"]) == {"Alpha", "Beta"}
 
     loaded_map, loaded_tokens, loaded_characters = load_map_file(path)

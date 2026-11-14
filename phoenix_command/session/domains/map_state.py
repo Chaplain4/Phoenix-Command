@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import logging
 import uuid
 from dataclasses import dataclass, field
 from typing import Any
+
+_logger = logging.getLogger(__name__)
 
 
 def _hex_key(q: int, r: int) -> str:
@@ -272,19 +275,24 @@ class Opening:
     """Window or door on a wall segment."""
 
     kind: str = "window"  # "window" or "door"
-    state: str = "closed"  # "locked", "closed", "open" (doors)
+    state: str = "closed"  # "locked", "closed", "open", "broken"
     position: float = 0.5  # 0..1 along edge
     sill_height: float = 0.9
     head_height: float = 2.1
+    # Optional leaf/glass material; defaults applied in map_cover slabs.
+    material: str = ""
 
     def to_dict(self) -> dict:
-        return {
+        result = {
             "kind": self.kind,
             "state": self.state,
             "position": self.position,
             "sill_height": self.sill_height,
             "head_height": self.head_height,
         }
+        if self.material:
+            result["material"] = self.material
+        return result
 
     @classmethod
     def from_dict(cls, data: dict) -> "Opening":
@@ -294,14 +302,44 @@ class Opening:
             position=float(data.get("position", 0.5)),
             sill_height=float(data.get("sill_height", 0.9)),
             head_height=float(data.get("head_height", 2.1)),
+            material=str(data.get("material", "") or ""),
         )
+
+    def default_material(self, wall_material: str = "") -> str:
+        """Leaf/glass id for closed openings.
+
+        Explicit ``Opening.material`` wins. Door leaf otherwise follows a
+        ``door_*`` wall id, then exterior wood for structural walls, else
+        interior wood (PF 0.3).
+        """
+        if self.material:
+            return self.material
+        if self.kind != "door":
+            return "window_glass"
+        wm = (wall_material or "").lower()
+        if wm.startswith("door_"):
+            return wall_material
+        interior_walls = (
+            "wall_wood_interior",
+            "wall_wood_interior_plaster",
+            "wall_interior",
+        )
+        if wm.startswith("wall_") and not any(wm.startswith(p) for p in interior_walls):
+            return "door_exterior_wood"
+        return "door_interior_wood"
+
+
+def _normalize_wall_material(material: str) -> str:
+    if material == "cinder_block":
+        return "wall_cinder_block"
+    return material
 
 
 @dataclass
 class WallSegment:
     """Wall along a hex edge."""
 
-    material: str = "cinder_block"
+    material: str = "wall_cinder_block"
     thickness: float = 8.0  # inches
     protection_factor: float | None = None
     height: float = 2.5
@@ -321,8 +359,9 @@ class WallSegment:
     @classmethod
     def from_dict(cls, data: dict) -> "WallSegment":
         pf = data.get("protection_factor")
+        raw = data.get("material", "wall_cinder_block")
         return cls(
-            material=data.get("material", "cinder_block"),
+            material=_normalize_wall_material(str(raw)),
             thickness=float(data.get("thickness", 8.0)),
             protection_factor=float(pf) if pf is not None else None,
             height=float(data.get("height", 2.5)),
@@ -474,6 +513,14 @@ class MapState:
     active_layer_id: str = ""
     hide_inactive_layers: bool = False
     custom_barriers: dict[str, CustomBarrierMaterial] = field(default_factory=dict)
+    # Edge index convention: screen_cw_v1 matches GUI hex_corners / nearest_edge.
+    edge_convention: str = "screen_cw_v1"
+    # True when field was present on load / set by migrate / new map. If False
+    # (legacy file without the field), to_dict omits it so CLI can still migrate.
+    edge_convention_explicit: bool = True
+    # Set by migrate_edge_convention.py after engine→GUI key rewrite; blocks
+    # a second --force. Empty means unset (omit from JSON).
+    edge_keys_migrated_from: str = ""
     # Legacy fields for backward compatibility
     width: int = 0
     height: int = 0
@@ -505,7 +552,7 @@ class MapState:
 
     def to_dict(self) -> dict:
         self.ensure_default_layer()
-        return {
+        result: dict[str, Any] = {
             "grid": self.grid.to_dict(),
             "layers": [layer.to_dict() for layer in self.layers],
             "active_layer_id": self.active_layer_id,
@@ -514,6 +561,13 @@ class MapState:
                 k: v.to_dict() for k, v in self.custom_barriers.items()
             },
         }
+        # Only stamp convention when it was explicit (file/migrate/new map).
+        # Omitting keeps CLI `--from engine` usable after open→save of legacy files.
+        if self.edge_convention_explicit:
+            result["edge_convention"] = self.edge_convention or "screen_cw_v1"
+        if self.edge_keys_migrated_from:
+            result["edge_keys_migrated_from"] = self.edge_keys_migrated_from
+        return result
 
     @classmethod
     def from_dict(cls, data: dict) -> "MapState":
@@ -523,14 +577,41 @@ class MapState:
                 k: CustomBarrierMaterial.from_dict(v)
                 for k, v in data.get("custom_barriers", {}).items()
             }
+            had_convention = "edge_convention" in data and bool(data.get("edge_convention"))
+            convention = str(data.get("edge_convention") or "")
+            migrated_from = str(data.get("edge_keys_migrated_from") or "")
+            grid = HexGridConfig.from_dict(data.get("grid", {}))
             state = cls(
-                grid=HexGridConfig.from_dict(data.get("grid", {})),
+                grid=grid,
                 layers=layers,
                 active_layer_id=data.get("active_layer_id", ""),
                 hide_inactive_layers=bool(data.get("hide_inactive_layers", False)),
                 custom_barriers=custom,
+                edge_convention=convention or "screen_cw_v1",
+                edge_convention_explicit=had_convention,
+                edge_keys_migrated_from=migrated_from,
             )
             state.ensure_default_layer()
+            # Missing field: runtime assumes screen-CW; do not auto-remap or stamp
+            # on save. Scripted engine maps need CLI migrate (--force if already stamped).
+            if not had_convention:
+                from phoenix_command.simulations.hex_frame import (
+                    looks_like_engine_edge_keys,
+                )
+
+                orientation = grid.orientation or "flat"
+                if any(
+                    looks_like_engine_edge_keys(layer.walls, orientation)
+                    for layer in state.layers
+                ):
+                    _logger.warning(
+                        "Map has no edge_convention and edge keys look like legacy "
+                        "engine numbering. Walls were NOT remapped (editor maps would "
+                        "break). If this is a scripted map, run: "
+                        "python tools/migrate_edge_convention.py --from engine <file> "
+                        "(--force if edge_convention stamped wrongly; do not --force "
+                        "editor maps)"
+                    )
             return state
 
         # Legacy stub format migration
@@ -556,3 +637,10 @@ class MapState:
 def rules_hexes(meters: float) -> float:
     """Convert meters to rulebook hexes (1 rule hex = 2 m)."""
     return meters / 2.0
+
+
+def rule_range_hexes(meters: float) -> int:
+    """Integer rule-hex range with half-up rounding (avoid banker's round)."""
+    import math
+
+    return max(1, int(math.floor(rules_hexes(meters) + 0.5)))

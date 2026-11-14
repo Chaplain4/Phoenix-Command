@@ -42,11 +42,11 @@ def _engine(ac: float = 0.5) -> tuple[ImpulseCombatEngine, TokenPlacement]:
 
 
 def test_guest_move_intent_partial_progress() -> None:
-    engine, tok = _engine(ac=0.5)
+    engine, tok = _engine(ac=0.25)
     result = engine.apply_action(
         "t1",
         "move",
-        {"target_q": -1, "target_r": 0},
+        {"target_q": 1, "target_r": 0},
         player_id="guest-abc",
         is_host=False,
     )
@@ -54,15 +54,15 @@ def test_guest_move_intent_partial_progress() -> None:
     rt = engine.get_runtime("t1")
     assert rt.move_progress > 0
     assert tok.q == 0 and tok.r == 0
-    assert rt.pending_id() == "move" or rt.move_target_q == -1
+    assert rt.pending_id() == "move" or rt.move_target_q == 1
 
 
 def test_advance_impulse_alone_does_not_finish_pending_move() -> None:
-    engine, tok = _engine(ac=0.5)
+    engine, tok = _engine(ac=0.25)
     engine.apply_action(
         "t1",
         "move",
-        {"target_q": -1, "target_r": 0},
+        {"target_q": 1, "target_r": 0},
         player_id="guest-abc",
         is_host=False,
     )
@@ -73,16 +73,16 @@ def test_advance_impulse_alone_does_not_finish_pending_move() -> None:
     engine.advance_impulse()
     # Progress and target survive impulse advance; hex stays put.
     assert rt.move_progress == progress
-    assert rt.move_target_q == -1
+    assert rt.move_target_q == 1
     assert tok.q == 0 and tok.r == 0
 
 
 def test_continue_move_after_refill_completes() -> None:
-    engine, tok = _engine(ac=0.5)
+    engine, tok = _engine(ac=0.25)
     engine.apply_action(
         "t1",
         "move",
-        {"target_q": -1, "target_r": 0},
+        {"target_q": 1, "target_r": 0},
         player_id="guest-abc",
         is_host=False,
     )
@@ -93,21 +93,21 @@ def test_continue_move_after_refill_completes() -> None:
     result = engine.apply_action(
         "t1",
         "move",
-        {"target_q": -1, "target_r": 0},
+        {"target_q": 1, "target_r": 0},
         player_id="guest-abc",
         is_host=False,
     )
     assert result.success
-    assert tok.q == -1 and tok.r == 0
+    assert tok.q == 1 and tok.r == 0
     assert rt.move_progress == 0.0
 
 
 def test_guest_sees_partial_move_via_full_state_sync() -> None:
-    engine, tok = _engine(ac=0.5)
+    engine, tok = _engine(ac=0.25)
     engine.apply_action(
         "t1",
         "move",
-        {"target_q": -1, "target_r": 0},
+        {"target_q": 1, "target_r": 0},
         player_id="guest-abc",
         is_host=False,
     )
@@ -120,7 +120,7 @@ def test_guest_sees_partial_move_via_full_state_sync() -> None:
     guest_state = apply_message_to_state(GameState(), msg)
     rt = guest_state.impulse_combat.token_runtime["t1"]
     assert rt.move_progress > 0
-    assert rt.move_target_q == -1
+    assert rt.move_target_q == 1
     assert guest_state.tokens.placements["t1"].q == 0
     assert guest_state.tokens.placements["t1"].controlled_by == "guest-abc"
 
@@ -130,7 +130,7 @@ def test_wrong_player_cannot_move_token() -> None:
     bad = engine.apply_action(
         "t1",
         "move",
-        {"target_q": -1, "target_r": 0},
+        {"target_q": 1, "target_r": 0},
         player_id="guest-other",
         is_host=False,
     )

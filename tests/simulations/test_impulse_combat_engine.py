@@ -61,8 +61,9 @@ def test_refill_impulse_ac() -> None:
 
 
 def test_half_hex_move_progress() -> None:
-    engine, tok = _engine(ac=0.5)
-    result = engine.apply_action("t1", "move", {"target_q": -1, "target_r": 0})
+    # Forward hex costs 0.5 AC on 1 m grid — use 0.25 so first spend is partial.
+    engine, tok = _engine(ac=0.25)
+    result = engine.apply_action("t1", "move", {"target_q": 1, "target_r": 0})
     assert result.success
     rt = engine.get_runtime("t1")
     assert rt.ac_remaining == 0.0
@@ -71,12 +72,12 @@ def test_half_hex_move_progress() -> None:
 
 
 def test_complete_move_after_second_impulse() -> None:
-    engine, tok = _engine(ac=0.5)
-    engine.apply_action("t1", "move", {"target_q": -1, "target_r": 0})
+    engine, tok = _engine(ac=0.25)
+    engine.apply_action("t1", "move", {"target_q": 1, "target_r": 0})
     engine.refill_impulse_ac()
-    result = engine.apply_action("t1", "move", {"target_q": -1, "target_r": 0})
+    result = engine.apply_action("t1", "move", {"target_q": 1, "target_r": 0})
     assert result.success
-    assert tok.q == -1
+    assert tok.q == 1
     assert engine.get_runtime("t1").move_progress == 0.0
 
 

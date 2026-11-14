@@ -8,19 +8,64 @@ from typing import Callable
 
 from phoenix_command.models.character import Character
 from phoenix_command.session.domains.impulse_combat_state import TokenCombatRuntime
-from phoenix_command.session.domains.map_state import MapLayer, hex_wall_key
-from phoenix_command.simulations.hex_tactical import (
+from phoenix_command.gui.utils.hex_geometry import is_in_bounds
+from phoenix_command.session.domains.map_state import HexGridConfig, MapLayer
+from phoenix_command.simulations.hex_frame import (
     axial_neighbors,
     classify_movement_base,
     direction_index_to_facing,
     neighbor_direction_index,
     shortest_facing_delta,
 )
+from phoenix_command.simulations.map_movement import (
+    edge_blocks_movement,
+    hex_blocks_destination,
+)
 from phoenix_command.tables.catalogs.movement_catalog import compute_movement_cost
 
+# Legacy alias: 1 m/hex → 0.5 AC scale (Table 7A is per 2 m rule hex).
 METER_SCALE = 0.5
 FREE_FACING_STEPS = 2
 MAX_FACING_PER_ACTION = 4  # 120°
+
+
+def hex_movement_scale(meters_per_hex: float) -> float:
+    """Convert Table 7A rule-hex cost to map-hex AC (1 rule hex = 2 m)."""
+    return max(0.01, float(meters_per_hex)) / 2.0
+
+
+def step_cost(
+    facing: int,
+    dir_idx: int,
+    stance: str,
+    layer: MapLayer | None,
+    tq: int,
+    tr: int,
+    braced: bool,
+    terrain_fn: Callable[[MapLayer | None, int, int, str], tuple[int | None, list[str]]],
+    *,
+    orientation: str = "flat",
+    meters_per_hex: float = 1.0,
+) -> float | None:
+    """AC cost of one hex step after free ≤60° facing (book enter-hex turn)."""
+    desired = direction_index_to_facing(dir_idx, orientation)
+    free = max(
+        -FREE_FACING_STEPS,
+        min(FREE_FACING_STEPS, shortest_facing_delta(facing, desired)),
+    )
+    facing_after_free = (facing + free) % 12
+    return _hex_cost(
+        facing_after_free,
+        dir_idx,
+        stance,
+        layer,
+        tq,
+        tr,
+        braced,
+        terrain_fn,
+        orientation,
+        meters_per_hex,
+    )
 
 
 @dataclass
@@ -70,13 +115,15 @@ def _hex_cost(
     tr: int,
     braced: bool,
     terrain_fn: Callable[[MapLayer | None, int, int, str], tuple[int | None, list[str]]],
+    orientation: str = "flat",
+    meters_per_hex: float = 1.0,
 ) -> float | None:
     terrain_cost, modifier_ids = terrain_fn(layer, tq, tr, stance)
-    base_id = classify_movement_base(facing, dir_idx)
+    base_id = classify_movement_base(facing, dir_idx, orientation)
     rule_cost = compute_movement_cost(base_id, modifier_ids, terrain_cost)
     if rule_cost < 0:
         return None
-    cost = rule_cost * METER_SCALE
+    cost = rule_cost * hex_movement_scale(meters_per_hex)
     if braced:
         cost += 1.0
     return cost
@@ -86,20 +133,27 @@ def _passable(
     layer: MapLayer | None,
     q: int,
     r: int,
+    *,
+    from_q: int | None = None,
+    from_r: int | None = None,
+    orientation: str = "flat",
+    grid: HexGridConfig | None = None,
 ) -> bool:
-    if not layer:
-        return True
-    key = f"{q},{r}"
-    if key in layer.obstacles and layer.obstacles[key].blocks_movement:
+    if grid is not None and not is_in_bounds(q, r, grid):
         return False
-    if hex_wall_key(q, r) in layer.walls:
+    if hex_blocks_destination(layer, q, r):
         return False
+    if from_q is not None and from_r is not None:
+        if edge_blocks_movement(layer, from_q, from_r, q, r, orientation):
+            return False
     return True
 
 
-def facing_steps_for_move(from_facing: int, dir_idx: int) -> list[dict]:
+def facing_steps_for_move(
+    from_facing: int, dir_idx: int, orientation: str = "flat"
+) -> list[dict]:
     """Paid facing remainder after free ≤60° on hex enter (queued before hex step)."""
-    desired = direction_index_to_facing(dir_idx)
+    desired = direction_index_to_facing(dir_idx, orientation)
     delta = shortest_facing_delta(from_facing, desired)
     free = max(-FREE_FACING_STEPS, min(FREE_FACING_STEPS, delta))
     remainder = delta - free
@@ -123,25 +177,45 @@ def append_adjacent_hex(
     braced: bool,
     layer: MapLayer | None,
     terrain_fn: Callable[[MapLayer | None, int, int, str], tuple[int | None, list[str]]],
+    orientation: str = "flat",
+    meters_per_hex: float = 1.0,
+    grid: HexGridConfig | None = None,
 ) -> tuple[list[dict], int, str | None]:
     """
     Append facing + hex step for one adjacent move.
 
     Returns (new_route, facing_after, error).
     """
-    dir_idx = neighbor_direction_index(from_q, from_r, to_q, to_r)
+    dir_idx = neighbor_direction_index(from_q, from_r, to_q, to_r, orientation)
     if dir_idx is None:
         return route, from_facing, "Target is not an adjacent hex"
-    if not _passable(layer, to_q, to_r):
+    if not _passable(
+        layer,
+        to_q,
+        to_r,
+        from_q=from_q,
+        from_r=from_r,
+        orientation=orientation,
+        grid=grid,
+    ):
         return route, from_facing, "Hex blocked"
-    desired = direction_index_to_facing(dir_idx)
+    desired = direction_index_to_facing(dir_idx, orientation)
     delta = shortest_facing_delta(from_facing, desired)
     free = max(-FREE_FACING_STEPS, min(FREE_FACING_STEPS, delta))
     facing_after_free = (from_facing + free) % 12
-    paid = facing_steps_for_move(from_facing, dir_idx)
+    paid = facing_steps_for_move(from_facing, dir_idx, orientation)
     # Cost check uses facing after free turn (book: free turn on enter).
     cost = _hex_cost(
-        facing_after_free, dir_idx, stance, layer, to_q, to_r, braced, terrain_fn
+        facing_after_free,
+        dir_idx,
+        stance,
+        layer,
+        to_q,
+        to_r,
+        braced,
+        terrain_fn,
+        orientation,
+        meters_per_hex,
     )
     if cost is None:
         return route, from_facing, "Impassable terrain"
@@ -193,20 +267,37 @@ def pathfind_to(
     layer: MapLayer | None,
     terrain_fn: Callable[[MapLayer | None, int, int, str], tuple[int | None, list[str]]],
     max_nodes: int = 4000,
+    orientation: str = "flat",
+    meters_per_hex: float = 1.0,
+    grid: HexGridConfig | None = None,
 ) -> tuple[list[dict], str | None]:
     """A* pathfind; returns route steps (with facing) or error."""
     if (start_q, start_r) == (dest_q, dest_r):
         return [], None
-    if not _passable(layer, dest_q, dest_r):
-        return [], "Destination blocked"
+    if not _passable(
+        layer,
+        dest_q,
+        dest_r,
+        from_q=start_q,
+        from_r=start_r,
+        orientation=orientation,
+        grid=grid,
+    ):
+        # Destination itself blocked (obstacle/hex-wall); edge from start checked in expand
+        if hex_blocks_destination(layer, dest_q, dest_r):
+            return [], "Destination blocked"
+        if grid is not None and not is_in_bounds(dest_q, dest_r, grid):
+            return [], "Destination out of bounds"
+
+    min_step = hex_movement_scale(meters_per_hex) * 0.5  # cheapest forward open
 
     def heuristic(q: int, r: int) -> float:
-        # axial hex distance
-        return (
+        dist = (
             abs(q - dest_q)
             + abs(r - dest_r)
             + abs((-q - r) - (-dest_q - dest_r))
         ) / 2.0
+        return dist * min_step
 
     # state: (q, r, facing)
     start = (start_q, start_r, start_facing % 12)
@@ -233,20 +324,37 @@ def pathfind_to(
                 path_steps.extend(segs)
             return path_steps, None
 
-        for nq, nr, dir_idx in axial_neighbors(q, r):
-            if not _passable(layer, nq, nr):
+        for nq, nr, dir_idx in axial_neighbors(q, r, orientation):
+            if not _passable(
+                layer,
+                nq,
+                nr,
+                from_q=q,
+                from_r=r,
+                orientation=orientation,
+                grid=grid,
+            ):
                 continue
             segs: list[dict] = []
-            paid = facing_steps_for_move(facing, dir_idx)
+            paid = facing_steps_for_move(facing, dir_idx, orientation)
             segs.extend(paid)
-            desired = direction_index_to_facing(dir_idx)
+            desired = direction_index_to_facing(dir_idx, orientation)
             free = max(
                 -FREE_FACING_STEPS,
                 min(FREE_FACING_STEPS, shortest_facing_delta(facing, desired)),
             )
             facing_after_free = (facing + free) % 12
             cost = _hex_cost(
-                facing_after_free, dir_idx, stance, layer, nq, nr, braced, terrain_fn
+                facing_after_free,
+                dir_idx,
+                stance,
+                layer,
+                nq,
+                nr,
+                braced,
+                terrain_fn,
+                orientation,
+                meters_per_hex,
             )
             if cost is None:
                 continue

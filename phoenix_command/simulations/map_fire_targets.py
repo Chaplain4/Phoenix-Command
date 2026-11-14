@@ -7,9 +7,9 @@ from dataclasses import dataclass, field
 
 from phoenix_command.gui.utils.hex_geometry import axial_distance
 from phoenix_command.session.domains.impulse_combat_state import TokenCombatRuntime
-from phoenix_command.session.domains.map_state import MapState, rules_hexes
+from phoenix_command.session.domains.map_state import MapState, rule_range_hexes
 from phoenix_command.session.domains.token_state import TokenPlacement, TokenState
-from phoenix_command.simulations.hex_tactical import facing_to_radians
+from phoenix_command.simulations.hex_frame import bearing, facing_to_radians
 from phoenix_command.simulations.map_shot_context import build_map_shot_context
 
 
@@ -33,10 +33,9 @@ def _angle_diff(a: float, b: float) -> float:
     return min(d, 2 * math.pi - d)
 
 
-def _hex_bearing(q0: int, r0: int, q1: int, r1: int) -> float:
-    dq = q1 - q0
-    dr = r1 - r0
-    return math.atan2(dr * math.sqrt(3) / 2, dq * 1.5 + dr * 0.75)
+def _hex_bearing(q0: int, r0: int, q1: int, r1: int, map_state: MapState | None = None) -> float:
+    grid = map_state.grid if map_state else None
+    return bearing(q0, r0, q1, r1, grid)
 
 
 def _meters_per_hex(map_state: MapState | None) -> float:
@@ -49,8 +48,10 @@ def _enemy_tokens(
     shooter: TokenPlacement,
     tokens: TokenState,
     exclude_ids: set[str] | None = None,
+    token_runtime: dict[str, TokenCombatRuntime] | None = None,
 ) -> list[TokenPlacement]:
     exclude = exclude_ids or set()
+    runtime = token_runtime or {}
     result = []
     for tid, tok in tokens.placements.items():
         if tid in exclude or tid == shooter.token_id:
@@ -58,6 +59,9 @@ def _enemy_tokens(
         if not tok.character_name:
             continue
         if shooter.side_id and tok.side_id == shooter.side_id:
+            continue
+        rt = runtime.get(tid)
+        if rt is not None and (rt.is_dead or rt.disabled_head_spine):
             continue
         result.append(tok)
     return result
@@ -84,18 +88,19 @@ def tokens_in_arc(
     mph = _meters_per_hex(map_state)
     out: list[FireTargetInfo] = []
 
-    for tok in _enemy_tokens(shooter, tokens):
+    for tok in _enemy_tokens(shooter, tokens, token_runtime=runtime):
         if same_layer_only and tok.layer_id and shooter.layer_id and tok.layer_id != shooter.layer_id:
             continue
         dist_m = axial_distance(shooter.q, shooter.r, tok.q, tok.r) * mph
-        range_hex = max(1, round(rules_hexes(dist_m)))
+        range_hex = rule_range_hexes(dist_m)
         if range_hex > max_range_hexes:
             continue
         if axial_distance(shooter.q, shooter.r, tok.q, tok.r) == 0:
             bearing_ok = True
         else:
-            bearing = _hex_bearing(shooter.q, shooter.r, tok.q, tok.r)
-            bearing_ok = _angle_diff(bearing, facing_angle) <= half
+            brg = _hex_bearing(shooter.q, shooter.r, tok.q, tok.r, map_state)
+            # Epsilon so flat SE neighbor at exactly +30° stays inside a ±30° cone.
+            bearing_ok = _angle_diff(brg, facing_angle) <= half + 1e-9
         if not bearing_ok:
             continue
 

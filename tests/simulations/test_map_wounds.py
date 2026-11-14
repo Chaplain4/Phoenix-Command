@@ -343,5 +343,6 @@ def test_engine_disoriented_cannot_close() -> None:
     rt.ac_remaining = 5.0
     bad = engine.apply_action("t1", "move", {"target_q": 1, "target_r": 0})
     assert not bad.success
-    good = engine.apply_action("t1", "move", {"target_q": -1, "target_r": 0})
+    # Lateral/away step that stays in-bounds on default 20×20 even-q grid
+    good = engine.apply_action("t1", "move", {"target_q": 0, "target_r": 1})
     assert good.success
